@@ -10,11 +10,6 @@ RUN pip install pip-tools
 
 RUN useradd --create-home --shell /bin/bash vscode
 
-
-RUN mkdir -p /tmp/codeium/manager \
-    && chown -R vscode:vscode /tmp/codeium \
-    && chmod -R 777 /tmp/codeium
-
 USER vscode
 
 COPY requirements/main.txt requirements/main.txt
