@@ -49,7 +49,8 @@ fun DashboardScreen(vm: DashboardViewModel = koinViewModel()) {
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(spacing.lg),
+        // bottom extra para que el FAB central no tape la última tarjeta.
+        contentPadding = PaddingValues(start = spacing.lg, end = spacing.lg, top = spacing.lg, bottom = 96.dp),
         verticalArrangement = Arrangement.spacedBy(spacing.lg),
     ) {
         item { BalanceHeroCard(data.totalBalanceMinor, data.monthIncomeMinor, data.monthExpenseMinor, data.currency) }

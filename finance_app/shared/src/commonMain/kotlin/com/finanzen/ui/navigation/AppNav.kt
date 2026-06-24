@@ -45,6 +45,9 @@ fun AppNav() {
     val currentRoute = backStack?.destination?.route
 
     val showBottomBar = TopDestination.entries.any { it.route == currentRoute }
+    // El FAB central solo crea transacciones, así que solo aparece donde tiene sentido.
+    // Cards/Subscriptions tienen su propio FAB; Análisis/Más no necesitan uno.
+    val showFab = currentRoute == TopDestination.Dashboard.route || currentRoute == TopDestination.Transactions.route
 
     Scaffold(
         bottomBar = {
@@ -73,7 +76,7 @@ fun AppNav() {
             }
         },
         floatingActionButton = {
-            if (showBottomBar) {
+            if (showFab) {
                 FloatingActionButton(onClick = { navController.navigate("tx_form") }) {
                     Icon(Icons.Outlined.Add, contentDescription = "Agregar transacción")
                 }
