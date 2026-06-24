@@ -2,7 +2,6 @@ package com.finanzen.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -13,12 +12,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -28,11 +29,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.finanzen.domain.Money
 import com.finanzen.ui.components.LabeledDropdown
+import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.viewmodel.TransactionsViewModel
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
@@ -62,6 +63,7 @@ fun TransactionFormScreen(
     val selectedAccount = accounts.firstOrNull { it.id == accountId } ?: accounts.firstOrNull()
     val categoryOptions = categories.filter { it.kind == kind }
     val selectedCategory = categoryOptions.firstOrNull { it.id == categoryId }
+    val finance = LocalFinanceColors.current
 
     Scaffold(
         topBar = {
@@ -79,15 +81,23 @@ fun TransactionFormScreen(
             modifier = Modifier.fillMaxSize().padding(inner).padding(16.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(selected = kind == "EXPENSE", onClick = {
-                    kind = "EXPENSE"
-                    categoryId = null
-                }, label = { Text("Gasto") })
-                FilterChip(selected = kind == "INCOME", onClick = {
-                    kind = "INCOME"
-                    categoryId = null
-                }, label = { Text("Ingreso") })
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                SegmentedButton(
+                    selected = kind == "EXPENSE",
+                    onClick = {
+                        kind = "EXPENSE"
+                        categoryId = null
+                    },
+                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                ) { Text("Gasto") }
+                SegmentedButton(
+                    selected = kind == "INCOME",
+                    onClick = {
+                        kind = "INCOME"
+                        categoryId = null
+                    },
+                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                ) { Text("Ingreso") }
             }
 
             OutlinedTextField(
@@ -130,7 +140,7 @@ fun TransactionFormScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            error?.let { Text(it, color = Color(0xFFB13E53), style = MaterialTheme.typography.bodySmall) }
+            error?.let { Text(it, color = finance.expense, style = MaterialTheme.typography.bodySmall) }
 
             Button(
                 onClick = {

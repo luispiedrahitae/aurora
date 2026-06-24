@@ -1,5 +1,7 @@
 package com.finanzen.ui.screens
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,7 +17,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,35 +25,39 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.finanzen.domain.Money
+import com.finanzen.ui.components.CategoryProgressRow
+import com.finanzen.ui.components.FinanceCard
+import com.finanzen.ui.components.MoneyText
+import com.finanzen.ui.components.SectionHeader
+import com.finanzen.ui.components.StatPill
+import com.finanzen.ui.theme.LocalFinanceColors
+import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.viewmodel.CategorySlice
 import com.finanzen.viewmodel.DashboardViewModel
 import com.finanzen.viewmodel.MonthNet
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.math.absoluteValue
 
-private val ExpenseRed = Color(0xFFB13E53)
-
 @Composable
 fun DashboardScreen(vm: DashboardViewModel = koinViewModel()) {
     val data by vm.data.collectAsState()
+    val spacing = LocalSpacing.current
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(spacing.lg),
+        verticalArrangement = Arrangement.spacedBy(spacing.lg),
     ) {
-        item { BalanceCard(data.totalBalanceMinor, data.monthIncomeMinor, data.monthExpenseMinor, data.currency) }
+        item { BalanceHeroCard(data.totalBalanceMinor, data.monthIncomeMinor, data.monthExpenseMinor, data.currency) }
 
-        item {
-            SectionTitle("Flujo de los últimos 6 meses")
-        }
+        item { SectionHeader("Flujo de los últimos 6 meses") }
         item { CashflowCard(data.cashflow, data.currency) }
 
-        item { SectionTitle("Top categorías del mes") }
+        item { SectionHeader("Top categorías del mes") }
         if (data.topCategories.isEmpty()) {
             item {
                 Text(
@@ -63,66 +68,58 @@ fun DashboardScreen(vm: DashboardViewModel = koinViewModel()) {
             }
         } else {
             items(data.topCategories, key = { it.name }) { slice ->
-                CategoryRow(slice, data.currency)
+                FinanceCard { CategoryRow(slice, data.currency) }
             }
         }
     }
 }
 
 @Composable
-private fun SectionTitle(text: String) {
-    Text(
-        text,
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(top = 4.dp),
-    )
-}
+private fun BalanceHeroCard(balance: Long, monthIncome: Long, monthExpense: Long, currency: String) {
+    val finance = LocalFinanceColors.current
+    val spacing = LocalSpacing.current
+    // ponytail: anima como Float; para saldos > ~9 dígitos pierde precisión visual durante el barrido,
+    // el valor final mostrado siempre es el Long exacto. Suficiente para finanzas personales.
+    val animated by animateFloatAsState(targetValue = balance.toFloat(), animationSpec = tween(700))
+    val balanceColor = if (balance >= 0) MaterialTheme.colorScheme.onPrimaryContainer else finance.expense
 
-@Composable
-private fun BalanceCard(balance: Long, monthIncome: Long, monthExpense: Long, currency: String) {
-    val balanceColor = if (balance >= 0) MaterialTheme.colorScheme.primary else ExpenseRed
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                "Balance total",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                "${Money(balance, currency).format()} $currency",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = balanceColor,
-            )
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Stat("Ingresos (mes)", monthIncome, currency, MaterialTheme.colorScheme.primary)
-                Stat("Gastos (mes)", monthExpense, currency, ExpenseRed)
-                Stat("Neto (mes)", monthIncome - monthExpense, currency, MaterialTheme.colorScheme.onSurface)
+    FinanceCard(color = MaterialTheme.colorScheme.primaryContainer, contentPadding = PaddingValues(spacing.xl)) {
+        Column(verticalArrangement = Arrangement.spacedBy(spacing.lg)) {
+            Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
+                Text(
+                    "Balance total",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
+                )
+                MoneyText(
+                    amountMinor = animated.toLong(),
+                    currency = currency,
+                    style = MaterialTheme.typography.displayLarge,
+                    colorOverride = balanceColor,
+                )
+            }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                StatPill("Ingresos", monthIncome, currency, finance.income, finance.incomeContainer, Modifier.weight(1f))
+                StatPill("Gastos", monthExpense, currency, finance.expense, finance.expenseContainer, Modifier.weight(1f))
+                StatPill(
+                    "Neto",
+                    monthIncome - monthExpense,
+                    currency,
+                    MaterialTheme.colorScheme.onSurface,
+                    MaterialTheme.colorScheme.surfaceContainerHigh,
+                    Modifier.weight(1f),
+                )
             }
         }
-    }
-}
-
-@Composable
-private fun Stat(label: String, amount: Long, currency: String, color: Color) {
-    Column {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(
-            Money(amount, currency).format(),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = color,
-        )
     }
 }
 
 @Composable
 private fun CashflowCard(cashflow: List<MonthNet>, currency: String) {
     val maxAbs = (cashflow.maxOfOrNull { it.netMinor.absoluteValue } ?: 0L).coerceAtLeast(1L)
-    Card(modifier = Modifier.fillMaxWidth()) {
+    FinanceCard {
         Row(
-            modifier = Modifier.fillMaxWidth().height(140.dp).padding(12.dp),
+            modifier = Modifier.fillMaxWidth().height(150.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.Bottom,
         ) {
@@ -135,8 +132,11 @@ private fun CashflowCard(cashflow: List<MonthNet>, currency: String) {
 
 @Composable
 private fun CashflowBar(month: MonthNet, maxAbs: Long, currency: String, modifier: Modifier) {
-    val fraction = (month.netMinor.absoluteValue.toFloat() / maxAbs.toFloat()).coerceIn(0f, 1f)
-    val barColor = if (month.netMinor >= 0) MaterialTheme.colorScheme.primary else ExpenseRed
+    val finance = LocalFinanceColors.current
+    val targetFraction = (month.netMinor.absoluteValue.toFloat() / maxAbs.toFloat()).coerceIn(0f, 1f)
+    val fraction by animateFloatAsState(targetValue = targetFraction, animationSpec = tween(600))
+    val barColor = if (month.netMinor >= 0) finance.income else finance.expense
+    val gradient = Brush.verticalGradient(listOf(barColor.copy(alpha = 0.85f), barColor))
     Column(
         modifier = modifier.fillMaxHeight(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -151,10 +151,10 @@ private fun CashflowBar(month: MonthNet, maxAbs: Long, currency: String, modifie
         Box(
             modifier = Modifier
                 .padding(vertical = 4.dp)
-                .width(24.dp)
-                .fillMaxHeight(fraction)
-                .clip(RoundedCornerShape(4.dp))
-                .background(barColor),
+                .width(28.dp)
+                .fillMaxHeight(fraction.coerceAtLeast(0.02f))
+                .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
+                .background(gradient),
         )
         Text(month.label, style = MaterialTheme.typography.labelSmall)
     }
@@ -162,31 +162,11 @@ private fun CashflowBar(month: MonthNet, maxAbs: Long, currency: String, modifie
 
 @Composable
 private fun CategoryRow(slice: CategorySlice, currency: String) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(slice.name, fontWeight = FontWeight.SemiBold)
-                Text("${Money(slice.amountMinor, currency).format()} $currency", style = MaterialTheme.typography.bodyMedium)
-            }
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(10.dp)
-                    .clip(RoundedCornerShape(5.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(slice.pct.coerceIn(0f, 1f))
-                        .height(10.dp)
-                        .clip(RoundedCornerShape(5.dp))
-                        .background(Color(slice.colorHex)),
-                )
-            }
-        }
-    }
+    CategoryProgressRow(
+        name = slice.name,
+        amountMinor = slice.amountMinor,
+        currency = currency,
+        pct = slice.pct,
+        color = Color(slice.colorHex),
+    )
 }

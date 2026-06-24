@@ -1,6 +1,13 @@
 package com.finanzen.ui.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material3.FabPosition
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -65,18 +72,27 @@ fun AppNav() {
                 }
             }
         },
+        floatingActionButton = {
+            if (showBottomBar) {
+                FloatingActionButton(onClick = { navController.navigate("tx_form") }) {
+                    Icon(Icons.Outlined.Add, contentDescription = "Agregar transacción")
+                }
+            }
+        },
+        floatingActionButtonPosition = FabPosition.Center,
     ) { inner ->
         NavHost(
             navController = navController,
             startDestination = TopDestination.Dashboard.route,
             modifier = Modifier.padding(inner),
+            enterTransition = { fadeIn(tween(220)) },
+            exitTransition = { fadeOut(tween(180)) },
+            popEnterTransition = { fadeIn(tween(220)) },
+            popExitTransition = { fadeOut(tween(180)) },
         ) {
             composable(TopDestination.Dashboard.route) { DashboardScreen() }
             composable(TopDestination.Transactions.route) {
-                TransactionsScreen(
-                    onAdd = { navController.navigate("tx_form") },
-                    onEdit = { id -> navController.navigate("tx_form/$id") },
-                )
+                TransactionsScreen(onEdit = { id -> navController.navigate("tx_form/$id") })
             }
             composable(TopDestination.Cards.route) { CardsScreen() }
             composable(TopDestination.Analysis.route) { AnalysisScreen() }
