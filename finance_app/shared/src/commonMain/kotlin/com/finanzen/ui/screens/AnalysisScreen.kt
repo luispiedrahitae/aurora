@@ -7,9 +7,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,6 +19,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.finanzen.domain.Money
 import com.finanzen.ui.components.CategoryPieChart
+import com.finanzen.ui.components.FinanceCard
+import com.finanzen.ui.components.SectionHeader
+import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.viewmodel.AnalysisViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -35,14 +36,7 @@ fun AnalysisScreen(vm: AnalysisViewModel = koinViewModel()) {
     ) {
         item { TotalsCard(income = data.totalIncomeMinor, expense = data.totalExpenseMinor, currency = data.currency) }
 
-        item {
-            Text(
-                "Gasto por categoría",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(top = 4.dp),
-            )
-        }
+        item { SectionHeader("Gasto por categoría") }
 
         if (data.byCategory.isEmpty()) {
             item {
@@ -54,8 +48,8 @@ fun AnalysisScreen(vm: AnalysisViewModel = koinViewModel()) {
             }
         } else {
             item {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Box(modifier = Modifier.padding(16.dp)) {
+                FinanceCard(modifier = Modifier.fillMaxWidth()) {
+                    Box {
                         CategoryPieChart(data.byCategory, currency = data.currency)
                     }
                 }
@@ -66,11 +60,12 @@ fun AnalysisScreen(vm: AnalysisViewModel = koinViewModel()) {
 
 @Composable
 private fun TotalsCard(income: Long, expense: Long, currency: String) {
+    val finance = LocalFinanceColors.current
     val net = income - expense
-    val netColor = if (net >= 0) MaterialTheme.colorScheme.primary else Color(0xFFB13E53)
+    val netColor = if (net >= 0) finance.income else finance.expense
 
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    FinanceCard(modifier = Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Balance del periodo", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
                 Money(net, currency).format() + " " + currency,
@@ -79,8 +74,8 @@ private fun TotalsCard(income: Long, expense: Long, currency: String) {
                 color = netColor,
             )
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                StatColumn(label = "Ingresos", amount = income, currency = currency, color = MaterialTheme.colorScheme.primary)
-                StatColumn(label = "Gastos", amount = expense, currency = currency, color = Color(0xFFB13E53))
+                StatColumn(label = "Ingresos", amount = income, currency = currency, color = finance.income)
+                StatColumn(label = "Gastos", amount = expense, currency = currency, color = finance.expense)
                 StatColumn(
                     label = "Ratio",
                     amount = null,

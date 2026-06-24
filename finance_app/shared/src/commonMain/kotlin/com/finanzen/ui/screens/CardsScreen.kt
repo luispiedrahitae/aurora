@@ -13,7 +13,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material3.Card
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,6 +28,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.finanzen.db.InstallmentPlan
 import com.finanzen.domain.Money
+import com.finanzen.ui.components.FinanceCard
+import com.finanzen.ui.components.SectionHeader
 import com.finanzen.viewmodel.CardsViewModel
 import org.koin.compose.viewmodel.koinViewModel
 import com.finanzen.db.Card as CardEntity
@@ -78,16 +79,6 @@ fun CardsScreen(vm: CardsViewModel = koinViewModel()) {
 }
 
 @Composable
-private fun SectionHeader(text: String) {
-    Text(
-        text,
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
-    )
-}
-
-@Composable
 private fun EmptyHint(text: String) {
     Box(Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) {
         Text(
@@ -100,9 +91,9 @@ private fun EmptyHint(text: String) {
 
 @Composable
 private fun CardItem(card: CardEntity, planCount: Int, onDelete: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(12.dp)) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.Top,
         ) {
             Column(modifier = Modifier.weight(1f)) {
@@ -135,9 +126,9 @@ private fun CardItem(card: CardEntity, planCount: Int, onDelete: () -> Unit) {
 
 @Composable
 private fun InstallmentItem(plan: InstallmentPlan, cardLast4: String, onDelete: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(12.dp)) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.Top,
         ) {
             Column(modifier = Modifier.weight(1f)) {

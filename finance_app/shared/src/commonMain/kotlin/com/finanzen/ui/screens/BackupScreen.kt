@@ -11,8 +11,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -28,11 +26,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.finanzen.ui.components.FinanceCard
+import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.viewmodel.BackupViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -65,8 +64,8 @@ fun BackupScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                FinanceCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Exportar", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium)
                         Text(
                             "Cifra toda la DB con AES-256-GCM. La clave se deriva de tu passphrase con PBKDF2 (100k iteraciones). Mínimo 8 caracteres.",
@@ -88,8 +87,8 @@ fun BackupScreen(
             }
 
             item {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                FinanceCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Importar", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium)
                         Text(
                             "Restaura TODA la DB desde un archivo .finzbkp. Esto reemplaza tus datos actuales.",
@@ -119,13 +118,11 @@ fun BackupScreen(
 
             status?.let { s ->
                 item {
-                    val container = if (s.isError) Color(0xFFFFE0E0) else MaterialTheme.colorScheme.primaryContainer
-                    val fg = if (s.isError) Color(0xFFB13E53) else MaterialTheme.colorScheme.onPrimaryContainer
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = container),
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    val finance = LocalFinanceColors.current
+                    val container = if (s.isError) finance.expenseContainer else MaterialTheme.colorScheme.primaryContainer
+                    val fg = if (s.isError) finance.expense else MaterialTheme.colorScheme.onPrimaryContainer
+                    FinanceCard(modifier = Modifier.fillMaxWidth(), color = container, contentPadding = PaddingValues(12.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(if (s.isError) "Error" else "Éxito", color = fg, fontWeight = FontWeight.SemiBold)
                             Text(s.message, style = MaterialTheme.typography.bodySmall, color = fg)
                             Button(onClick = { vm.clearStatus() }) { Text("OK") }

@@ -29,10 +29,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.viewmodel.SecurityViewModel
 
 private const val PIN_MAX = 8
@@ -41,6 +41,7 @@ private const val PIN_MAX = 8
 fun LockScreen(vm: SecurityViewModel) {
     var entered by remember { mutableStateOf("") }
     val error by vm.attemptError.collectAsState()
+    val finance = LocalFinanceColors.current
 
     LaunchedEffect(entered) {
         if (entered.length in 4..PIN_MAX) {
@@ -71,7 +72,7 @@ fun LockScreen(vm: SecurityViewModel) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             PinDots(entered.length, max = PIN_MAX)
-            error?.let { Text(it, color = Color(0xFFB13E53), style = MaterialTheme.typography.bodyMedium) }
+            error?.let { Text(it, color = finance.expense, style = MaterialTheme.typography.bodyMedium) }
             Keypad(
                 onDigit = { d -> if (entered.length < PIN_MAX) entered += d },
                 onBackspace = { entered = entered.dropLast(1) },

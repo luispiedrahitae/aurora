@@ -14,7 +14,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -32,11 +31,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.finanzen.domain.Money
+import com.finanzen.ui.components.FinanceCard
+import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.viewmodel.BudgetRow
 import com.finanzen.viewmodel.BudgetsViewModel
 import org.koin.compose.viewmodel.koinViewModel
@@ -91,10 +91,11 @@ private fun BudgetRowCard(row: BudgetRow, onSetLimit: (Long, Long) -> Unit) {
     val hasLimit = row.limitMinor > 0
     val fraction = if (hasLimit) (row.spentMinor.toFloat() / row.limitMinor.toFloat()).coerceIn(0f, 1f) else 0f
     val over = hasLimit && row.spentMinor > row.limitMinor
-    val barColor = if (over) Color(0xFFB13E53) else MaterialTheme.colorScheme.primary
+    val finance = LocalFinanceColors.current
+    val barColor = if (over) finance.expense else MaterialTheme.colorScheme.primary
 
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(12.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(row.categoryName, fontWeight = FontWeight.SemiBold)
             Text(
                 if (hasLimit) {
@@ -103,7 +104,7 @@ private fun BudgetRowCard(row: BudgetRow, onSetLimit: (Long, Long) -> Unit) {
                     "Gastado ${Money(row.spentMinor, "").format()} · sin presupuesto"
                 },
                 style = MaterialTheme.typography.bodySmall,
-                color = if (over) Color(0xFFB13E53) else MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (over) finance.expense else MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (hasLimit) {
                 LinearProgressIndicator(progress = { fraction }, modifier = Modifier.fillMaxWidth(), color = barColor)

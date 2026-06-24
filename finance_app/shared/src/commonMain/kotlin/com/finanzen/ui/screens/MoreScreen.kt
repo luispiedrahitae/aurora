@@ -1,6 +1,5 @@
 package com.finanzen.ui.screens
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -19,7 +18,6 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.PieChart
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -29,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.finanzen.ui.components.FinanceCard
 
 data class MoreItem(val title: String, val subtitle: String, val icon: ImageVector, val enabled: Boolean, val onClick: () -> Unit)
 
@@ -76,13 +75,12 @@ fun MoreScreen(onNavigate: (route: String) -> Unit) {
 @Composable
 private fun MoreRow(item: MoreItem) {
     val containerAlpha = if (item.enabled) 1.0f else 0.55f
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(enabled = item.enabled, onClick = item.onClick),
+    FinanceCard(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = item.onClick.takeIf { item.enabled },
     ) {
         androidx.compose.foundation.layout.Row(
-            modifier = Modifier.padding(12.dp).fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(

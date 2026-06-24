@@ -11,7 +11,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,11 +28,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.finanzen.ui.components.FinanceCard
+import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.viewmodel.SecurityViewModel
 import org.koin.compose.koinInject
 
@@ -64,8 +64,8 @@ fun SecuritySettingsScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                FinanceCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         androidx.compose.foundation.layout.Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -120,8 +120,8 @@ fun SecuritySettingsScreen(
             }
 
             item {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                FinanceCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("Biometría", fontWeight = FontWeight.SemiBold)
                         Text(
                             "No disponible en el preview de escritorio. En Android se conectará a BiometricPrompt; en iOS a LocalAuthentication.",
@@ -140,9 +140,10 @@ private fun PinSetupCard(onCancel: () -> Unit, onSave: (String) -> Boolean) {
     var pin by remember { mutableStateOf("") }
     var confirm by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
+    val finance = LocalFinanceColors.current
 
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    FinanceCard(modifier = Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Define tu PIN", fontWeight = FontWeight.SemiBold)
             Text(
                 "4 a 8 dígitos. Necesario para volver a abrir la app.",
@@ -165,7 +166,7 @@ private fun PinSetupCard(onCancel: () -> Unit, onSave: (String) -> Boolean) {
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
             )
-            error?.let { Text(it, color = Color(0xFFB13E53), style = MaterialTheme.typography.bodySmall) }
+            error?.let { Text(it, color = finance.expense, style = MaterialTheme.typography.bodySmall) }
             androidx.compose.foundation.layout.Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth(),

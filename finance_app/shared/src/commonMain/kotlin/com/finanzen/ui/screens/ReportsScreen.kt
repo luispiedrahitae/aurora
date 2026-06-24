@@ -12,7 +12,6 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.PictureAsPdf
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -24,9 +23,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.finanzen.ui.components.FinanceCard
+import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.viewmodel.ReportsViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -89,8 +89,8 @@ private fun ReportCard(
     buttonText: String,
     onClick: () -> Unit,
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    FinanceCard(modifier = Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 Text(
@@ -108,13 +108,11 @@ private fun ReportCard(
 
 @Composable
 private fun StatusBanner(message: String, isError: Boolean, onDismiss: () -> Unit) {
-    val container = if (isError) Color(0xFFFFE0E0) else MaterialTheme.colorScheme.primaryContainer
-    val fg = if (isError) Color(0xFFB13E53) else MaterialTheme.colorScheme.onPrimaryContainer
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = container),
-    ) {
-        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    val finance = LocalFinanceColors.current
+    val container = if (isError) finance.expenseContainer else MaterialTheme.colorScheme.primaryContainer
+    val fg = if (isError) finance.expense else MaterialTheme.colorScheme.onPrimaryContainer
+    FinanceCard(modifier = Modifier.fillMaxWidth(), color = container, contentPadding = PaddingValues(12.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(if (isError) "Pendiente / error" else "Exportado", color = fg, fontWeight = FontWeight.SemiBold)
             Text(message, style = MaterialTheme.typography.bodySmall, color = fg)
             Button(onClick = onDismiss) { Text("OK") }

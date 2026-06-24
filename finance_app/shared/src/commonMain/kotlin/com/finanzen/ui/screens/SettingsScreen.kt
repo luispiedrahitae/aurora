@@ -11,7 +11,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -27,6 +26,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.finanzen.ui.components.FinanceCard
+import com.finanzen.ui.components.SectionHeader
 import com.finanzen.viewmodel.SettingsViewModel
 import com.finanzen.viewmodel.ThemeMode
 import org.koin.compose.koinInject
@@ -56,11 +57,9 @@ fun SettingsScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            item { SectionHeader("Tema") }
             item {
-                Text("Tema", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
-            }
-            item {
-                Card(modifier = Modifier.fillMaxWidth()) {
+                FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(0.dp)) {
                     Column {
                         ThemeOption("Sistema", "Sigue el modo claro/oscuro del dispositivo", ThemeMode.SYSTEM, theme, vm::setTheme)
                         ThemeOption("Claro", "Siempre claro", ThemeMode.LIGHT, theme, vm::setTheme)

@@ -14,14 +14,14 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -35,6 +35,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.finanzen.db.Category
+import com.finanzen.ui.components.FinanceCard
+import com.finanzen.ui.components.SectionHeader
 import com.finanzen.viewmodel.CategoriesViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -68,12 +70,20 @@ fun CategoriesScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                FinanceCard(modifier = Modifier.fillMaxWidth()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Nueva categoría", fontWeight = FontWeight.SemiBold)
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            FilterChip(selected = kind == "EXPENSE", onClick = { kind = "EXPENSE" }, label = { Text("Gasto") })
-                            FilterChip(selected = kind == "INCOME", onClick = { kind = "INCOME" }, label = { Text("Ingreso") })
+                        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                            SegmentedButton(
+                                selected = kind == "EXPENSE",
+                                onClick = { kind = "EXPENSE" },
+                                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                            ) { Text("Gasto") }
+                            SegmentedButton(
+                                selected = kind == "INCOME",
+                                onClick = { kind = "INCOME" },
+                                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                            ) { Text("Ingreso") }
                         }
                         OutlinedTextField(
                             value = name,
@@ -110,9 +120,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.categoryGroup(
     onDelete: (Long) -> Unit,
 ) {
     if (parents.isEmpty()) return
-    item {
-        Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-    }
+    item { SectionHeader(title) }
     items(parents, key = { it.id }) { parent ->
         val children = all.filter { it.parentId == parent.id }
         CategoryCard(parent, children, onDelete)
@@ -121,8 +129,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.categoryGroup(
 
 @Composable
 private fun CategoryCard(parent: Category, children: List<Category>, onDelete: (Long) -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(12.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             CategoryRow(parent, onDelete)
             children.forEach { child ->
                 Row(modifier = Modifier.padding(start = 16.dp)) { CategoryRow(child, onDelete) }

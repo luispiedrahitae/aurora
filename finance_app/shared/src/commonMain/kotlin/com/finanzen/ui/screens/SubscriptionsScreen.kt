@@ -13,7 +13,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -30,6 +29,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.finanzen.domain.Money
+import com.finanzen.ui.components.FinanceCard
+import com.finanzen.ui.components.SectionHeader
 import com.finanzen.viewmodel.SubscriptionsViewModel
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
@@ -77,7 +78,7 @@ fun SubscriptionsScreen(
             contentPadding = PaddingValues(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            item { SectionTitle("Suscripciones (${subs.size})") }
+            item { SectionHeader("Suscripciones (${subs.size})") }
             if (subs.isEmpty()) {
                 item { EmptyText("Sin suscripciones. Usa + para añadir una de muestra.") }
             } else {
@@ -95,7 +96,7 @@ fun SubscriptionsScreen(
                 }
             }
 
-            item { SectionTitle("Gastos recurrentes (${recur.size})") }
+            item { SectionHeader("Gastos recurrentes (${recur.size})") }
             if (recur.isEmpty()) {
                 item { EmptyText("Sin recurrentes. Usa + para añadir un gasto fijo.") }
             } else {
@@ -114,16 +115,6 @@ fun SubscriptionsScreen(
             }
         }
     }
-}
-
-@Composable
-private fun SectionTitle(text: String) {
-    Text(
-        text,
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
-    )
 }
 
 @Composable
@@ -155,8 +146,8 @@ private fun ScheduleItem(
         daysUntil == 1L -> "mañana"
         else -> "en ${daysUntil}d"
     }
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Box(Modifier.padding(12.dp)) {
+    FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(12.dp)) {
+        Box {
             Column {
                 Text(title, fontWeight = FontWeight.SemiBold)
                 Text(
