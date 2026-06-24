@@ -32,7 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.finanzen.domain.Money
-import com.finanzen.ui.components.LabeledDropdown
+import com.finanzen.ui.components.PickerField
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.viewmodel.TransactionsViewModel
 import kotlinx.datetime.Clock
@@ -109,20 +109,24 @@ fun TransactionFormScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            LabeledDropdown(
+            PickerField(
                 label = "Cuenta",
                 options = accounts,
                 selected = selectedAccount,
                 optionLabel = { "${it.name} (${it.currency})" },
                 onSelect = { accountId = it.id },
+                placeholder = "Selecciona cuenta",
+                emptyHint = "Crea una cuenta primero (pestaña Más › Cuentas).",
             )
 
-            LabeledDropdown(
+            PickerField(
                 label = "Categoría (opcional)",
                 options = categoryOptions,
                 selected = selectedCategory,
                 optionLabel = { it.name },
                 onSelect = { categoryId = it.id },
+                placeholder = "Sin categoría",
+                emptyHint = "No hay categorías de ${if (kind == "EXPENSE") "gasto" else "ingreso"}.",
             )
 
             OutlinedTextField(

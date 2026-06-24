@@ -21,7 +21,7 @@ fun FinanZenTheme(darkTheme: Boolean = false, content: @Composable () -> Unit) {
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = FinanZenTypography,
+            typography = finanZenTypography(),
             shapes = FinanZenShapes,
             content = content,
         )
