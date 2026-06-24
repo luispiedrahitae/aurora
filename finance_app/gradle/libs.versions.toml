@@ -1,0 +1,71 @@
+[versions]
+kotlin = "2.1.0"
+agp = "8.7.3"
+compose-mp = "1.7.3"
+sqldelight = "2.0.2"
+coroutines = "1.10.1"
+serialization = "1.7.3"
+datetime = "0.6.1"
+koin = "4.0.0"
+lifecycle = "2.8.4"
+nav = "2.8.0-alpha10"
+koalaplot = "0.9.0"
+coil = "3.0.4"
+work = "2.10.0"
+biometric = "1.2.0-alpha05"
+activity = "1.9.3"
+detekt = "1.23.7"
+spotless = "6.25.0"
+ktlint = "1.4.1"
+skiko = "0.9.4.2"
+
+[libraries]
+kotlinx-coroutines-core    = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+kotlinx-coroutines-test    = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
+kotlinx-coroutines-swing   = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "coroutines" }
+kotlinx-datetime           = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "datetime" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
+
+sqldelight-runtime         = { module = "app.cash.sqldelight:runtime", version.ref = "sqldelight" }
+sqldelight-coroutines-ext  = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
+sqldelight-driver-android  = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
+sqldelight-driver-native   = { module = "app.cash.sqldelight:native-driver", version.ref = "sqldelight" }
+sqldelight-driver-sqlite   = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight" }
+
+koin-core              = { module = "io.insert-koin:koin-core",              version.ref = "koin" }
+koin-compose           = { module = "io.insert-koin:koin-compose",           version.ref = "koin" }
+koin-compose-viewmodel = { module = "io.insert-koin:koin-compose-viewmodel", version.ref = "koin" }
+koin-android           = { module = "io.insert-koin:koin-android",           version.ref = "koin" }
+
+androidx-lifecycle-viewmodel = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+androidx-navigation-compose  = { module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "nav" }
+androidx-activity-compose    = { module = "androidx.activity:activity-compose", version.ref = "activity" }
+androidx-work-runtime        = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
+androidx-biometric           = { module = "androidx.biometric:biometric-ktx", version.ref = "biometric" }
+
+koalaplot-core = { module = "io.github.koalaplot:koalaplot-core", version.ref = "koalaplot" }
+
+coil-compose      = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
+coil-network-ktor = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil" }
+
+detekt-formatting = { module = "io.gitlab.arturbosch.detekt:detekt-formatting", version.ref = "detekt" }
+
+# Match Skiko native binary to the resolved skiko-awt jar version.
+# nav-compose KMP alpha + Compose 1.7.3 currently produce a jar/native mismatch otherwise.
+skiko-awt-runtime-windows-x64 = { module = "org.jetbrains.skiko:skiko-awt-runtime-windows-x64", version.ref = "skiko" }
+skiko-awt-runtime-macos-arm64 = { module = "org.jetbrains.skiko:skiko-awt-runtime-macos-arm64", version.ref = "skiko" }
+skiko-awt-runtime-macos-x64   = { module = "org.jetbrains.skiko:skiko-awt-runtime-macos-x64", version.ref = "skiko" }
+skiko-awt-runtime-linux-x64   = { module = "org.jetbrains.skiko:skiko-awt-runtime-linux-x64", version.ref = "skiko" }
+
+[plugins]
+kotlinMultiplatform  = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlinAndroid        = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlinJvm            = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlinSerialization  = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+composeCompiler      = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+androidApplication   = { id = "com.android.application", version.ref = "agp" }
+androidLibrary       = { id = "com.android.library", version.ref = "agp" }
+composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "compose-mp" }
+sqldelight           = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
+detekt               = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+spotless             = { id = "com.diffplug.spotless", version.ref = "spotless" }

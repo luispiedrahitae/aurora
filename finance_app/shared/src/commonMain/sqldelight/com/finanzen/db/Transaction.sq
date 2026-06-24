@@ -1,0 +1,53 @@
+CREATE TABLE TransactionRow (
+    id                  INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    accountId           INTEGER NOT NULL REFERENCES Account(id),
+    categoryId          INTEGER REFERENCES Category(id),
+    amountMinor         INTEGER NOT NULL,
+    currency            TEXT NOT NULL REFERENCES Currency(code),
+    date                INTEGER NOT NULL,                     -- epoch day
+    note                TEXT NOT NULL DEFAULT '',
+    kind                TEXT NOT NULL,                        -- INCOME | EXPENSE | TRANSFER
+    transferAccountId   INTEGER REFERENCES Account(id),
+    installmentPlanId   INTEGER REFERENCES InstallmentPlan(id) ON DELETE SET NULL
+);
+
+CREATE INDEX TransactionRow_date_idx ON TransactionRow(date);
+CREATE INDEX TransactionRow_category_idx ON TransactionRow(categoryId);
+CREATE INDEX TransactionRow_account_idx ON TransactionRow(accountId);
+
+selectAll:
+SELECT * FROM TransactionRow ORDER BY date DESC, id DESC;
+
+selectBetween:
+SELECT * FROM TransactionRow WHERE date BETWEEN :start AND :end ORDER BY date DESC, id DESC;
+
+selectById:
+SELECT * FROM TransactionRow WHERE id = ?;
+
+selectByAccount:
+SELECT * FROM TransactionRow WHERE accountId = ? ORDER BY date DESC, id DESC;
+
+sumByCategoryBetween:
+SELECT categoryId, kind, SUM(amountMinor) AS totalMinor
+FROM TransactionRow
+WHERE date BETWEEN :start AND :end
+GROUP BY categoryId, kind;
+
+monthlyCashflow:
+SELECT (date / 30) AS bucket, kind, SUM(amountMinor) AS totalMinor
+FROM TransactionRow
+WHERE date BETWEEN :start AND :end
+GROUP BY bucket, kind
+ORDER BY bucket;
+
+insert:
+INSERT INTO TransactionRow(accountId, categoryId, amountMinor, currency, date, note, kind, transferAccountId, installmentPlanId)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+update:
+UPDATE TransactionRow
+SET accountId = ?, categoryId = ?, amountMinor = ?, currency = ?, date = ?, note = ?, kind = ?, transferAccountId = ?, installmentPlanId = ?
+WHERE id = ?;
+
+delete:
+DELETE FROM TransactionRow WHERE id = ?;

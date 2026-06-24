@@ -1,0 +1,30 @@
+CREATE TABLE InstallmentPlan (
+    id                INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    cardId            INTEGER NOT NULL REFERENCES Card(id) ON DELETE CASCADE,
+    totalAmountMinor  INTEGER NOT NULL,
+    installments      INTEGER NOT NULL,
+    interestRate      REAL NOT NULL DEFAULT 0.0,
+    startDate         INTEGER NOT NULL,                  -- epoch day
+    description       TEXT NOT NULL DEFAULT ''
+);
+
+selectAll:
+SELECT * FROM InstallmentPlan ORDER BY startDate DESC;
+
+selectById:
+SELECT * FROM InstallmentPlan WHERE id = ?;
+
+selectByCard:
+SELECT * FROM InstallmentPlan WHERE cardId = ? ORDER BY startDate DESC;
+
+insert:
+INSERT INTO InstallmentPlan(cardId, totalAmountMinor, installments, interestRate, startDate, description)
+VALUES (?, ?, ?, ?, ?, ?);
+
+update:
+UPDATE InstallmentPlan
+SET cardId = ?, totalAmountMinor = ?, installments = ?, interestRate = ?, startDate = ?, description = ?
+WHERE id = ?;
+
+delete:
+DELETE FROM InstallmentPlan WHERE id = ?;

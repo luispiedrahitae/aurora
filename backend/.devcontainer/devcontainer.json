@@ -1,7 +1,0 @@
-{
-	"name": "containers",
-	"build": {
-		"dockerfile": "Dockerfile",
-		"context": ".."
-	}
-}

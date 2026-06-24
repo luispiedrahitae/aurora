@@ -1,0 +1,40 @@
+build:
+  maxIssues: 0
+  excludeCorrectable: false
+
+complexity:
+  LongMethod:
+    threshold: 80
+  LongParameterList:
+    functionThreshold: 8
+    constructorThreshold: 8
+  CyclomaticComplexMethod:
+    threshold: 20
+  TooManyFunctions:
+    thresholdInClasses: 25
+    thresholdInFiles: 25
+
+style:
+  MagicNumber:
+    ignoreNumbers: ['-1', '0', '1', '2', '10', '100', '1000']
+    ignoreEnums: true
+    ignoreRanges: true
+  ReturnCount:
+    max: 4
+  ForbiddenComment:
+    active: false
+  UnusedPrivateMember:
+    active: true
+
+formatting:
+  active: true
+  android: true
+  autoCorrect: false
+  MaximumLineLength:
+    maxLineLength: 140
+
+naming:
+  FunctionNaming:
+    # PascalCase permitido (Composables); además ignora funciones @Composable explícitamente.
+    functionPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    ignoreAnnotated: ['Composable']

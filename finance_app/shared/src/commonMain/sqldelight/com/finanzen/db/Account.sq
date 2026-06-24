@@ -1,0 +1,29 @@
+CREATE TABLE Account (
+    id                   INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    name                 TEXT NOT NULL,
+    type                 TEXT NOT NULL,           -- CASH | DEBIT | CREDIT | SAVINGS
+    currency             TEXT NOT NULL REFERENCES Currency(code),
+    openingBalanceMinor  INTEGER NOT NULL DEFAULT 0,
+    color                INTEGER NOT NULL DEFAULT 0,
+    archived             INTEGER NOT NULL DEFAULT 0
+);
+
+selectAll:
+SELECT * FROM Account WHERE archived = 0 ORDER BY name;
+
+selectById:
+SELECT * FROM Account WHERE id = ?;
+
+insert:
+INSERT INTO Account(name, type, currency, openingBalanceMinor, color, archived)
+VALUES (?, ?, ?, ?, ?, ?);
+
+update:
+UPDATE Account SET name = ?, type = ?, currency = ?, openingBalanceMinor = ?, color = ?, archived = ?
+WHERE id = ?;
+
+archive:
+UPDATE Account SET archived = 1 WHERE id = ?;
+
+delete:
+DELETE FROM Account WHERE id = ?;

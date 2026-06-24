@@ -1,0 +1,30 @@
+CREATE TABLE Category (
+    id        INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    parentId  INTEGER REFERENCES Category(id) ON DELETE CASCADE,
+    name      TEXT NOT NULL,
+    icon      TEXT NOT NULL DEFAULT '',
+    color     INTEGER NOT NULL DEFAULT 0,
+    kind      TEXT NOT NULL                     -- INCOME | EXPENSE
+);
+
+selectAll:
+SELECT * FROM Category ORDER BY kind, name;
+
+-- SQLite ASC ya ordena NULLs primero, no hace falta NULLS FIRST (no soportado en sqlite_3_18).
+selectByKind:
+SELECT * FROM Category WHERE kind = ? ORDER BY parentId ASC, name;
+
+selectChildren:
+SELECT * FROM Category WHERE parentId = ? ORDER BY name;
+
+selectById:
+SELECT * FROM Category WHERE id = ?;
+
+insert:
+INSERT INTO Category(parentId, name, icon, color, kind) VALUES (?, ?, ?, ?, ?);
+
+update:
+UPDATE Category SET parentId = ?, name = ?, icon = ?, color = ?, kind = ? WHERE id = ?;
+
+delete:
+DELETE FROM Category WHERE id = ?;

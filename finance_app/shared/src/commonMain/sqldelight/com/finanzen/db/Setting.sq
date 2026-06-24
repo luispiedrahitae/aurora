@@ -1,0 +1,16 @@
+CREATE TABLE Setting (
+    key    TEXT NOT NULL PRIMARY KEY,
+    value  TEXT NOT NULL
+);
+
+selectAll:
+SELECT * FROM Setting;
+
+get:
+SELECT value FROM Setting WHERE key = ?;
+
+put:
+INSERT OR REPLACE INTO Setting(key, value) VALUES (?, ?);
+
+delete:
+DELETE FROM Setting WHERE key = ?;

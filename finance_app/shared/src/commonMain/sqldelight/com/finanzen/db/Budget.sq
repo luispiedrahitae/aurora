@@ -1,0 +1,24 @@
+CREATE TABLE Budget (
+    id           INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    categoryId   INTEGER NOT NULL REFERENCES Category(id) ON DELETE CASCADE,
+    periodMonth  INTEGER NOT NULL,                       -- YYYYMM, e.g. 202606
+    limitMinor   INTEGER NOT NULL,
+    UNIQUE(categoryId, periodMonth)
+);
+
+selectAll:
+SELECT * FROM Budget ORDER BY periodMonth DESC, categoryId;
+
+selectByPeriod:
+SELECT * FROM Budget WHERE periodMonth = ?;
+
+selectById:
+SELECT * FROM Budget WHERE id = ?;
+
+-- ponytail: INSERT OR REPLACE re-inserta el row (id cambia). Aceptable porque la clave funcional es (categoryId, periodMonth).
+-- Subir a UPSERT (ON CONFLICT DO UPDATE) cuando minSdk >= 30 o el dialecto SQLDelight pase a sqlite_3_24+.
+upsert:
+INSERT OR REPLACE INTO Budget(categoryId, periodMonth, limitMinor) VALUES (?, ?, ?);
+
+delete:
+DELETE FROM Budget WHERE id = ?;

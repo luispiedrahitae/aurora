@@ -1,0 +1,66 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+local.properties
+.fleet/
+.kotlin/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Android
+*.apk
+*.aab
+*.ap_
+*.dex
+captures/
+output.json
+release/
+
+# Keystore
+*.jks
+*.keystore
+keystore.properties
+finanzen-keystore.properties
+
+# Xcode / iOS
+iosApp/build/
+iosApp/Pods/
+iosApp/*.xcworkspace/xcuserdata/
+iosApp/**/xcuserdata/
+iosApp/*.xcodeproj/xcuserdata/
+iosApp/*.xcodeproj/project.xcworkspace/xcuserdata/
+DerivedData/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Compose Desktop
+desktopApp/build/
+**/distributions/
+
+# CocoaPods
+Pods/
+
+# Misc
+*.log
+.env
+.env.local
+
+# Claude Code local tooling (settings.json with hooks is kept)
+.claude/settings.local.json
+.claude/skills/
+
+# Graphify regenerable cache (graph.json/report kept, raw AST cache is not)
+graphify-out/cache/

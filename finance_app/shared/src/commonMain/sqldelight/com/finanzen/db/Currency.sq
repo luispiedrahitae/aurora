@@ -1,0 +1,18 @@
+CREATE TABLE Currency (
+    code        TEXT NOT NULL PRIMARY KEY,
+    symbol      TEXT NOT NULL,
+    decimals    INTEGER NOT NULL DEFAULT 2,
+    rateToBase  REAL NOT NULL DEFAULT 1.0
+);
+
+selectAll:
+SELECT * FROM Currency ORDER BY code;
+
+selectByCode:
+SELECT * FROM Currency WHERE code = ?;
+
+upsert:
+INSERT OR REPLACE INTO Currency(code, symbol, decimals, rateToBase) VALUES (?, ?, ?, ?);
+
+delete:
+DELETE FROM Currency WHERE code = ?;

@@ -1,0 +1,29 @@
+CREATE TABLE Card (
+    id                INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    accountId         INTEGER NOT NULL REFERENCES Account(id) ON DELETE CASCADE,
+    last4             TEXT NOT NULL,
+    network           TEXT NOT NULL,             -- VISA | MASTERCARD | AMEX | OTHER
+    creditLimitMinor  INTEGER,                   -- NULL para débito
+    cutoffDay         INTEGER,                   -- día de corte
+    dueDay            INTEGER                    -- día de pago
+);
+
+selectAll:
+SELECT * FROM Card ORDER BY id;
+
+selectByAccount:
+SELECT * FROM Card WHERE accountId = ?;
+
+selectById:
+SELECT * FROM Card WHERE id = ?;
+
+insert:
+INSERT INTO Card(accountId, last4, network, creditLimitMinor, cutoffDay, dueDay)
+VALUES (?, ?, ?, ?, ?, ?);
+
+update:
+UPDATE Card SET accountId = ?, last4 = ?, network = ?, creditLimitMinor = ?, cutoffDay = ?, dueDay = ?
+WHERE id = ?;
+
+delete:
+DELETE FROM Card WHERE id = ?;
