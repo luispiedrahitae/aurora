@@ -57,17 +57,19 @@ actual class NotificationScheduler(private val context: Context) {
     }
 }
 
-// ponytail: stub. Migrar a MediaStore + PdfDocument cuando lleguemos a release Android.
-actual class ReportExporter(@Suppress("unused") private val context: Context) {
-    actual fun saveCsv(suggestedName: String, content: String): String {
-        Log.d("FinanZen", "[REPORT-Android stub] saveCsv '$suggestedName' (${content.length} chars)")
-        return "stub: pendiente integrar MediaStore"
-    }
+/** Exporta reportes a la carpeta Descargas: CSV directo y PDF renderizado con PdfDocument. */
+actual class ReportExporter(private val context: Context) {
+    actual fun saveCsv(suggestedName: String, content: String): String = runCatching {
+        writeToDownloads(context, ensureExtension(suggestedName, "csv"), "text/csv") { os ->
+            os.write(content.toByteArray(Charsets.UTF_8))
+        }
+    }.getOrElse { "error: ${it.message}" }
 
-    actual fun savePdf(suggestedName: String, lines: List<String>): String {
-        Log.d("FinanZen", "[REPORT-Android stub] savePdf '$suggestedName' (${lines.size} líneas)")
-        return "stub: pendiente integrar PdfDocument + MediaStore"
-    }
+    actual fun savePdf(suggestedName: String, lines: List<String>): String = runCatching {
+        writeToDownloads(context, ensureExtension(suggestedName, "pdf"), "application/pdf") { os ->
+            writePdf(os, lines)
+        }
+    }.getOrElse { "error: ${it.message}" }
 }
 
 // ponytail: stub. Conectar a androidx.biometric.BiometricPrompt + FragmentActivity en release.
