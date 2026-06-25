@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Fondo de ventana antes de que Compose dibuje (evita flash blanco en modo oscuro). -->
+    <color name="window_background">#FFFBFE</color>
+</resources>

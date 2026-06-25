@@ -11,9 +11,22 @@
 -dontnote kotlinx.serialization.AnnotationsKt
 -keepclassmembers class kotlinx.serialization.json.** { *** Companion; }
 -keepclasseswithmembers class kotlinx.serialization.json.** { kotlinx.serialization.KSerializer serializer(...); }
+# Serializers generados de nuestras @Serializable (EncryptedEnvelope, BackupSnapshot, etc.)
+-keepclassmembers @kotlinx.serialization.Serializable class com.finanzen.** {
+    *** Companion;
+    kotlinx.serialization.KSerializer serializer(...);
+}
+-keep,includedescriptorclasses class com.finanzen.**$$serializer { *; }
 
 # Koin
 -keep class org.koin.** { *; }
 
 # Coroutines
 -dontwarn kotlinx.coroutines.**
+
+# koalaplot (charts) — usa reflexión/genéricos; sin esto el donut puede romper ofuscado
+-keep class io.github.koalaplot.** { *; }
+-dontwarn io.github.koalaplot.**
+
+# kotlinx-datetime
+-dontwarn kotlinx.datetime.**
