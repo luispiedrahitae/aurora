@@ -49,5 +49,8 @@ UPDATE TransactionRow
 SET accountId = ?, categoryId = ?, amountMinor = ?, currency = ?, date = ?, note = ?, kind = ?, transferAccountId = ?, installmentPlanId = ?
 WHERE id = ?;
 
+setAllCurrency:
+UPDATE TransactionRow SET currency = ?;
+
 delete:
 DELETE FROM TransactionRow WHERE id = ?;

@@ -30,11 +30,30 @@ class SettingsRepositoryTest {
         SettingsRepository(db).setThemeMode(SettingsRepository.THEME_DARK)
 
         // un VM nuevo (como tras reiniciar la app) arranca con el tema guardado
-        val vm = SettingsViewModel(SettingsRepository(db))
+        val vm = SettingsViewModel(SettingsRepository(db), CurrencyRepository(db))
         assertEquals(ThemeMode.DARK, vm.theme.value)
 
         vm.setTheme(ThemeMode.LIGHT)
         assertEquals(ThemeMode.LIGHT, vm.theme.value)
         assertEquals(SettingsRepository.THEME_LIGHT, SettingsRepository(db).themeMode())
+    }
+
+    @Test
+    fun setBaseCurrencyReEtiquetaCuentasYTransacciones() {
+        val db = freshDb()
+        db.currencyQueries.upsert("USD", "$", 2, 1.0)
+        db.currencyQueries.upsert("COP", "$", 0, 1.0)
+        val accountRepo = AccountRepository(db)
+        val accId = accountRepo.add(name = "Efectivo", type = "CASH", currency = "USD")
+        db.transactionQueries.insert(accId, null, 1000, "USD", 0, "", "EXPENSE", null, null)
+
+        val repo = SettingsRepository(db)
+        assertEquals(SettingsRepository.DEFAULT_CURRENCY, repo.baseCurrency())
+
+        repo.setBaseCurrency("COP")
+
+        assertEquals("COP", repo.baseCurrency())
+        assertEquals("COP", accountRepo.all().single().currency)
+        assertEquals("COP", db.transactionQueries.selectAll().executeAsList().single().currency)
     }
 }

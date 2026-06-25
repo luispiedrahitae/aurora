@@ -39,6 +39,7 @@ fun SettingsScreen(
     vm: SettingsViewModel = koinInject(),
 ) {
     val theme by vm.theme.collectAsState()
+    val baseCurrency by vm.baseCurrency.collectAsState()
 
     Scaffold(
         topBar = {
@@ -67,7 +68,44 @@ fun SettingsScreen(
                     }
                 }
             }
+
+            item { SectionHeader("Moneda") }
+            item {
+                FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(0.dp)) {
+                    Column {
+                        Text(
+                            "Moneda única de la app. Cambiarla re-etiqueta tus montos existentes sin convertirlos.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
+                        )
+                        vm.currencies.forEach { currency ->
+                            CurrencyOption(currency.code, currency.symbol, baseCurrency, vm::setBaseCurrency)
+                        }
+                    }
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun CurrencyOption(
+    code: String,
+    symbol: String,
+    selected: String,
+    onSelect: (String) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectable(selected = selected == code, onClick = { onSelect(code) })
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        RadioButton(selected = selected == code, onClick = { onSelect(code) })
+        Text("$code ($symbol)", fontWeight = FontWeight.SemiBold)
     }
 }
 

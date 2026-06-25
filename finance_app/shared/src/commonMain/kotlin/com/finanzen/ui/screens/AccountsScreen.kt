@@ -48,7 +48,6 @@ fun AccountsScreen(
     val accounts by vm.accounts.collectAsState()
     var name by remember { mutableStateOf("") }
     var type by remember { mutableStateOf(vm.accountTypes.first()) }
-    var currency by remember { mutableStateOf(vm.currencies.firstOrNull()?.code ?: "USD") }
 
     Scaffold(
         topBar = {
@@ -85,16 +84,14 @@ fun AccountsScreen(
                             optionLabel = { it },
                             onSelect = { type = it },
                         )
-                        LabeledDropdown(
-                            label = "Moneda",
-                            options = vm.currencies,
-                            selected = vm.currencies.firstOrNull { it.code == currency },
-                            optionLabel = { "${it.code} (${it.symbol})" },
-                            onSelect = { currency = it.code },
+                        Text(
+                            "Moneda: ${vm.baseCurrency} (se configura en Ajustes › Moneda)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Button(
                             onClick = {
-                                vm.add(name, type, currency)
+                                vm.add(name, type)
                                 name = ""
                             },
                             enabled = name.isNotBlank(),

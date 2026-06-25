@@ -25,5 +25,8 @@ WHERE id = ?;
 archive:
 UPDATE Account SET archived = 1 WHERE id = ?;
 
+setAllCurrency:
+UPDATE Account SET currency = ?;
+
 delete:
 DELETE FROM Account WHERE id = ?;

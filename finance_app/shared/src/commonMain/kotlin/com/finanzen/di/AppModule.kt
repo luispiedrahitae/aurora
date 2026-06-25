@@ -66,5 +66,5 @@ val sharedModule: Module = module {
     viewModel { ReportsViewModel(get(), get(), get(), get()) }
     viewModel { BackupViewModel(get(), get(), get()) }
     single { SecurityViewModel(get()) }
-    single { SettingsViewModel(get()) }
+    single { SettingsViewModel(get(), get()) }
 }
