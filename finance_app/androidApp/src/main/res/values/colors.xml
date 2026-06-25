@@ -2,4 +2,6 @@
 <resources>
     <!-- Fondo de ventana antes de que Compose dibuje (evita flash blanco en modo oscuro). -->
     <color name="window_background">#FFFBFE</color>
+    <!-- Verde de marca para el icono adaptativo. -->
+    <color name="ic_launcher_background">#1E6F5C</color>
 </resources>
