@@ -63,6 +63,7 @@ android {
 dependencies {
     implementation(project(":shared"))
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.biometric) // aporta FragmentActivity para BiometricPrompt
     implementation(libs.koin.core)
     implementation(libs.koin.android)
 }

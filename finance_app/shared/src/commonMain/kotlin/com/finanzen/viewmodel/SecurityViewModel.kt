@@ -27,6 +27,12 @@ class SecurityViewModel(private val repo: SecurityRepository) : ViewModel() {
         }
     }
 
+    /** El SO ya verificó la identidad vía biometría; el PIN sigue siendo la credencial de respaldo. */
+    fun unlockBiometric() {
+        _attemptError.value = null
+        _state.value = LockState.Unlocked
+    }
+
     fun clearError() {
         _attemptError.value = null
     }

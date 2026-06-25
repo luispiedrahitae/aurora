@@ -31,18 +31,6 @@ expect class ReportExporter {
 }
 
 /**
- * Autenticación biométrica. Stub en todas las plataformas: el botón "Usar biometría" siempre devuelve false
- * en v1; cuando lleguemos a producción Android/iOS conectamos al BiometricPrompt / LocalAuthentication real.
- */
-expect class BiometricAuth {
-    /** true si el dispositivo soporta biometría y el usuario la tiene configurada. */
-    fun isAvailable(): Boolean
-
-    /** Pide al usuario autenticarse. Llama onResult(true) si OK. Por ahora siempre stub → false. */
-    fun authenticate(reason: String, onResult: (Boolean) -> Unit)
-}
-
-/**
  * AES-GCM con clave derivada con PBKDF2-HMAC-SHA256 (100k iteraciones, 256 bits).
  * El envelope devuelto por [encrypt] es un JSON self-describing (salt + iv + ciphertext b64) y
  * puede ser leído por cualquier plataforma con la misma passphrase.

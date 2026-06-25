@@ -14,11 +14,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Backspace
+import androidx.compose.material.icons.outlined.Fingerprint
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -32,6 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.finanzen.platform.rememberBiometricUnlock
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.viewmodel.SecurityViewModel
 
@@ -42,12 +45,18 @@ fun LockScreen(vm: SecurityViewModel) {
     var entered by remember { mutableStateOf("") }
     val error by vm.attemptError.collectAsState()
     val finance = LocalFinanceColors.current
+    val biometric = rememberBiometricUnlock()
 
     LaunchedEffect(entered) {
         if (entered.length in 4..PIN_MAX) {
             // No auto-submit; el usuario presiona "OK" en el keypad. Limpio el error al teclear.
             if (error != null) vm.clearError()
         }
+    }
+
+    // Ofrece biometría automáticamente al abrir la pantalla de bloqueo.
+    LaunchedEffect(Unit) {
+        if (biometric.available) biometric.authenticate { vm.unlockBiometric() }
     }
 
     Box(
@@ -83,6 +92,12 @@ fun LockScreen(vm: SecurityViewModel) {
                     }
                 },
             )
+            if (biometric.available) {
+                TextButton(onClick = { biometric.authenticate { vm.unlockBiometric() } }) {
+                    Icon(Icons.Outlined.Fingerprint, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Text("  Usar biometría")
+                }
+            }
         }
     }
 }

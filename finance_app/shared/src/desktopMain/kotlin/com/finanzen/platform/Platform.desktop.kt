@@ -65,15 +65,6 @@ actual class ReportExporter {
     }
 }
 
-// Desktop preview: no hay biometría, siempre stub.
-actual class BiometricAuth {
-    actual fun isAvailable(): Boolean = false
-    actual fun authenticate(reason: String, onResult: (Boolean) -> Unit) {
-        println("[BIO-Desktop] '$reason' → biometría no aplicable en desktop preview")
-        onResult(false)
-    }
-}
-
 actual class BackupCrypto {
     actual fun encrypt(passphrase: String, plaintext: String): String = com.finanzen.security.JvmAesGcm.encrypt(passphrase, plaintext)
 

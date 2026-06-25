@@ -124,7 +124,8 @@ fun SecuritySettingsScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("Biometría", fontWeight = FontWeight.SemiBold)
                         Text(
-                            "No disponible en el preview de escritorio. En Android se conectará a BiometricPrompt; en iOS a LocalAuthentication.",
+                            "Si activas el bloqueo con PIN y tu dispositivo tiene huella o rostro configurados, " +
+                                "podrás desbloquear con biometría desde la pantalla de bloqueo. (No disponible en el preview de escritorio.)",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

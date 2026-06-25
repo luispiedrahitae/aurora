@@ -1,7 +1,6 @@
 package com.finanzen.platform
 
 import android.content.Context
-import android.util.Log
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
@@ -70,15 +69,6 @@ actual class ReportExporter(private val context: Context) {
             writePdf(os, lines)
         }
     }.getOrElse { "error: ${it.message}" }
-}
-
-// ponytail: stub. Conectar a androidx.biometric.BiometricPrompt + FragmentActivity en release.
-actual class BiometricAuth(@Suppress("unused") private val context: Context) {
-    actual fun isAvailable(): Boolean = false
-    actual fun authenticate(reason: String, onResult: (Boolean) -> Unit) {
-        Log.d("FinanZen", "[BIO-Android stub] '$reason' → not configured")
-        onResult(false)
-    }
 }
 
 actual class BackupCrypto {

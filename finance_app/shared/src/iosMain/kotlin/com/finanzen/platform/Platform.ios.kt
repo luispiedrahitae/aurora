@@ -36,15 +36,6 @@ actual class ReportExporter {
     }
 }
 
-// ponytail: stub. Conectar a LocalAuthentication.LAContext en release iOS.
-actual class BiometricAuth {
-    actual fun isAvailable(): Boolean = false
-    actual fun authenticate(reason: String, onResult: (Boolean) -> Unit) {
-        println("[BIO-iOS stub] '$reason' → not configured")
-        onResult(false)
-    }
-}
-
 // ponytail: stub iOS. Conectar a CryptoKit / Security framework (AES.GCM.seal/open) cuando lleguemos a release iOS.
 actual class BackupCrypto {
     actual fun encrypt(passphrase: String, plaintext: String): String {
