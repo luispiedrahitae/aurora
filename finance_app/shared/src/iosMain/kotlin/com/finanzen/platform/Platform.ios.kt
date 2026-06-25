@@ -63,8 +63,4 @@ actual class BackupIO {
         println("[BACKUPIO-iOS stub] writeBackup '$filename' (${content.length} chars)")
         return "stub: pendiente integrar UIDocumentPicker"
     }
-    actual fun readBackup(absolutePath: String): String? {
-        println("[BACKUPIO-iOS stub] readBackup '$absolutePath'")
-        return null
-    }
 }

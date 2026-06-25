@@ -87,18 +87,12 @@ actual class BackupCrypto {
     actual fun decrypt(passphrase: String, envelope: String): String? = com.finanzen.security.AndroidAesGcm.decrypt(passphrase, envelope)
 }
 
-// ponytail: en Android real, usar MediaStore.Downloads y ACTION_OPEN_DOCUMENT.
-// V1 escribe al Files/Documents interno; el path se devuelve para que la UI lo muestre.
+// Escribe el backup cifrado a Descargas vía MediaStore (sin permisos). La importación usa
+// rememberBackupPicker (SAF), así que aquí solo necesitamos escribir.
 actual class BackupIO(private val context: Context) {
     actual fun writeBackup(filename: String, content: String): String = runCatching {
-        val safe = filename.replace(Regex("[^A-Za-z0-9_.-]"), "_")
-        val dir = java.io.File(context.filesDir, "backups").apply { mkdirs() }
-        val file = java.io.File(dir, "${safe}_${System.currentTimeMillis()}.finzbkp")
-        file.writeText(content, Charsets.UTF_8)
-        file.absolutePath
+        writeToDownloads(context, ensureExtension(filename, "finzbkp"), "application/octet-stream") { os ->
+            os.write(content.toByteArray(Charsets.UTF_8))
+        }
     }.getOrElse { "error: ${it.message}" }
-
-    actual fun readBackup(absolutePath: String): String? = runCatching {
-        java.io.File(absolutePath).readText(Charsets.UTF_8)
-    }.getOrNull()
 }

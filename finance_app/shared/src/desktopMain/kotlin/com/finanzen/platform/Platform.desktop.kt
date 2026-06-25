@@ -89,8 +89,4 @@ actual class BackupIO {
         file.writeText(content, Charsets.UTF_8)
         file.absolutePath
     }.getOrElse { "error: ${it.message}" }
-
-    actual fun readBackup(absolutePath: String): String? = runCatching {
-        File(absolutePath).readText(Charsets.UTF_8)
-    }.getOrNull()
 }

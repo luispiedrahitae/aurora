@@ -35,14 +35,13 @@ class BackupViewModel(
         _status.value = ExportStatus(path, isError = path.startsWith("error") || path.startsWith("stub"))
     }
 
-    fun import(passphrase: String, absolutePath: String) {
-        if (absolutePath.isBlank()) {
-            _status.value = ExportStatus("Indica la ruta absoluta del archivo .finzbkp", isError = true)
+    fun import(passphrase: String, envelope: String?) {
+        if (passphrase.isBlank()) {
+            _status.value = ExportStatus("Indica la passphrase del backup", isError = true)
             return
         }
-        val envelope = io.readBackup(absolutePath)
         if (envelope.isNullOrEmpty()) {
-            _status.value = ExportStatus("No pude leer el archivo en esa ruta", isError = true)
+            _status.value = ExportStatus("No se seleccionó ningún archivo o está vacío", isError = true)
             return
         }
         val plaintext = crypto.decrypt(passphrase, envelope)

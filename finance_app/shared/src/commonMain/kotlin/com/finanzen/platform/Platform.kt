@@ -55,8 +55,10 @@ expect class BackupCrypto {
     fun decrypt(passphrase: String, envelope: String): String?
 }
 
-/** Lee y escribe archivos de backup en la plataforma. Desktop usa ~/Downloads; mobile usa MediaStore/share sheet. */
+/**
+ * Escribe archivos de backup en la plataforma (Android: MediaStore/Descargas; Desktop: ~/Downloads).
+ * La lectura para importar se hace con [rememberBackupPicker], que entrega el contenido directamente.
+ */
 expect class BackupIO {
     fun writeBackup(filename: String, content: String): String
-    fun readBackup(absolutePath: String): String?
 }

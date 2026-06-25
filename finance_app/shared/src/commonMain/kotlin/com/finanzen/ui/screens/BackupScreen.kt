@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.finanzen.platform.rememberBackupPicker
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.viewmodel.BackupViewModel
@@ -44,7 +45,7 @@ fun BackupScreen(
     val status by vm.status.collectAsState()
     var exportPass by remember { mutableStateOf("") }
     var importPass by remember { mutableStateOf("") }
-    var importPath by remember { mutableStateOf("") }
+    val openPicker = rememberBackupPicker { content -> vm.import(importPass, content) }
 
     Scaffold(
         topBar = {
@@ -91,16 +92,9 @@ fun BackupScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Importar", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium)
                         Text(
-                            "Restaura TODA la DB desde un archivo .finzbkp. Esto reemplaza tus datos actuales.",
+                            "Restaura TODA la DB desde un archivo .finzbkp. Escribe la passphrase y elige el archivo. Esto reemplaza tus datos actuales.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                        OutlinedTextField(
-                            value = importPath,
-                            onValueChange = { importPath = it },
-                            label = { Text("Ruta absoluta del .finzbkp") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
                         )
                         OutlinedTextField(
                             value = importPass,
@@ -111,7 +105,7 @@ fun BackupScreen(
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                         )
-                        Button(onClick = { vm.import(importPass, importPath) }) { Text("Restaurar") }
+                        Button(onClick = { openPicker() }) { Text("Elegir archivo y restaurar") }
                     }
                 }
             }
