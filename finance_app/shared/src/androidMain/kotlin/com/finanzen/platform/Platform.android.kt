@@ -2,9 +2,19 @@ package com.finanzen.platform
 
 import android.content.Context
 import android.util.Log
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
 import com.finanzen.db.FinanzenDb
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atTime
+import kotlinx.datetime.toInstant
+import java.util.concurrent.TimeUnit
 
 actual val platformName: String = "Android ${android.os.Build.VERSION.RELEASE}"
 
@@ -12,14 +22,38 @@ actual class DriverFactory(private val context: Context) {
     actual fun create(): SqlDriver = AndroidSqliteDriver(FinanzenDb.Schema, context, "finanzen.db")
 }
 
-// ponytail: stub. Subir a WorkManager + NotificationManager en Phase 11/12 cuando lleguemos a producción Android.
-actual class NotificationScheduler(@Suppress("unused") private val context: Context) {
+/**
+ * Programa recordatorios con WorkManager (inexacto, evita SCHEDULE_EXACT_ALARM). El Worker
+ * [ReminderWorker] publica la notificación en la fecha indicada (a las 9:00 locales). Cada
+ * recordatorio usa un nombre único por id para poder reemplazarlo/cancelarlo.
+ */
+actual class NotificationScheduler(private val context: Context) {
     actual fun scheduleReminder(id: Long, title: String, body: String, atEpochDay: Long) {
-        Log.d("FinanZen", "[NOTIF-Android stub] id=$id at=$atEpochDay '$title': $body")
+        val triggerAt = LocalDate.fromEpochDays(atEpochDay.toInt())
+            .atTime(LocalTime(REMINDER_HOUR, 0))
+            .toInstant(TimeZone.currentSystemDefault())
+            .toEpochMilliseconds()
+        val delayMs = triggerAt - System.currentTimeMillis()
+        // No notificamos recordatorios cuya fecha ya pasó.
+        if (delayMs <= 0) {
+            cancel(id)
+            return
+        }
+        val request = OneTimeWorkRequestBuilder<ReminderWorker>()
+            .setInitialDelay(delayMs, TimeUnit.MILLISECONDS)
+            .setInputData(workDataOf(KEY_NOTIF_ID to id, KEY_TITLE to title, KEY_BODY to body))
+            .build()
+        WorkManager.getInstance(context).enqueueUniqueWork(workName(id), ExistingWorkPolicy.REPLACE, request)
     }
 
     actual fun cancel(id: Long) {
-        Log.d("FinanZen", "[NOTIF-Android stub] cancel id=$id")
+        WorkManager.getInstance(context).cancelUniqueWork(workName(id))
+    }
+
+    private fun workName(id: Long): String = "finanzen_reminder_$id"
+
+    private companion object {
+        const val REMINDER_HOUR = 9
     }
 }
 
