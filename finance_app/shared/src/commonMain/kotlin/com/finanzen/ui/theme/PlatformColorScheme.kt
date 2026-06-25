@@ -10,3 +10,6 @@ import androidx.compose.runtime.Composable
  */
 @Composable
 expect fun platformColorScheme(darkTheme: Boolean): ColorScheme?
+
+/** true solo donde el color dinámico tiene efecto (Android 12+). Decide si mostrar el toggle. */
+expect fun dynamicColorSupported(): Boolean

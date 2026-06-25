@@ -9,6 +9,16 @@ class SettingsRepository(private val db: FinanzenDb) {
 
     fun setThemeMode(mode: String) = db.settingQueries.put(KEY_THEME, mode)
 
+    /** Preset de acento (nombre del enum AccentPreset). */
+    fun accent(): String = db.settingQueries.get(KEY_ACCENT).executeAsOneOrNull() ?: DEFAULT_ACCENT
+
+    fun setAccent(key: String) = db.settingQueries.put(KEY_ACCENT, key)
+
+    /** Color dinámico (Material You). Activo por defecto donde la plataforma lo soporte. */
+    fun dynamicColorEnabled(): Boolean = db.settingQueries.get(KEY_DYNAMIC).executeAsOneOrNull()?.toBooleanStrictOrNull() ?: true
+
+    fun setDynamicColorEnabled(enabled: Boolean) = db.settingQueries.put(KEY_DYNAMIC, enabled.toString())
+
     /** Moneda única de la app. La app no maneja FX; todos los montos se asumen en esta moneda. */
     fun baseCurrency(): String = db.settingQueries.get(KEY_CURRENCY).executeAsOneOrNull() ?: DEFAULT_CURRENCY
 
@@ -30,5 +40,8 @@ class SettingsRepository(private val db: FinanzenDb) {
         const val THEME_DARK = "dark"
         const val KEY_CURRENCY = "app.currency"
         const val DEFAULT_CURRENCY = "USD"
+        const val KEY_ACCENT = "app.accent"
+        const val DEFAULT_ACCENT = "Teal"
+        const val KEY_DYNAMIC = "app.dynamic_color"
     }
 }

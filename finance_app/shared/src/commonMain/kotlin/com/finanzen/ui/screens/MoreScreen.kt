@@ -55,7 +55,7 @@ fun MoreScreen(onNavigate: (route: String) -> Unit) {
         MoreItem("Seguridad", "Bloqueo con PIN", Icons.Outlined.Settings, true) {
             onNavigate("security")
         },
-        MoreItem("Apariencia", "Tema claro / oscuro / sistema", Icons.Outlined.DarkMode, true) {
+        MoreItem("Temas y apariencia", "Tema, color de acento y moneda", Icons.Outlined.DarkMode, true) {
             onNavigate("settings")
         },
         MoreItem("Acerca de FinanZen", "Versión, privacidad, licencias", Icons.Outlined.Info, true) {

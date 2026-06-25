@@ -17,12 +17,14 @@ import org.koin.compose.koinInject
 fun App() {
     val settingsVm: SettingsViewModel = koinInject()
     val theme by settingsVm.theme.collectAsState()
+    val accent by settingsVm.accent.collectAsState()
+    val dynamicColor by settingsVm.dynamicColor.collectAsState()
     val darkTheme = when (theme) {
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
     }
-    FinanZenTheme(darkTheme = darkTheme) {
+    FinanZenTheme(darkTheme = darkTheme, accent = accent, useDynamic = dynamicColor) {
         val securityVm: SecurityViewModel = koinInject()
         val lockState by securityVm.state.collectAsState()
         when (lockState) {
