@@ -50,10 +50,11 @@ class Phase4ManagementTest {
     fun borrarTarjetaTambienBorraSuCuentaHuerfana() {
         val db = freshDb()
         seedIfEmpty(db)
-        val vm = CardsViewModel(CardRepository(db), InstallmentPlanRepository(db), AccountRepository(db))
+        val vm = CardsViewModel(CardRepository(db), InstallmentPlanRepository(db), AccountRepository(db), SettingsRepository(db))
         val accountsBefore = db.accountQueries.selectAll().executeAsList().size
 
-        vm.addSample() // crea una cuenta CREDIT + su tarjeta
+        // crea una cuenta CREDIT + su tarjeta
+        vm.addCard(network = "VISA", last4 = "1234", isCredit = true, creditLimitMinor = 500_000L, cutoffDay = 15L, dueDay = 5L)
         assertEquals(accountsBefore + 1, db.accountQueries.selectAll().executeAsList().size)
         val card = db.cardQueries.selectAll().executeAsList().first()
 

@@ -12,9 +12,6 @@ import com.finanzen.platform.NotificationScheduler
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.datetime.Clock
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 
 class SubscriptionsViewModel(
     private val subsRepo: SubscriptionRepository,
@@ -71,18 +68,6 @@ class SubscriptionsViewModel(
         )
     }
 
-    /** Atajo del FAB en el preview: agrega una suscripción de ejemplo con cobro en ~1 mes. */
-    fun addSampleSubscription() {
-        val today = todayEpochDay()
-        addSubscription(name = "Netflix", amountMinor = 1_599, nextChargeEpochDay = today + 30, remindDaysBefore = 2)
-    }
-
-    /** Atajo del FAB en el preview: agrega un gasto recurrente de ejemplo con cobro en ~1 mes. */
-    fun addSampleRecurring() {
-        val today = todayEpochDay()
-        addRecurring(name = "Alquiler", amountMinor = 120_000, nextChargeEpochDay = today + 30, remindDaysBefore = 3)
-    }
-
     /** Convierte "12.50" → 1250 (centavos). null si el texto no es numérico válido. */
     fun parseAmountToMinor(text: String, decimals: Int = 2): Long? = Money.parseToMinor(text, decimals)
 
@@ -100,6 +85,4 @@ class SubscriptionsViewModel(
         ?: accountRepo.add("Efectivo", "CASH", "USD").let { id ->
             accountRepo.all().first { it.id == id }
         }
-
-    private fun todayEpochDay(): Long = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date.toEpochDays().toLong()
 }
