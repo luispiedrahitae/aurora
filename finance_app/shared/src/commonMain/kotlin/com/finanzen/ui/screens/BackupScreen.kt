@@ -69,7 +69,7 @@ fun BackupScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Exportar", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium)
                         Text(
-                            "Cifra toda la DB con AES-256-GCM. La clave se deriva de tu passphrase con PBKDF2 (100k iteraciones). Mínimo 8 caracteres.",
+                            "Cifra toda la DB con AES-256-GCM. La clave se deriva de tu passphrase con PBKDF2 (600k iteraciones). Mínimo 8 caracteres.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )

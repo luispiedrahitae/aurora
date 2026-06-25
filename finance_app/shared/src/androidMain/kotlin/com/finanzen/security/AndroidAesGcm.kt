@@ -18,7 +18,10 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  */
 @OptIn(ExperimentalEncodingApi::class)
 object AndroidAesGcm {
-    private const val ITERATIONS = 100_000
+    // OWASP 2023 recomienda ≥600k para PBKDF2-HMAC-SHA256.
+    // ponytail: las iteraciones no van versionadas en el envelope; backups viejos no se descifrarían
+    // si esto cambia. Aceptable pre-lanzamiento (no hay backups en circulación).
+    private const val ITERATIONS = 600_000
     private const val KEY_LEN_BITS = 256
     private const val GCM_TAG_BITS = 128
     private const val SALT_LEN = 16

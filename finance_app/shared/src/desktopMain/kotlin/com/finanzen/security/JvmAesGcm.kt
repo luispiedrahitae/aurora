@@ -18,7 +18,9 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  */
 @OptIn(ExperimentalEncodingApi::class)
 object JvmAesGcm {
-    private const val ITERATIONS = 100_000
+    // OWASP 2023 recomienda ≥600k para PBKDF2-HMAC-SHA256. Debe coincidir con AndroidAesGcm
+    // para que un backup creado en una plataforma se descifre en la otra.
+    private const val ITERATIONS = 600_000
     private const val KEY_LEN_BITS = 256
     private const val GCM_TAG_BITS = 128
     private const val SALT_LEN = 16

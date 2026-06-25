@@ -1,13 +1,19 @@
 package com.finanzen.security
 
-import kotlin.random.Random
-
 /** SHA-256 hex. Implementación por plataforma (java.security en JVM/Android, CommonCrypto en iOS). */
 expect fun sha256Hex(input: String): String
 
-/** Hash de PIN: 10.000 iteraciones de SHA-256 con sal. Comparable al PBKDF2 mínimo. */
+/** Bytes aleatorios criptográficamente seguros (SecureRandom en JVM/Android, SecRandomCopyBytes en iOS). */
+expect fun secureRandomBytes(size: Int): ByteArray
+
+/**
+ * Hash de PIN: SHA-256 iterado con sal aleatoria segura.
+ * ponytail: el techo de seguridad es la entropía del PIN (4–8 dígitos), no el KDF — ningún número de
+ * iteraciones resiste un ataque offline a 10^4–10^8 combinaciones. Las iteraciones solo encarecen cada
+ * intento; la sal segura evita rainbow tables entre instalaciones. La biometría/FDE del SO es la defensa real.
+ */
 object PinHasher {
-    private const val ITERATIONS = 10_000
+    private const val ITERATIONS = 200_000
 
     fun hash(pin: String, salt: String): String {
         var current = sha256Hex(salt + pin)
@@ -17,10 +23,6 @@ object PinHasher {
 
     fun verify(pin: String, salt: String, expectedHash: String): Boolean = hash(pin, salt) == expectedHash
 
-    /** Genera una sal de 32 bytes en hex. Lo suficientemente único — v1 no requiere SecureRandom. */
-    fun newSalt(): String {
-        val bytes = ByteArray(32)
-        Random.nextBytes(bytes)
-        return bytes.joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
-    }
+    /** Genera una sal de 32 bytes en hex con RNG criptográfico. */
+    fun newSalt(): String = secureRandomBytes(32).joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
 }
