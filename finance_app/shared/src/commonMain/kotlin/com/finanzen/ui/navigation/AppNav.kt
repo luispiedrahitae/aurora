@@ -34,6 +34,7 @@ import com.finanzen.ui.screens.AccountsScreen
 import com.finanzen.ui.screens.AnalysisScreen
 import com.finanzen.ui.screens.BackupScreen
 import com.finanzen.ui.screens.BudgetsScreen
+import com.finanzen.ui.screens.CalendarScreen
 import com.finanzen.ui.screens.CardsScreen
 import com.finanzen.ui.screens.CategoriesScreen
 import com.finanzen.ui.screens.DashboardScreen
@@ -185,6 +186,12 @@ private fun AppNavHost(navController: NavHostController, modifier: Modifier = Mo
         }
         composable("budgets") {
             BudgetsScreen(onBack = { navController.popBackStack() })
+        }
+        composable("calendar") {
+            CalendarScreen(
+                onEdit = { id -> navController.navigate("tx_form/$id") },
+                onBack = { navController.popBackStack() },
+            )
         }
     }
 }

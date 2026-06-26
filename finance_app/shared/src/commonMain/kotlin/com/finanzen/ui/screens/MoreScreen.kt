@@ -12,6 +12,7 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.AccountBalance
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Backup
+import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Info
@@ -39,6 +40,9 @@ fun MoreScreen(onNavigate: (route: String) -> Unit) {
         },
         MoreItem("Presupuestos", "Por categoría y mes", Icons.Outlined.PieChart, true) {
             onNavigate("budgets")
+        },
+        MoreItem("Calendario", "Movimientos por día", Icons.Outlined.CalendarMonth, true) {
+            onNavigate("calendar")
         },
         MoreItem("Reportes", "Exportar CSV / PDF", Icons.Outlined.Description, true) {
             onNavigate("reports")
