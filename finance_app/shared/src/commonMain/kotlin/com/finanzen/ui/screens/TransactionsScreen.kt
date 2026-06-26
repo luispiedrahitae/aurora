@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.finanzen.db.TransactionRow
+import com.finanzen.domain.Money
 import com.finanzen.ui.components.EmptyState
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.MoneyText
@@ -117,24 +118,35 @@ fun TransactionsScreen(
 
 @Composable
 private fun TransactionItem(row: TransactionRow, onClick: () -> Unit, onDelete: () -> Unit) {
+    val isTransfer = row.kind == "TRANSFER"
     val isIncome = row.kind == "INCOME"
     val signedAmount = if (isIncome) row.amountMinor else -row.amountMinor
     val spacing = LocalSpacing.current
     FinanceCard(onClick = onClick, modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(spacing.lg)) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                row.note.ifBlank { "(sin nota)" },
+                if (isTransfer) row.note.ifBlank { "Transferencia" } else row.note.ifBlank { "(sin nota)" },
                 fontWeight = FontWeight.Medium,
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.weight(1f),
             )
-            MoneyText(
-                amountMinor = signedAmount,
-                currency = row.currency,
-                style = MaterialTheme.typography.titleMedium,
-                signed = true,
-                showCurrency = false,
-            )
+            if (isTransfer) {
+                // Una transferencia no es ingreso ni gasto: monto neutro con marca de movimiento.
+                Text(
+                    "⇄ ${Money(row.amountMinor, row.currency).format()}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                MoneyText(
+                    amountMinor = signedAmount,
+                    currency = row.currency,
+                    style = MaterialTheme.typography.titleMedium,
+                    signed = true,
+                    showCurrency = false,
+                )
+            }
             IconButton(onClick = onDelete) {
                 Icon(
                     Icons.Outlined.Delete,

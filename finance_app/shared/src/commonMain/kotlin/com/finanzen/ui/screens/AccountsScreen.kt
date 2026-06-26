@@ -36,6 +36,7 @@ import com.finanzen.db.Account
 import com.finanzen.domain.Money
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.LabeledDropdown
+import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.viewmodel.AccountsViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -46,6 +47,7 @@ fun AccountsScreen(
     vm: AccountsViewModel = koinViewModel(),
 ) {
     val accounts by vm.accounts.collectAsState()
+    val balances by vm.balances.collectAsState()
     var name by remember { mutableStateOf("") }
     var type by remember { mutableStateOf(vm.accountTypes.first()) }
 
@@ -104,20 +106,43 @@ fun AccountsScreen(
                 }
             }
 
-            items(accounts, key = { it.id }) { account -> AccountRow(account, onDelete = { vm.delete(account.id) }) }
+            items(accounts, key = { it.id }) { account ->
+                AccountRow(
+                    account = account,
+                    balanceMinor = balances[account.id] ?: account.openingBalanceMinor,
+                    onDelete = { vm.delete(account.id) },
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun AccountRow(account: Account, onDelete: () -> Unit) {
+private fun AccountRow(account: Account, balanceMinor: Long, onDelete: () -> Unit) {
     FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(12.dp)) {
         Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(account.name, fontWeight = FontWeight.SemiBold)
                 Text(
-                    "${account.type} · ${account.currency} · saldo inicial ${Money(account.openingBalanceMinor, account.currency).format()}",
+                    "${account.type} · inicial ${Money(account.openingBalanceMinor, account.currency).format()}",
                     style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    "${Money(balanceMinor, account.currency).format()} ${account.currency}",
+                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (balanceMinor < 0) {
+                        LocalFinanceColors.current.expense
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+                )
+                Text(
+                    "saldo actual",
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }

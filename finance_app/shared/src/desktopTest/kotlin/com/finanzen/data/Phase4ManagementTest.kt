@@ -65,6 +65,26 @@ class Phase4ManagementTest {
     }
 
     @Test
+    fun computeBalancesIncluyeIngresosGastosYTransferencias() {
+        val db = freshDb()
+        db.currencyQueries.upsert("USD", "$", 2, 1.0)
+        val accountRepo = AccountRepository(db)
+        val a = accountRepo.add("A", "CASH", "USD", openingBalanceMinor = 10_000)
+        val b = accountRepo.add("B", "DEBIT", "USD", openingBalanceMinor = 0)
+        val tx = TransactionRepository(db)
+        tx.add(a, null, 5_000, "USD", 0, "sueldo", "INCOME") // A: +5000
+        tx.add(a, null, 2_000, "USD", 0, "café", "EXPENSE") // A: -2000
+        tx.addTransfer(a, b, 3_000, "USD", 0, "ahorro") // A: -3000, B: +3000
+
+        val balances = com.finanzen.viewmodel.AccountsViewModel.computeBalances(
+            accounts = db.accountQueries.selectAll().executeAsList(),
+            txs = db.transactionQueries.selectAll().executeAsList(),
+        )
+        assertEquals(10_000L, balances[a]) // 10000 + 5000 - 2000 - 3000
+        assertEquals(3_000L, balances[b]) // 0 + 3000
+    }
+
+    @Test
     fun computeBudgetsCalculaGastoYLimiteDelMes() {
         val db = freshDb()
         seedIfEmpty(db)

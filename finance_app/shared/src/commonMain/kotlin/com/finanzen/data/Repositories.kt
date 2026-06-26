@@ -60,6 +60,32 @@ class TransactionRepository(private val db: FinanzenDb) {
         id = id,
     )
 
+    /** Transferencia: una fila kind=TRANSFER, origen=accountId, destino=transferAccountId. Sin categoría. */
+    fun addTransfer(fromAccountId: Long, toAccountId: Long, amountMinor: Long, currency: String, epochDay: Long, note: String) = db.transactionQueries.insert(
+        accountId = fromAccountId,
+        categoryId = null,
+        amountMinor = amountMinor,
+        currency = currency,
+        date = epochDay,
+        note = note,
+        kind = "TRANSFER",
+        transferAccountId = toAccountId,
+        installmentPlanId = null,
+    )
+
+    fun updateTransfer(id: Long, fromAccountId: Long, toAccountId: Long, amountMinor: Long, currency: String, epochDay: Long, note: String) = db.transactionQueries.update(
+        accountId = fromAccountId,
+        categoryId = null,
+        amountMinor = amountMinor,
+        currency = currency,
+        date = epochDay,
+        note = note,
+        kind = "TRANSFER",
+        transferAccountId = toAccountId,
+        installmentPlanId = null,
+        id = id,
+    )
+
     fun byId(id: Long): TransactionRow? = db.transactionQueries.selectById(id).executeAsOneOrNull()
 
     fun delete(id: Long) = db.transactionQueries.delete(id)

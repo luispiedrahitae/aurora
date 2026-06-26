@@ -59,7 +59,7 @@ val sharedModule: Module = module {
     viewModel { TransactionsViewModel(get(), get(), get()) }
     viewModel { CategoriesViewModel(get()) }
     viewModel { BudgetsViewModel(get(), get(), get()) }
-    viewModel { AccountsViewModel(get(), get()) }
+    viewModel { AccountsViewModel(get(), get(), get()) }
     viewModel { CardsViewModel(get(), get(), get(), get()) }
     viewModel { SubscriptionsViewModel(get(), get(), get(), get()) }
     viewModel { AnalysisViewModel(get(), get()) }

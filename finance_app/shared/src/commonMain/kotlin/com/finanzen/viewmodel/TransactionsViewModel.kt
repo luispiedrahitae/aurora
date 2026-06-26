@@ -50,5 +50,24 @@ class TransactionsViewModel(
         }
     }
 
+    /** Crea o actualiza una transferencia entre dos cuentas (misma moneda; la app no maneja FX). */
+    fun saveTransfer(
+        id: Long?,
+        fromAccountId: Long,
+        toAccountId: Long,
+        amountMinor: Long,
+        note: String,
+        dateEpochDay: Long,
+    ) {
+        val currency = accounts.value.firstOrNull { it.id == fromAccountId }?.currency
+            ?: accountRepo.all().firstOrNull { it.id == fromAccountId }?.currency
+            ?: "USD"
+        if (id == null) {
+            txRepo.addTransfer(fromAccountId, toAccountId, amountMinor, currency, dateEpochDay, note)
+        } else {
+            txRepo.updateTransfer(id, fromAccountId, toAccountId, amountMinor, currency, dateEpochDay, note)
+        }
+    }
+
     fun delete(id: Long) = txRepo.delete(id)
 }
