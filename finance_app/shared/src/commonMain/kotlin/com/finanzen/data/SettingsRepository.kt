@@ -14,8 +14,11 @@ class SettingsRepository(private val db: FinanzenDb) {
 
     fun setAccent(key: String) = db.settingQueries.put(KEY_ACCENT, key)
 
-    /** Color dinámico (Material You). Activo por defecto donde la plataforma lo soporte. */
-    fun dynamicColorEnabled(): Boolean = db.settingQueries.get(KEY_DYNAMIC).executeAsOneOrNull()?.toBooleanStrictOrNull() ?: true
+    /**
+     * Color dinámico (Material You). Apagado por defecto: la app se muestra con su acento de marca
+     * (morado) en todos los dispositivos; el usuario puede activar Material You si lo prefiere.
+     */
+    fun dynamicColorEnabled(): Boolean = db.settingQueries.get(KEY_DYNAMIC).executeAsOneOrNull()?.toBooleanStrictOrNull() ?: false
 
     fun setDynamicColorEnabled(enabled: Boolean) = db.settingQueries.put(KEY_DYNAMIC, enabled.toString())
 
@@ -41,7 +44,7 @@ class SettingsRepository(private val db: FinanzenDb) {
         const val KEY_CURRENCY = "app.currency"
         const val DEFAULT_CURRENCY = "USD"
         const val KEY_ACCENT = "app.accent"
-        const val DEFAULT_ACCENT = "Teal"
+        const val DEFAULT_ACCENT = "Violet"
         const val KEY_DYNAMIC = "app.dynamic_color"
     }
 }
