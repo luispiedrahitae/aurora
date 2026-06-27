@@ -14,6 +14,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.PieChart
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -39,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.finanzen.domain.Money
+import com.finanzen.ui.components.EmptyState
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.LabeledDropdown
 import com.finanzen.ui.theme.LocalFinanceColors
@@ -101,9 +103,9 @@ fun BudgetsScreen(
         },
     ) { inner ->
         if (data.rows.isEmpty()) {
-            EmptyMessage("Crea categorías de gasto para asignarles presupuesto.", inner)
+            EmptyMessage("Sin presupuestos", "Crea categorías de gasto para asignarles presupuesto.", inner)
         } else if (budgeted.isEmpty()) {
-            EmptyMessage("Aún no hay presupuestos. Usa + para asignar uno a una categoría.", inner)
+            EmptyMessage("Sin presupuestos", "Usa el botón + para asignar uno a una categoría.", inner)
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize().padding(inner),
@@ -119,12 +121,13 @@ fun BudgetsScreen(
 }
 
 @Composable
-private fun EmptyMessage(text: String, inner: PaddingValues) {
+private fun EmptyMessage(title: String, subtitle: String, inner: PaddingValues) {
     Box(Modifier.fillMaxSize().padding(inner), contentAlignment = Alignment.Center) {
-        Text(
-            text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        EmptyState(
+            icon = Icons.Outlined.PieChart,
+            title = title,
+            subtitle = subtitle,
+            modifier = Modifier.padding(32.dp),
         )
     }
 }
