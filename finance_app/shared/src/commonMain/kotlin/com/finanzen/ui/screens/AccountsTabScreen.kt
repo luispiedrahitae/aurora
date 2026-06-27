@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.AlertDialog
@@ -43,6 +44,7 @@ import com.finanzen.db.Card
 import com.finanzen.db.InstallmentPlan
 import com.finanzen.domain.InstallmentMath
 import com.finanzen.domain.Money
+import com.finanzen.ui.components.EmptyState
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.LabeledDropdown
 import com.finanzen.ui.theme.LocalFinanceColors
@@ -93,10 +95,11 @@ fun AccountsTabScreen(vm: AccountsViewModel = koinViewModel()) {
     ) { inner ->
         if (accounts.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(inner), contentAlignment = Alignment.Center) {
-                Text(
-                    "Sin cuentas. Usa + para crear tu primera cuenta.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                EmptyState(
+                    icon = Icons.Outlined.AccountBalanceWallet,
+                    title = "Sin cuentas",
+                    subtitle = "Usa el botón + para crear tu primera cuenta.",
+                    modifier = Modifier.padding(32.dp),
                 )
             }
         } else {
