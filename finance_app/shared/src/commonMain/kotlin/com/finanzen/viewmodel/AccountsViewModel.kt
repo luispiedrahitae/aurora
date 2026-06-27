@@ -4,10 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.finanzen.data.AccountRepository
 import com.finanzen.data.CardRepository
+import com.finanzen.data.InstallmentPlanRepository
 import com.finanzen.data.SettingsRepository
 import com.finanzen.data.TransactionRepository
 import com.finanzen.db.Account
 import com.finanzen.db.Card
+import com.finanzen.db.InstallmentPlan
 import com.finanzen.db.TransactionRow
 import com.finanzen.domain.Money
 import com.finanzen.platform.NotificationScheduler
@@ -27,6 +29,7 @@ class AccountsViewModel(
     private val accountRepo: AccountRepository,
     txRepo: TransactionRepository,
     private val cardRepo: CardRepository,
+    private val planRepo: InstallmentPlanRepository,
     private val settingsRepo: SettingsRepository,
     private val scheduler: NotificationScheduler,
 ) : ViewModel() {
@@ -43,6 +46,13 @@ class AccountsViewModel(
     val cards: StateFlow<Map<Long, Card>> =
         cardRepo.observeAll().map { list -> list.associateBy { it.accountId } }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    /** Planes de cuotas agrupados por cuenta (vía su tarjeta de respaldo). */
+    val plansByAccount: StateFlow<Map<Long, List<InstallmentPlan>>> =
+        combine(cardRepo.observeAll(), planRepo.observeAll()) { cardsList, plans ->
+            val accountByCard = cardsList.associate { it.id to it.accountId }
+            plans.groupBy { accountByCard[it.cardId] ?: -1L }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     /** La app es de moneda única; las cuentas nuevas heredan la moneda base (ver Ajustes). */
     val baseCurrency: String get() = settingsRepo.baseCurrency()
@@ -116,6 +126,8 @@ class AccountsViewModel(
         cardRepo.byAccount(id)?.let { cardRepo.delete(it.id) }
         accountRepo.delete(id)
     }
+
+    fun deletePlan(id: Long) = planRepo.delete(id)
 
     companion object {
         // Offsets para que los ids de notificación de tarjeta no choquen entre sí ni con otros.

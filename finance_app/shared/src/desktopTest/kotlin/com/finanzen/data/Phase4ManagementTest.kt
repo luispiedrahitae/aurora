@@ -52,7 +52,7 @@ class Phase4ManagementTest {
     fun crearCuentaDeCreditoCreaTarjetaYBorrarlaLaElimina() {
         val db = freshDb()
         seedIfEmpty(db)
-        val vm = AccountsViewModel(AccountRepository(db), TransactionRepository(db), CardRepository(db), SettingsRepository(db), NotificationScheduler())
+        val vm = AccountsViewModel(AccountRepository(db), TransactionRepository(db), CardRepository(db), InstallmentPlanRepository(db), SettingsRepository(db), NotificationScheduler())
         val accountsBefore = db.accountQueries.selectAll().executeAsList().size
 
         // Crear una cuenta de crédito también crea su tarjeta con cupo/corte/pago/interés.
@@ -80,7 +80,7 @@ class Phase4ManagementTest {
     fun gastoConCreditoYCuotasCreaPlanYLoEnlaza() {
         val db = freshDb()
         seedIfEmpty(db)
-        val accVm = AccountsViewModel(AccountRepository(db), TransactionRepository(db), CardRepository(db), SettingsRepository(db), NotificationScheduler())
+        val accVm = AccountsViewModel(AccountRepository(db), TransactionRepository(db), CardRepository(db), InstallmentPlanRepository(db), SettingsRepository(db), NotificationScheduler())
         val accId = accVm.addAccount(type = "CREDIT", name = "Visa", creditLimitMinor = 1_000_000L)!!
         val txVm = TransactionsViewModel(
             TransactionRepository(db),

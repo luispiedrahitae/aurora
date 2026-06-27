@@ -18,6 +18,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -39,11 +40,16 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.finanzen.db.Account
 import com.finanzen.db.Card
+import com.finanzen.db.InstallmentPlan
+import com.finanzen.domain.InstallmentMath
 import com.finanzen.domain.Money
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.LabeledDropdown
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.viewmodel.AccountsViewModel
+import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
 import org.koin.compose.viewmodel.koinViewModel
 
 private fun typeLabel(type: String): String = when (type) {
@@ -60,6 +66,7 @@ fun AccountsTabScreen(vm: AccountsViewModel = koinViewModel()) {
     val accounts by vm.accounts.collectAsState()
     val balances by vm.balances.collectAsState()
     val cards by vm.cards.collectAsState()
+    val plansByAccount by vm.plansByAccount.collectAsState()
     var showForm by remember { mutableStateOf(false) }
 
     if (showForm) {
@@ -103,7 +110,9 @@ fun AccountsTabScreen(vm: AccountsViewModel = koinViewModel()) {
                         account = account,
                         balanceMinor = balances[account.id] ?: account.openingBalanceMinor,
                         card = cards[account.id],
+                        plans = plansByAccount[account.id].orEmpty(),
                         onDelete = { vm.delete(account.id) },
+                        onDeletePlan = { vm.deletePlan(it) },
                     )
                 }
             }
@@ -112,34 +121,69 @@ fun AccountsTabScreen(vm: AccountsViewModel = koinViewModel()) {
 }
 
 @Composable
-private fun AccountRow(account: Account, balanceMinor: Long, card: Card?, onDelete: () -> Unit) {
+private fun AccountRow(
+    account: Account,
+    balanceMinor: Long,
+    card: Card?,
+    plans: List<InstallmentPlan>,
+    onDelete: () -> Unit,
+    onDeletePlan: (Long) -> Unit,
+) {
     val isCredit = account.type == "CREDIT"
     FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(12.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(account.name, fontWeight = FontWeight.SemiBold)
-                Text(
-                    accountSubtitle(account, card, balanceMinor),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(account.name, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        accountSubtitle(account, card, balanceMinor),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        "${Money(balanceMinor, account.currency).format()} ${account.currency}",
+                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = if (balanceMinor < 0) LocalFinanceColors.current.expense else MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        if (isCredit) "saldo (deuda si −)" else "saldo actual",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                IconButton(onClick = onDelete) {
+                    Icon(Icons.Outlined.Delete, contentDescription = "Eliminar")
+                }
             }
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    "${Money(balanceMinor, account.currency).format()} ${account.currency}",
-                    fontWeight = FontWeight.SemiBold,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = if (balanceMinor < 0) LocalFinanceColors.current.expense else MaterialTheme.colorScheme.onSurface,
-                )
-                Text(
-                    if (isCredit) "saldo (deuda si −)" else "saldo actual",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            if (plans.isNotEmpty()) {
+                HorizontalDivider()
+                val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()).toEpochDays().toLong() }
+                plans.forEach { plan -> PlanRow(plan, account.currency, today, onDelete = { onDeletePlan(plan.id) }) }
             }
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Outlined.Delete, contentDescription = "Eliminar")
-            }
+        }
+    }
+}
+
+/** Una cuota dentro de la tarjeta de la cuenta: cuota/mes, progreso e interés. */
+@Composable
+private fun PlanRow(plan: InstallmentPlan, currency: String, todayEpochDay: Long, onDelete: () -> Unit) {
+    val monthly = InstallmentMath.monthlyPaymentMinor(plan.totalAmountMinor, plan.installments, plan.interestRate)
+    val elapsed = InstallmentMath.elapsedInstallments(plan.startDate, todayEpochDay, plan.installments)
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(plan.description.ifBlank { "Compra a cuotas" }, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+            val interest = if (plan.interestRate > 0.0) " · ${plan.interestRate}%" else ""
+            Text(
+                "${Money(monthly, currency).format()}/mes · $elapsed/${plan.installments} cuotas$interest",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        IconButton(onClick = onDelete) {
+            Icon(Icons.Outlined.Delete, contentDescription = "Eliminar cuota")
         }
     }
 }
