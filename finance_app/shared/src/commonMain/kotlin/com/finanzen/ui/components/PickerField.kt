@@ -45,6 +45,7 @@ fun <T> PickerField(
     modifier: Modifier = Modifier,
     placeholder: String = "Selecciona…",
     emptyHint: String = "No hay opciones disponibles.",
+    leadingContent: (@Composable (T) -> Unit)? = null,
 ) {
     val spacing = LocalSpacing.current
     var open by remember { mutableStateOf(false) }
@@ -105,6 +106,7 @@ fun <T> PickerField(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(spacing.md),
                         ) {
+                            leadingContent?.invoke(option)
                             Text(
                                 optionLabel(option),
                                 modifier = Modifier.weight(1f),
