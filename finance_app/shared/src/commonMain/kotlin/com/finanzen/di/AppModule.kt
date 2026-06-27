@@ -18,7 +18,6 @@ import com.finanzen.viewmodel.AccountsViewModel
 import com.finanzen.viewmodel.AnalysisViewModel
 import com.finanzen.viewmodel.BackupViewModel
 import com.finanzen.viewmodel.BudgetsViewModel
-import com.finanzen.viewmodel.CardsViewModel
 import com.finanzen.viewmodel.CategoriesViewModel
 import com.finanzen.viewmodel.DashboardViewModel
 import com.finanzen.viewmodel.ReportsViewModel
@@ -56,11 +55,10 @@ val sharedModule: Module = module {
     single { BudgetRepository(get()) }
 
     viewModel { DashboardViewModel(get(), get(), get()) }
-    viewModel { TransactionsViewModel(get(), get(), get()) }
+    viewModel { TransactionsViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { CategoriesViewModel(get()) }
     viewModel { BudgetsViewModel(get(), get(), get()) }
-    viewModel { AccountsViewModel(get(), get(), get()) }
-    viewModel { CardsViewModel(get(), get(), get(), get()) }
+    viewModel { AccountsViewModel(get(), get(), get(), get(), get()) }
     viewModel { SubscriptionsViewModel(get(), get(), get(), get()) }
     viewModel { AnalysisViewModel(get(), get()) }
     viewModel { ReportsViewModel(get(), get(), get(), get()) }

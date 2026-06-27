@@ -3,10 +3,13 @@ CREATE TABLE Card (
     accountId         INTEGER NOT NULL REFERENCES Account(id) ON DELETE CASCADE,
     last4             TEXT NOT NULL,
     network           TEXT NOT NULL,             -- VISA | MASTERCARD | AMEX | OTHER
-    creditLimitMinor  INTEGER,                   -- NULL para débito
+    creditLimitMinor  INTEGER,                   -- cupo; NULL para débito
     cutoffDay         INTEGER,                   -- día de corte
-    dueDay            INTEGER                    -- día de pago
+    dueDay            INTEGER,                   -- día de pago
+    interestRate      REAL                       -- tasa de interés anual %; NULL si no aplica
 );
+-- ponytail: pre-release sin datos productivos → columna añadida sin migración .sqm;
+-- reinstalar/limpiar datos en dispositivos de desarrollo. Añadir migración si llega a producción.
 
 selectAll:
 SELECT * FROM Card ORDER BY id;
@@ -18,11 +21,11 @@ selectById:
 SELECT * FROM Card WHERE id = ?;
 
 insert:
-INSERT INTO Card(accountId, last4, network, creditLimitMinor, cutoffDay, dueDay)
-VALUES (?, ?, ?, ?, ?, ?);
+INSERT INTO Card(accountId, last4, network, creditLimitMinor, cutoffDay, dueDay, interestRate)
+VALUES (?, ?, ?, ?, ?, ?, ?);
 
 update:
-UPDATE Card SET accountId = ?, last4 = ?, network = ?, creditLimitMinor = ?, cutoffDay = ?, dueDay = ?
+UPDATE Card SET accountId = ?, last4 = ?, network = ?, creditLimitMinor = ?, cutoffDay = ?, dueDay = ?, interestRate = ?
 WHERE id = ?;
 
 delete:

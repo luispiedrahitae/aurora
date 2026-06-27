@@ -19,44 +19,54 @@ class BackupViewModel(
     private val _status = MutableStateFlow<ExportStatus?>(null)
     val status: StateFlow<ExportStatus?> = _status.asStateFlow()
 
-    fun export(passphrase: String) {
-        if (passphrase.length < 8) {
+    /** Exporta el backup. Si [encrypt] es true cifra con la passphrase; si no, escribe JSON en claro. */
+    fun export(encrypt: Boolean, passphrase: String) {
+        if (encrypt && passphrase.length < 8) {
             _status.value = ExportStatus("La passphrase debe tener al menos 8 caracteres", isError = true)
             return
         }
         val snapshot = BackupSerializer.snapshotOf(db, Clock.System.now().toEpochMilliseconds())
         val plaintext = BackupSerializer.toJson(snapshot)
-        val envelope = crypto.encrypt(passphrase, plaintext)
-        if (envelope.isEmpty()) {
-            _status.value = ExportStatus("Cifrado no disponible en esta plataforma (stub)", isError = true)
-            return
+        val content = if (encrypt) {
+            val envelope = crypto.encrypt(passphrase, plaintext)
+            if (envelope.isEmpty()) {
+                _status.value = ExportStatus("Cifrado no disponible en esta plataforma (stub)", isError = true)
+                return
+            }
+            envelope
+        } else {
+            plaintext
         }
-        val path = io.writeBackup("finanzen-backup", envelope)
+        val path = io.writeBackup("finanzen-backup", content)
         _status.value = ExportStatus(path, isError = path.startsWith("error") || path.startsWith("stub"))
     }
 
     fun import(passphrase: String, envelope: String?) {
-        if (passphrase.isBlank()) {
-            _status.value = ExportStatus("Indica la passphrase del backup", isError = true)
-            return
-        }
         if (envelope.isNullOrEmpty()) {
             _status.value = ExportStatus("No se seleccionó ningún archivo o está vacío", isError = true)
             return
         }
-        val plaintext = crypto.decrypt(passphrase, envelope)
-        if (plaintext == null) {
-            _status.value = ExportStatus("Passphrase incorrecta o archivo corrupto", isError = true)
-            return
+        // Detecta el formato: un snapshot en claro parsea directo; si no, asumimos que está cifrado.
+        var snapshot = runCatching { BackupSerializer.fromJson(envelope) }.getOrNull()
+        if (snapshot == null) {
+            if (passphrase.isBlank()) {
+                _status.value = ExportStatus("Este backup está cifrado: indica la passphrase.", isError = true)
+                return
+            }
+            val plaintext = crypto.decrypt(passphrase, envelope)
+            if (plaintext == null) {
+                _status.value = ExportStatus("Passphrase incorrecta o archivo corrupto", isError = true)
+                return
+            }
+            snapshot = runCatching { BackupSerializer.fromJson(plaintext) }.getOrNull()
         }
-        val snapshot = runCatching { BackupSerializer.fromJson(plaintext) }.getOrNull()
         if (snapshot == null) {
             _status.value = ExportStatus("Formato no reconocido (¿backup de otra versión?)", isError = true)
             return
         }
         BackupSerializer.restore(db, snapshot)
         _status.value = ExportStatus(
-            "Restaurado: ${snapshot.transactions.size} transacciones, ${snapshot.accounts.size} cuentas, ${snapshot.cards.size} tarjetas.",
+            "Restaurado: ${snapshot.transactions.size} movimientos, ${snapshot.accounts.size} cuentas, ${snapshot.cards.size} tarjetas.",
             isError = false,
         )
     }

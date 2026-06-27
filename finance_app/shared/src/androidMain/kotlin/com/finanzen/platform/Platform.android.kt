@@ -49,6 +49,10 @@ actual class NotificationScheduler(private val context: Context) {
         WorkManager.getInstance(context).cancelUniqueWork(workName(id))
     }
 
+    actual fun notifyNow(id: Long, title: String, body: String) {
+        postReminderNotification(context, id.toInt(), title, body)
+    }
+
     private fun workName(id: Long): String = "finanzen_reminder_$id"
 
     private companion object {

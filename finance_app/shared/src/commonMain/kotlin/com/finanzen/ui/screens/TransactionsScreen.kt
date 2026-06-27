@@ -85,7 +85,7 @@ fun TransactionsScreen(
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 EmptyState(
                     icon = Icons.AutoMirrored.Outlined.ReceiptLong,
-                    title = if (query.isBlank()) "Sin transacciones" else "Sin resultados",
+                    title = if (query.isBlank()) "Sin movimientos" else "Sin resultados",
                     subtitle = if (query.isBlank()) "Usa el botón + para registrar tu primer movimiento." else "Prueba con otra búsqueda.",
                     modifier = Modifier.padding(spacing.xl),
                 )

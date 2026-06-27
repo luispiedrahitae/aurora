@@ -17,6 +17,9 @@ expect class DriverFactory {
 expect class NotificationScheduler {
     fun scheduleReminder(id: Long, title: String, body: String, atEpochDay: Long)
     fun cancel(id: Long)
+
+    /** Publica una notificación inmediata (p.ej. presupuesto alcanzado). */
+    fun notifyNow(id: Long, title: String, body: String)
 }
 
 /**

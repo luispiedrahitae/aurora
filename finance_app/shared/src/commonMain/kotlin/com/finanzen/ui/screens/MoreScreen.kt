@@ -9,14 +9,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
-import androidx.compose.material.icons.outlined.AccountBalance
+import androidx.compose.material.icons.outlined.Analytics
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Backup
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.outlined.PieChart
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
@@ -38,20 +37,17 @@ fun MoreScreen(onNavigate: (route: String) -> Unit) {
         MoreItem("Suscripciones y recurrentes", "Recordatorios de cobros", Icons.Outlined.Repeat, true) {
             onNavigate("subscriptions")
         },
-        MoreItem("Presupuestos", "Por categoría y mes", Icons.Outlined.PieChart, true) {
-            onNavigate("budgets")
-        },
         MoreItem("Calendario", "Movimientos por día", Icons.Outlined.CalendarMonth, true) {
             onNavigate("calendar")
+        },
+        MoreItem("Análisis", "Gastos por categoría", Icons.Outlined.Analytics, true) {
+            onNavigate("analysis")
         },
         MoreItem("Reportes", "Exportar CSV / PDF", Icons.Outlined.Description, true) {
             onNavigate("reports")
         },
-        MoreItem("Backup encriptado", "Exportar / importar tu data", Icons.Outlined.Backup, true) {
+        MoreItem("Backup", "Exportar / importar tu data", Icons.Outlined.Backup, true) {
             onNavigate("backup")
-        },
-        MoreItem("Cuentas", "Crear cuentas y elegir moneda", Icons.Outlined.AccountBalance, true) {
-            onNavigate("accounts")
         },
         MoreItem("Categorías", "Personalizar", Icons.Outlined.AutoAwesome, true) {
             onNavigate("categories")

@@ -64,6 +64,8 @@ fun SettingsScreen(
     val accent by vm.accent.collectAsState()
     val dynamicColor by vm.dynamicColor.collectAsState()
     val baseCurrency by vm.baseCurrency.collectAsState()
+    val cardNotif by vm.cardNotifications.collectAsState()
+    val budgetNotif by vm.budgetNotifications.collectAsState()
 
     Scaffold(
         topBar = {
@@ -148,6 +150,26 @@ fun SettingsScreen(
                 }
             }
 
+            item { SectionHeader("Notificaciones") }
+            item {
+                FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(0.dp)) {
+                    Column {
+                        ToggleRow(
+                            "Corte y pago de tarjetas",
+                            "Recuérdame el día de corte y de pago de mis tarjetas de crédito.",
+                            cardNotif,
+                            vm::setCardNotifications,
+                        )
+                        ToggleRow(
+                            "Presupuesto alcanzado",
+                            "Avísame cuando un gasto alcance el límite de una categoría.",
+                            budgetNotif,
+                            vm::setBudgetNotifications,
+                        )
+                    }
+                }
+            }
+
             item { SectionHeader("Moneda") }
             item {
                 FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(0.dp)) {
@@ -202,6 +224,21 @@ private fun AccentSwatch(
                 Icon(Icons.Outlined.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
             }
         }
+    }
+}
+
+@Composable
+private fun ToggleRow(title: String, subtitle: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(title, fontWeight = FontWeight.SemiBold)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Switch(checked = checked, onCheckedChange = onChange)
     }
 }
 

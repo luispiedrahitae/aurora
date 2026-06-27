@@ -21,6 +21,9 @@ insert:
 INSERT INTO InstallmentPlan(cardId, totalAmountMinor, installments, interestRate, startDate, description)
 VALUES (?, ?, ?, ?, ?, ?);
 
+lastInsertRowId:
+SELECT last_insert_rowid();
+
 update:
 UPDATE InstallmentPlan
 SET cardId = ?, totalAmountMinor = ?, installments = ?, interestRate = ?, startDate = ?, description = ?

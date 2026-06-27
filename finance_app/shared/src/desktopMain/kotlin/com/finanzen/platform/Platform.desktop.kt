@@ -31,6 +31,10 @@ actual class NotificationScheduler {
         println("[NOTIF-Desktop] id=$id at=$atEpochDay '$title': $body")
     }
 
+    actual fun notifyNow(id: Long, title: String, body: String) {
+        println("[NOTIF-Desktop] now id=$id '$title': $body")
+    }
+
     actual fun cancel(id: Long) {
         println("[NOTIF-Desktop] cancel id=$id")
     }

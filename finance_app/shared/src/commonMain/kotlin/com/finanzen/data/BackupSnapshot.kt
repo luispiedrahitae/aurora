@@ -39,6 +39,7 @@ data class BackupSnapshot(
     val creditLimitMinor: Long?,
     val cutoffDay: Long?,
     val dueDay: Long?,
+    val interestRate: Double? = null,
 )
 
 @Serializable data class CategoryDto(

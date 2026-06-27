@@ -3,15 +3,18 @@ package com.finanzen.ui.navigation
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material3.FabPosition
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material.icons.outlined.ArrowDownward
+import androidx.compose.material.icons.outlined.ArrowUpward
+import androidx.compose.material.icons.outlined.Repeat
+import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationRail
@@ -29,13 +32,14 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.finanzen.ui.components.SpeedDialAction
+import com.finanzen.ui.components.SpeedDialFab
 import com.finanzen.ui.screens.AboutScreen
-import com.finanzen.ui.screens.AccountsScreen
+import com.finanzen.ui.screens.AccountsTabScreen
 import com.finanzen.ui.screens.AnalysisScreen
 import com.finanzen.ui.screens.BackupScreen
 import com.finanzen.ui.screens.BudgetsScreen
 import com.finanzen.ui.screens.CalendarScreen
-import com.finanzen.ui.screens.CardsScreen
 import com.finanzen.ui.screens.CategoriesScreen
 import com.finanzen.ui.screens.DashboardScreen
 import com.finanzen.ui.screens.MoreScreen
@@ -45,6 +49,7 @@ import com.finanzen.ui.screens.SettingsScreen
 import com.finanzen.ui.screens.SubscriptionsScreen
 import com.finanzen.ui.screens.TransactionFormScreen
 import com.finanzen.ui.screens.TransactionsScreen
+import com.finanzen.ui.theme.LocalFinanceColors
 
 // Ancho a partir del cual mostramos rail lateral en vez de bottom bar (escritorio/tablet).
 private val WIDE_BREAKPOINT = 600.dp
@@ -56,14 +61,13 @@ fun AppNav() {
     val currentRoute = backStack?.destination?.route
 
     val showNav = TopDestination.entries.any { it.route == currentRoute }
-    // El FAB central solo crea transacciones, así que solo aparece donde tiene sentido.
-    // Cards/Subscriptions tienen su propio FAB; Análisis/Más no necesitan uno.
+    // El FAB desplegable solo crea movimientos/suscripciones, así que aparece donde tiene sentido.
     val showFab = currentRoute == TopDestination.Dashboard.route || currentRoute == TopDestination.Transactions.route
 
     val onSelect: (TopDestination) -> Unit = { dest ->
         if (currentRoute != dest.route) {
             navController.navigate(dest.route) {
-                popUpTo(TopDestination.Dashboard.route) {
+                popUpTo(TopDestination.Transactions.route) {
                     saveState = true
                     inclusive = false
                 }
@@ -72,20 +76,28 @@ fun AppNav() {
             }
         }
     }
-    val onAdd = { navController.navigate("tx_form") }
+
+    val finance = LocalFinanceColors.current
+    // Orden de arriba hacia abajo en el desplegable; "Gasto" queda junto al FAB (lo más usado).
+    val speedDialActions = listOf(
+        SpeedDialAction("Suscripción", Icons.Outlined.Repeat, MaterialTheme.colorScheme.primary) {
+            navController.navigate("subscriptions?add=1")
+        },
+        SpeedDialAction("Transferencia", Icons.Outlined.SwapHoriz, finance.neutral) {
+            navController.navigate("tx_form?kind=TRANSFER")
+        },
+        SpeedDialAction("Ingreso", Icons.Outlined.ArrowUpward, finance.income) {
+            navController.navigate("tx_form?kind=INCOME")
+        },
+        SpeedDialAction("Gasto", Icons.Outlined.ArrowDownward, finance.expense) {
+            navController.navigate("tx_form?kind=EXPENSE")
+        },
+    )
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         if (maxWidth >= WIDE_BREAKPOINT && showNav) {
             Row(Modifier.fillMaxSize()) {
-                NavigationRail(
-                    header = {
-                        if (showFab) {
-                            FloatingActionButton(onClick = onAdd) {
-                                Icon(Icons.Outlined.Add, contentDescription = "Agregar transacción")
-                            }
-                        }
-                    },
-                ) {
+                NavigationRail {
                     TopDestination.entries.forEach { dest ->
                         NavigationRailItem(
                             selected = currentRoute == dest.route,
@@ -95,7 +107,10 @@ fun AppNav() {
                         )
                     }
                 }
-                AppNavHost(navController, Modifier.weight(1f))
+                Box(Modifier.weight(1f).fillMaxSize()) {
+                    AppNavHost(navController)
+                    if (showFab) SpeedDialFab(speedDialActions, contentDescription = "Agregar movimiento")
+                }
             }
         } else {
             Scaffold(
@@ -113,16 +128,11 @@ fun AppNav() {
                         }
                     }
                 },
-                floatingActionButton = {
-                    if (showFab) {
-                        FloatingActionButton(onClick = onAdd) {
-                            Icon(Icons.Outlined.Add, contentDescription = "Agregar transacción")
-                        }
-                    }
-                },
-                floatingActionButtonPosition = FabPosition.Center,
             ) { inner ->
-                AppNavHost(navController, Modifier.padding(inner))
+                Box(Modifier.fillMaxSize().padding(inner)) {
+                    AppNavHost(navController)
+                    if (showFab) SpeedDialFab(speedDialActions, contentDescription = "Agregar movimiento")
+                }
             }
         }
     }
@@ -132,7 +142,7 @@ fun AppNav() {
 private fun AppNavHost(navController: NavHostController, modifier: Modifier = Modifier) {
     NavHost(
         navController = navController,
-        startDestination = TopDestination.Dashboard.route,
+        startDestination = TopDestination.Transactions.route,
         modifier = modifier,
         enterTransition = { fadeIn(tween(220)) },
         exitTransition = { fadeOut(tween(180)) },
@@ -143,13 +153,24 @@ private fun AppNavHost(navController: NavHostController, modifier: Modifier = Mo
         composable(TopDestination.Transactions.route) {
             TransactionsScreen(onEdit = { id -> navController.navigate("tx_form/$id") })
         }
-        composable(TopDestination.Cards.route) { CardsScreen() }
-        composable(TopDestination.Analysis.route) { AnalysisScreen() }
+        composable(TopDestination.Accounts.route) { AccountsTabScreen() }
+        composable(TopDestination.Budgets.route) { BudgetsScreen() }
         composable(TopDestination.More.route) {
             MoreScreen(onNavigate = { route -> navController.navigate(route) })
         }
-        composable("subscriptions") {
-            SubscriptionsScreen(onBack = { navController.popBackStack() })
+        composable(
+            "subscriptions?add={add}",
+            arguments = listOf(
+                navArgument("add") {
+                    type = NavType.StringType
+                    defaultValue = "0"
+                },
+            ),
+        ) { entry ->
+            SubscriptionsScreen(
+                openAddInitially = entry.arguments?.getString("add") == "1",
+                onBack = { navController.popBackStack() },
+            )
         }
         composable("reports") {
             ReportsScreen(onBack = { navController.popBackStack() })
@@ -166,8 +187,21 @@ private fun AppNavHost(navController: NavHostController, modifier: Modifier = Mo
         composable("about") {
             AboutScreen(onBack = { navController.popBackStack() })
         }
-        composable("tx_form") {
-            TransactionFormScreen(transactionId = null, onBack = { navController.popBackStack() })
+        composable(
+            "tx_form?kind={kind}",
+            arguments = listOf(
+                navArgument("kind") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+            ),
+        ) { entry ->
+            TransactionFormScreen(
+                transactionId = null,
+                initialKind = entry.arguments?.getString("kind"),
+                onBack = { navController.popBackStack() },
+            )
         }
         composable(
             "tx_form/{id}",
@@ -181,11 +215,8 @@ private fun AppNavHost(navController: NavHostController, modifier: Modifier = Mo
         composable("categories") {
             CategoriesScreen(onBack = { navController.popBackStack() })
         }
-        composable("accounts") {
-            AccountsScreen(onBack = { navController.popBackStack() })
-        }
-        composable("budgets") {
-            BudgetsScreen(onBack = { navController.popBackStack() })
+        composable("analysis") {
+            AnalysisScreen(onBack = { navController.popBackStack() })
         }
         composable("calendar") {
             CalendarScreen(

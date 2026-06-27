@@ -36,6 +36,22 @@ private fun hasNotificationPermission(context: Context): Boolean {
         PackageManager.PERMISSION_GRANTED
 }
 
+/** Publica una notificación de recordatorio ya. Compartido por el Worker y por notifyNow. */
+internal fun postReminderNotification(context: Context, notifId: Int, title: String, body: String) {
+    ensureReminderChannel(context)
+    val notification = NotificationCompat.Builder(context, REMINDER_CHANNEL_ID)
+        // ponytail: icono del sistema como placeholder. Reemplazar por el ic_stat monocromo en B1 (iconos).
+        .setSmallIcon(android.R.drawable.ic_popup_reminder)
+        .setContentTitle(title)
+        .setContentText(body)
+        .setAutoCancel(true)
+        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+        .build()
+    if (hasNotificationPermission(context)) {
+        NotificationManagerCompat.from(context).notify(notifId, notification)
+    }
+}
+
 /** Worker disparado por WorkManager en la fecha del recordatorio; publica la notificación. */
 class ReminderWorker(context: Context, params: WorkerParameters) : Worker(context, params) {
     override fun doWork(): Result {
@@ -43,20 +59,7 @@ class ReminderWorker(context: Context, params: WorkerParameters) : Worker(contex
         val notifId = inputData.getLong(KEY_NOTIF_ID, 0L).toInt()
         val title = inputData.getString(KEY_TITLE) ?: "FinanZen"
         val body = inputData.getString(KEY_BODY).orEmpty()
-
-        ensureReminderChannel(ctx)
-        val notification = NotificationCompat.Builder(ctx, REMINDER_CHANNEL_ID)
-            // ponytail: icono del sistema como placeholder. Reemplazar por el ic_stat monocromo en B1 (iconos).
-            .setSmallIcon(android.R.drawable.ic_popup_reminder)
-            .setContentTitle(title)
-            .setContentText(body)
-            .setAutoCancel(true)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            .build()
-
-        if (hasNotificationPermission(ctx)) {
-            NotificationManagerCompat.from(ctx).notify(notifId, notification)
-        }
+        postReminderNotification(ctx, notifId, title, body)
         return Result.success()
     }
 }

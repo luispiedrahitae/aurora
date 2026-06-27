@@ -7,9 +7,17 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -25,32 +33,46 @@ import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.viewmodel.AnalysisViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AnalysisScreen(vm: AnalysisViewModel = koinViewModel()) {
+fun AnalysisScreen(onBack: () -> Unit, vm: AnalysisViewModel = koinViewModel()) {
     val data by vm.data.collectAsState()
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        item { TotalsCard(income = data.totalIncomeMinor, expense = data.totalExpenseMinor, currency = data.currency) }
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Análisis") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Volver")
+                    }
+                },
+            )
+        },
+    ) { inner ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(inner),
+            contentPadding = PaddingValues(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            item { TotalsCard(income = data.totalIncomeMinor, expense = data.totalExpenseMinor, currency = data.currency) }
 
-        item { SectionHeader("Gasto por categoría") }
+            item { SectionHeader("Gasto por categoría") }
 
-        if (data.byCategory.isEmpty()) {
-            item {
-                Text(
-                    "Sin gastos categorizados todavía. Añade transacciones desde la pestaña Transacciones.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        } else {
-            item {
-                FinanceCard(modifier = Modifier.fillMaxWidth()) {
-                    Box {
-                        CategoryPieChart(data.byCategory, currency = data.currency)
+            if (data.byCategory.isEmpty()) {
+                item {
+                    Text(
+                        "Sin gastos categorizados todavía. Añade movimientos desde la pestaña Movimientos.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                item {
+                    FinanceCard(modifier = Modifier.fillMaxWidth()) {
+                        Box {
+                            CategoryPieChart(data.byCategory, currency = data.currency)
+                        }
                     }
                 }
             }

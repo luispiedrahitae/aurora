@@ -62,7 +62,7 @@ object ReportBuilder {
             }
         }
         lines += ""
-        lines += "Total de transacciones: ${rows.size}"
+        lines += "Total de movimientos: ${rows.size}"
         return lines
     }
 

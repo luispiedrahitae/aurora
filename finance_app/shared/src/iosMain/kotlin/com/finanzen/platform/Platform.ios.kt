@@ -18,6 +18,10 @@ actual class NotificationScheduler {
         println("[NOTIF-iOS stub] id=$id at=$atEpochDay '$title': $body")
     }
 
+    actual fun notifyNow(id: Long, title: String, body: String) {
+        println("[NOTIF-iOS stub] now id=$id '$title': $body")
+    }
+
     actual fun cancel(id: Long) {
         println("[NOTIF-iOS stub] cancel id=$id")
     }

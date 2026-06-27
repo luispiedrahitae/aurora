@@ -62,7 +62,7 @@ fun DashboardScreen(vm: DashboardViewModel = koinViewModel()) {
         if (data.topCategories.isEmpty()) {
             item {
                 Text(
-                    "Sin gastos este mes. Añade transacciones desde la pestaña Transacciones.",
+                    "Sin gastos este mes. Añade movimientos desde la pestaña Movimientos.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

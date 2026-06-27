@@ -53,13 +53,14 @@ private const val MILLIS_PER_DAY = 86_400_000L
 fun TransactionFormScreen(
     transactionId: Long?,
     onBack: () -> Unit,
+    initialKind: String? = null,
     vm: TransactionsViewModel = koinViewModel(),
 ) {
     val accounts by vm.accounts.collectAsState()
     val categories by vm.categories.collectAsState()
 
     val existing = remember(transactionId) { transactionId?.let(vm::transactionById) }
-    var kind by remember { mutableStateOf(existing?.kind ?: "EXPENSE") }
+    var kind by remember { mutableStateOf(existing?.kind ?: initialKind ?: "EXPENSE") }
     var accountId by remember { mutableStateOf(existing?.accountId) }
     var toAccountId by remember { mutableStateOf(existing?.transferAccountId) }
     var categoryId by remember { mutableStateOf(existing?.categoryId) }
@@ -70,6 +71,8 @@ fun TransactionFormScreen(
         mutableStateOf(existing?.date ?: Clock.System.todayIn(TimeZone.currentSystemDefault()).toEpochDays().toLong())
     }
     var showDatePicker by remember { mutableStateOf(false) }
+    var installmentsText by remember { mutableStateOf("1") }
+    var interestText by remember { mutableStateOf("") }
 
     val isTransfer = kind == "TRANSFER"
     val selectedAccount = accounts.firstOrNull { it.id == accountId } ?: accounts.firstOrNull()
@@ -133,7 +136,7 @@ fun TransactionFormScreen(
                         categoryId = null
                     },
                     shape = SegmentedButtonDefaults.itemShape(index = 2, count = 3),
-                ) { Text("Transfer.") }
+                ) { Text("Transferencia") }
             }
 
             OutlinedTextField(
@@ -152,7 +155,7 @@ fun TransactionFormScreen(
                 optionLabel = { "${it.name} (${it.currency})" },
                 onSelect = { accountId = it.id },
                 placeholder = "Selecciona cuenta",
-                emptyHint = "Crea una cuenta primero (pestaña Más › Cuentas).",
+                emptyHint = "Crea una cuenta primero (pestaña Cuentas).",
             )
 
             if (isTransfer) {
@@ -174,6 +177,26 @@ fun TransactionFormScreen(
                     onSelect = { categoryId = it.id },
                     placeholder = "Sin categoría",
                     emptyHint = "No hay categorías de ${if (kind == "EXPENSE") "gasto" else "ingreso"}.",
+                )
+            }
+
+            // Cuotas: solo para gastos con tarjeta de crédito. Captura de valores por ahora.
+            if (!isTransfer && kind == "EXPENSE" && selectedAccount?.type == "CREDIT") {
+                OutlinedTextField(
+                    value = installmentsText,
+                    onValueChange = { installmentsText = it.filter(Char::isDigit).take(3) },
+                    label = { Text("Nº de cuotas (1 = sin cuotas)") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = interestText,
+                    onValueChange = { interestText = it },
+                    label = { Text("Tasa de interés % (opcional)") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
 
@@ -209,7 +232,7 @@ fun TransactionFormScreen(
                         }
                     } else {
                         when {
-                            account == null -> error = "Crea una cuenta primero (pestaña Más › … )."
+                            account == null -> error = "Crea una cuenta primero (pestaña Cuentas)."
                             minor == null || minor <= 0 -> error = "Monto inválido."
                             else -> {
                                 vm.save(
@@ -220,6 +243,8 @@ fun TransactionFormScreen(
                                     kind = kind,
                                     note = note,
                                     dateEpochDay = dateEpochDay,
+                                    installments = installmentsText.toLongOrNull() ?: 1,
+                                    interestRate = interestText.toDoubleOrNull(),
                                 )
                                 onBack()
                             }

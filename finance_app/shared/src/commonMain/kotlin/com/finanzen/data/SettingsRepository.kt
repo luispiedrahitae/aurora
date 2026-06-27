@@ -22,6 +22,16 @@ class SettingsRepository(private val db: FinanzenDb) {
 
     fun setDynamicColorEnabled(enabled: Boolean) = db.settingQueries.put(KEY_DYNAMIC, enabled.toString())
 
+    /** Recordatorios de corte/pago de tarjetas de crédito. Apagado por defecto. */
+    fun cardNotificationsEnabled(): Boolean = db.settingQueries.get(KEY_NOTIFY_CARDS).executeAsOneOrNull()?.toBooleanStrictOrNull() ?: false
+
+    fun setCardNotificationsEnabled(enabled: Boolean) = db.settingQueries.put(KEY_NOTIFY_CARDS, enabled.toString())
+
+    /** Aviso al alcanzar el límite de un presupuesto. Apagado por defecto. */
+    fun budgetNotificationsEnabled(): Boolean = db.settingQueries.get(KEY_NOTIFY_BUDGET).executeAsOneOrNull()?.toBooleanStrictOrNull() ?: false
+
+    fun setBudgetNotificationsEnabled(enabled: Boolean) = db.settingQueries.put(KEY_NOTIFY_BUDGET, enabled.toString())
+
     /** Moneda única de la app. La app no maneja FX; todos los montos se asumen en esta moneda. */
     fun baseCurrency(): String = db.settingQueries.get(KEY_CURRENCY).executeAsOneOrNull() ?: DEFAULT_CURRENCY
 
@@ -46,5 +56,7 @@ class SettingsRepository(private val db: FinanzenDb) {
         const val KEY_ACCENT = "app.accent"
         const val DEFAULT_ACCENT = "Violet"
         const val KEY_DYNAMIC = "app.dynamic_color"
+        const val KEY_NOTIFY_CARDS = "notif.cards"
+        const val KEY_NOTIFY_BUDGET = "notif.budget"
     }
 }

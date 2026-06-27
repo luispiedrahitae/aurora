@@ -57,8 +57,8 @@ fun ReportsScreen(
         ) {
             item {
                 ReportCard(
-                    title = "Transacciones (CSV)",
-                    subtitle = "Exporta todas las transacciones. Compatible con Excel, Google Sheets, scripts.",
+                    title = "Movimientos (CSV)",
+                    subtitle = "Exporta todos los movimientos. Compatible con Excel, Google Sheets, scripts.",
                     icon = Icons.Outlined.Description,
                     buttonText = "Exportar CSV",
                     onClick = { vm.exportTransactionsCsv() },

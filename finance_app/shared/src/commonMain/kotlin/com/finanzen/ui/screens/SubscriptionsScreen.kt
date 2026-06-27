@@ -50,13 +50,14 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun SubscriptionsScreen(
     onBack: () -> Unit,
+    openAddInitially: Boolean = false,
     vm: SubscriptionsViewModel = koinViewModel(),
 ) {
     val subs by vm.subscriptions.collectAsState()
     val recur by vm.recurring.collectAsState()
     val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date.toEpochDays().toLong()
-    // Qué formulario está abierto: "sub", "recur" o null.
-    var openForm by remember { mutableStateOf<String?>(null) }
+    // Qué formulario está abierto: "sub", "recur" o null. Si venimos del FAB, abrimos "sub".
+    var openForm by remember { mutableStateOf<String?>(if (openAddInitially) "sub" else null) }
 
     if (openForm != null) {
         val isRecurring = openForm == "recur"

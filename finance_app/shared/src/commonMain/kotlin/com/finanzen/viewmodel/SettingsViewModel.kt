@@ -40,6 +40,12 @@ class SettingsViewModel(
     private val mutableDynamic = MutableStateFlow(dynamicSupported && repo.dynamicColorEnabled())
     val dynamicColor: StateFlow<Boolean> = mutableDynamic.asStateFlow()
 
+    private val mutableCardNotif = MutableStateFlow(repo.cardNotificationsEnabled())
+    val cardNotifications: StateFlow<Boolean> = mutableCardNotif.asStateFlow()
+
+    private val mutableBudgetNotif = MutableStateFlow(repo.budgetNotificationsEnabled())
+    val budgetNotifications: StateFlow<Boolean> = mutableBudgetNotif.asStateFlow()
+
     fun setTheme(mode: ThemeMode) {
         repo.setThemeMode(mode.name.lowercase())
         mutableTheme.value = mode
@@ -53,6 +59,16 @@ class SettingsViewModel(
     fun setDynamicColor(enabled: Boolean) {
         repo.setDynamicColorEnabled(enabled)
         mutableDynamic.value = enabled
+    }
+
+    fun setCardNotifications(enabled: Boolean) {
+        repo.setCardNotificationsEnabled(enabled)
+        mutableCardNotif.value = enabled
+    }
+
+    fun setBudgetNotifications(enabled: Boolean) {
+        repo.setBudgetNotificationsEnabled(enabled)
+        mutableBudgetNotif.value = enabled
     }
 
     fun setBaseCurrency(code: String) {

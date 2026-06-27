@@ -2,8 +2,10 @@ package com.finanzen.data
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.finanzen.db.FinanzenDb
+import com.finanzen.platform.NotificationScheduler
+import com.finanzen.viewmodel.AccountsViewModel
 import com.finanzen.viewmodel.BudgetsViewModel
-import com.finanzen.viewmodel.CardsViewModel
+import com.finanzen.viewmodel.TransactionsViewModel
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
@@ -47,21 +49,60 @@ class Phase4ManagementTest {
     }
 
     @Test
-    fun borrarTarjetaTambienBorraSuCuentaHuerfana() {
+    fun crearCuentaDeCreditoCreaTarjetaYBorrarlaLaElimina() {
         val db = freshDb()
         seedIfEmpty(db)
-        val vm = CardsViewModel(CardRepository(db), InstallmentPlanRepository(db), AccountRepository(db), SettingsRepository(db))
+        val vm = AccountsViewModel(AccountRepository(db), TransactionRepository(db), CardRepository(db), SettingsRepository(db), NotificationScheduler())
         val accountsBefore = db.accountQueries.selectAll().executeAsList().size
 
-        // crea una cuenta CREDIT + su tarjeta
-        vm.addCard(network = "VISA", last4 = "1234", isCredit = true, creditLimitMinor = 500_000L, cutoffDay = 15L, dueDay = 5L)
+        // Crear una cuenta de crédito también crea su tarjeta con cupo/corte/pago/interés.
+        val accId = vm.addAccount(
+            type = "CREDIT",
+            name = "Visa Oro",
+            creditLimitMinor = 500_000L,
+            cutoffDay = 15L,
+            dueDay = 5L,
+            interestRate = 2.5,
+        )
         assertEquals(accountsBefore + 1, db.accountQueries.selectAll().executeAsList().size)
         val card = db.cardQueries.selectAll().executeAsList().first()
+        assertEquals(accId, card.accountId)
+        assertEquals(500_000L, card.creditLimitMinor)
+        assertEquals(2.5, card.interestRate)
 
-        vm.deleteCard(card.id)
+        // Borrar la cuenta borra también su tarjeta de respaldo.
+        vm.delete(accId!!)
         assertNull(db.cardQueries.selectById(card.id).executeAsOneOrNull())
-        // la cuenta de respaldo ya no debe quedar (antes aparecía fantasma en el selector)
         assertEquals(accountsBefore, db.accountQueries.selectAll().executeAsList().size)
+    }
+
+    @Test
+    fun gastoConCreditoYCuotasCreaPlanYLoEnlaza() {
+        val db = freshDb()
+        seedIfEmpty(db)
+        val accVm = AccountsViewModel(AccountRepository(db), TransactionRepository(db), CardRepository(db), SettingsRepository(db), NotificationScheduler())
+        val accId = accVm.addAccount(type = "CREDIT", name = "Visa", creditLimitMinor = 1_000_000L)!!
+        val txVm = TransactionsViewModel(
+            TransactionRepository(db),
+            AccountRepository(db),
+            CategoryRepository(db),
+            CardRepository(db),
+            InstallmentPlanRepository(db),
+            BudgetRepository(db),
+            SettingsRepository(db),
+            NotificationScheduler(),
+        )
+
+        txVm.save(
+            id = null, accountId = accId, categoryId = null, amountMinor = 120_000,
+            kind = "EXPENSE", note = "TV", dateEpochDay = 20_000, installments = 12, interestRate = 2.0,
+        )
+
+        val plans = db.installmentPlanQueries.selectAll().executeAsList()
+        assertEquals(1, plans.size)
+        assertEquals(12L, plans.first().installments)
+        val tx = db.transactionQueries.selectAll().executeAsList().first { it.note == "TV" }
+        assertEquals(plans.first().id, tx.installmentPlanId)
     }
 
     @Test
