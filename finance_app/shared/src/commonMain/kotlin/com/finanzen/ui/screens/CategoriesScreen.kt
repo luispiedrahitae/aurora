@@ -78,11 +78,13 @@ fun CategoriesScreen(
                                 selected = kind == "EXPENSE",
                                 onClick = { kind = "EXPENSE" },
                                 shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                                icon = {},
                             ) { Text("Gasto") }
                             SegmentedButton(
                                 selected = kind == "INCOME",
                                 onClick = { kind = "INCOME" },
                                 shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                                icon = {},
                             ) { Text("Ingreso") }
                         }
                         OutlinedTextField(

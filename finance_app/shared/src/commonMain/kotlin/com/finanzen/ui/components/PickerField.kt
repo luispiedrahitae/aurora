@@ -12,10 +12,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.UnfoldMore
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -93,37 +95,52 @@ fun <T> PickerField(
                         modifier = Modifier.padding(horizontal = spacing.lg, vertical = spacing.md),
                     )
                 } else {
-                    options.forEach { option ->
-                        val isSelected = option == selected
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onSelect(option)
-                                    open = false
+                    // Lista dentro de un recuadro redondeado con separadores, como una tarjeta de opciones.
+                    Surface(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = spacing.lg),
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    ) {
+                        Column {
+                            options.forEachIndexed { index, option ->
+                                if (index > 0) {
+                                    HorizontalDivider(
+                                        modifier = Modifier.padding(start = spacing.lg),
+                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                                    )
                                 }
-                                .padding(horizontal = spacing.lg, vertical = spacing.md),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(spacing.md),
-                        ) {
-                            leadingContent?.invoke(option)
-                            Text(
-                                optionLabel(option),
-                                modifier = Modifier.weight(1f),
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                color = if (isSelected) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    MaterialTheme.colorScheme.onSurface
-                                },
-                            )
-                            if (isSelected) {
-                                Icon(
-                                    Icons.Outlined.Check,
-                                    contentDescription = "Seleccionado",
-                                    tint = MaterialTheme.colorScheme.primary,
-                                )
+                                val isSelected = option == selected
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            onSelect(option)
+                                            open = false
+                                        }
+                                        .padding(horizontal = spacing.lg, vertical = spacing.md),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(spacing.md),
+                                ) {
+                                    leadingContent?.invoke(option)
+                                    Text(
+                                        optionLabel(option),
+                                        modifier = Modifier.weight(1f),
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                        color = if (isSelected) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurface
+                                        },
+                                    )
+                                    if (isSelected) {
+                                        Icon(
+                                            Icons.Outlined.Check,
+                                            contentDescription = "Seleccionado",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
