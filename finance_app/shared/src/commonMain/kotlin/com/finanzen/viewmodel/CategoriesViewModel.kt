@@ -14,9 +14,9 @@ class CategoriesViewModel(private val repo: CategoryRepository) : ViewModel() {
         repo.observeAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** kind = INCOME | EXPENSE. parentId no nulo crea una subcategoría. Ignora nombres vacíos. */
-    fun add(name: String, kind: String, parentId: Long?) {
+    fun add(name: String, kind: String, parentId: Long?, icon: String = "", color: Long = 0) {
         if (name.isBlank()) return
-        repo.add(name = name.trim(), kind = kind, parentId = parentId)
+        repo.add(name = name.trim(), kind = kind, parentId = parentId, icon = icon, color = color)
     }
 
     fun delete(id: Long) = repo.delete(id)

@@ -1,15 +1,11 @@
 package com.finanzen.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -37,14 +33,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.finanzen.domain.Money
+import com.finanzen.ui.components.CategoryAvatar
 import com.finanzen.ui.components.PickerField
+import com.finanzen.ui.components.categoryColor
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.viewmodel.TransactionsViewModel
 import kotlinx.datetime.Clock
@@ -186,7 +181,7 @@ fun TransactionFormScreen(
                     onSelect = { categoryId = it.id },
                     placeholder = "Sin categoría",
                     emptyHint = "No hay categorías de ${if (kind == "EXPENSE") "gasto" else "ingreso"}.",
-                    leadingContent = { cat -> CategoryAvatar(cat.icon, colorForCategory(cat.name)) },
+                    leadingContent = { cat -> CategoryAvatar(cat.icon, categoryColor(cat.name, cat.color)) },
                 )
             }
 
@@ -262,29 +257,3 @@ fun TransactionFormScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun rememberDatePickerStateFor(epochDay: Long) = androidx.compose.material3.rememberDatePickerState(initialSelectedDateMillis = epochDay * MILLIS_PER_DAY)
-
-// Paleta fija para los círculos de categoría. ponytail: color por hash del nombre; si luego se
-// quiere color editable, ya existe la columna Category.color en la DB para reemplazar esto.
-private val categoryColors = listOf(
-    Color(0xFFFFB300),
-    Color(0xFF7E57C2),
-    Color(0xFF42A5F5),
-    Color(0xFFEC407A),
-    Color(0xFF26A69A),
-    Color(0xFF66BB6A),
-    Color(0xFFFF7043),
-    Color(0xFF8D6E63),
-)
-
-private fun colorForCategory(name: String): Color = categoryColors[((name.hashCode() % categoryColors.size) + categoryColors.size) % categoryColors.size]
-
-/** Emoji de la categoría dentro de un círculo de color, para el selector de categoría. */
-@Composable
-private fun CategoryAvatar(icon: String, color: Color) {
-    Box(
-        modifier = Modifier.size(36.dp).clip(CircleShape).background(color),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(icon.ifBlank { "•" }, style = MaterialTheme.typography.titleMedium)
-    }
-}

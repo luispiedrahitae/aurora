@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -26,6 +27,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.finanzen.domain.Money
 import com.finanzen.ui.theme.LocalFinanceColors
@@ -149,6 +151,35 @@ fun CategoryProgressRow(
                     .background(color),
             )
         }
+    }
+}
+
+/** Paleta fija para los círculos de categoría. También es la oferta del selector de color al crearlas. */
+val categoryColors = listOf(
+    Color(0xFFFFB300),
+    Color(0xFF7E57C2),
+    Color(0xFF42A5F5),
+    Color(0xFFEC407A),
+    Color(0xFF26A69A),
+    Color(0xFF66BB6A),
+    Color(0xFFFF7043),
+    Color(0xFF8D6E63),
+)
+
+/** Color por hash del nombre, fallback cuando la categoría no tiene color propio (color = 0). */
+fun colorForCategory(name: String): Color = categoryColors[((name.hashCode() % categoryColors.size) + categoryColors.size) % categoryColors.size]
+
+/** Color efectivo de una categoría: el guardado (ARGB en [storedColor]) si lo hay, si no el del hash. */
+fun categoryColor(name: String, storedColor: Long): Color = if (storedColor != 0L) Color(storedColor.toInt()) else colorForCategory(name)
+
+/** Emoji de la categoría dentro de un círculo de color. Avatar único usado en formularios y listas. */
+@Composable
+fun CategoryAvatar(icon: String, color: Color, modifier: Modifier = Modifier, size: Dp = 36.dp) {
+    Box(
+        modifier = modifier.size(size).clip(CircleShape).background(color),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(icon.ifBlank { "•" }, style = MaterialTheme.typography.titleMedium)
     }
 }
 
