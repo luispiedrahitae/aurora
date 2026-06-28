@@ -2,15 +2,24 @@ package com.finanzen.data
 
 import com.finanzen.db.FinanzenDb
 
+private const val KEY_SEEDED = "seeded"
+
 /**
- * Inserta datos mínimos en la primera apertura de la DB. Idempotente: si ya hay monedas, no hace nada.
+ * Inserta datos mínimos en la primera apertura de la DB. Idempotente: una bandera persistente marca
+ * que ya se sembró. No se infiere de la cuenta porque el usuario puede borrarla y dispararía un
+ * re-seed con categorías/monedas duplicadas.
  */
 fun seedIfEmpty(db: FinanzenDb) {
-    // Checkpoint = cuenta. Si existe, todo lo anterior (currencies, categorías) también — el seed va en una sola transacción.
-    val seeded = db.accountQueries.selectAll().executeAsList().isNotEmpty()
-    if (seeded) return
+    if (db.settingQueries.get(KEY_SEEDED).executeAsOneOrNull() != null) return
+
+    // DB previa a esta bandera que ya tenía datos: márcala como sembrada y no insertes de nuevo.
+    if (db.currencyQueries.selectAll().executeAsList().isNotEmpty()) {
+        db.settingQueries.put(KEY_SEEDED, "true")
+        return
+    }
 
     db.transaction {
+        db.settingQueries.put(KEY_SEEDED, "true")
         db.currencyQueries.upsert("USD", "$", 2, 1.0)
         db.currencyQueries.upsert("EUR", "€", 2, 1.0)
         db.currencyQueries.upsert("COP", "$", 0, 1.0)

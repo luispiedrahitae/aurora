@@ -34,6 +34,18 @@ class FinanzenDbTest {
     }
 
     @Test
+    fun seedNoReSiembraTrasBorrarLaCuenta() {
+        val db = freshDb()
+        seedIfEmpty(db)
+        val cats = db.categoryQueries.selectAll().executeAsList().size
+        // El usuario borra la cuenta sembrada; el seed no debe dispararse de nuevo.
+        db.accountQueries.selectAll().executeAsList().forEach { db.accountQueries.delete(it.id) }
+        seedIfEmpty(db)
+        assertEquals(cats, db.categoryQueries.selectAll().executeAsList().size)
+        assertTrue(db.accountQueries.selectAll().executeAsList().isEmpty())
+    }
+
+    @Test
     fun transaccionSeInsertaYRecupera() {
         val db = freshDb()
         seedIfEmpty(db)
