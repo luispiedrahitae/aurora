@@ -18,4 +18,13 @@ class CategoryColorTest {
         val stored = chosen.toArgb().toLong()
         assertEquals(chosen, categoryColor("loQueSea", stored))
     }
+
+    @Test
+    fun iconForKeyResuelveClaveConocidaYCaeAlFallback() {
+        val (key, vector) = categoryIcons.first()
+        assertEquals(vector, iconForKey(key))
+        // Clave desconocida (o emoji legacy) -> icono genérico, nunca null.
+        assertEquals(iconForKey("other"), iconForKey("🍔"))
+        assertEquals(iconForKey("other"), iconForKey("no_existe"))
+    }
 }

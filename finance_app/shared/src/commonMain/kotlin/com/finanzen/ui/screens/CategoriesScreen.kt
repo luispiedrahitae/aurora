@@ -52,6 +52,7 @@ import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.SectionHeader
 import com.finanzen.ui.components.categoryColor
 import com.finanzen.ui.components.categoryColors
+import com.finanzen.ui.components.categoryIcons
 import com.finanzen.viewmodel.CategoriesViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -64,7 +65,7 @@ fun CategoriesScreen(
     val categories by vm.categories.collectAsState()
     var name by remember { mutableStateOf("") }
     var kind by remember { mutableStateOf("EXPENSE") }
-    var icon by remember { mutableStateOf(categoryIcons.first()) }
+    var icon by remember { mutableStateOf(categoryIcons.first().first) }
     var color by remember { mutableStateOf(categoryColors.first()) }
 
     val parents = categories.filter { it.parentId == null }
@@ -123,7 +124,7 @@ fun CategoriesScreen(
                             onClick = {
                                 vm.add(name, kind, parentId = null, icon = icon, color = color.toArgb().toLong())
                                 name = ""
-                                icon = categoryIcons.first()
+                                icon = categoryIcons.first().first
                                 color = categoryColors.first()
                             },
                             enabled = name.isNotBlank(),
@@ -183,32 +184,29 @@ private fun CategoryRow(category: Category, onDelete: (Long) -> Unit) {
     }
 }
 
-// Oferta de emojis para personalizar la categoría. Set acotado y minimalista (gastos + ingresos).
-private val categoryIcons = listOf(
-    "🍔", "🛒", "🚗", "🏠", "💡", "📺", "🩺", "🎮",
-    "✈️", "👕", "🎓", "🐶", "🎁", "☕", "💼", "💰",
-)
-
 @Composable
 private fun IconPicker(selected: String, onSelect: (String) -> Unit) {
     Text("Icono", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        categoryIcons.forEach { emoji ->
-            val isSelected = emoji == selected
+        categoryIcons.forEach { (key, vector) ->
+            val isSelected = key == selected
             Box(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(
-                        if (isSelected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
-                    )
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                     .then(
                         if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape) else Modifier,
                     )
-                    .clickable { onSelect(emoji) },
+                    .clickable { onSelect(key) },
                 contentAlignment = Alignment.Center,
             ) {
-                Text(emoji, style = MaterialTheme.typography.titleMedium)
+                Icon(
+                    imageVector = vector,
+                    contentDescription = key,
+                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(22.dp),
+                )
             }
         }
     }

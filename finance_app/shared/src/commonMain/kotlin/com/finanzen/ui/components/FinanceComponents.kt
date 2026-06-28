@@ -14,6 +14,47 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.BeachAccess
+import androidx.compose.material.icons.outlined.Bolt
+import androidx.compose.material.icons.outlined.Build
+import androidx.compose.material.icons.outlined.Cake
+import androidx.compose.material.icons.outlined.Category
+import androidx.compose.material.icons.outlined.Checkroom
+import androidx.compose.material.icons.outlined.ChildCare
+import androidx.compose.material.icons.outlined.CreditCard
+import androidx.compose.material.icons.outlined.DirectionsCar
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.FitnessCenter
+import androidx.compose.material.icons.outlined.Flight
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.LocalCafe
+import androidx.compose.material.icons.outlined.LocalGasStation
+import androidx.compose.material.icons.outlined.LocalMall
+import androidx.compose.material.icons.outlined.MedicalServices
+import androidx.compose.material.icons.outlined.MenuBook
+import androidx.compose.material.icons.outlined.Movie
+import androidx.compose.material.icons.outlined.MusicNote
+import androidx.compose.material.icons.outlined.Payments
+import androidx.compose.material.icons.outlined.Pets
+import androidx.compose.material.icons.outlined.Receipt
+import androidx.compose.material.icons.outlined.Redeem
+import androidx.compose.material.icons.outlined.Restaurant
+import androidx.compose.material.icons.outlined.Savings
+import androidx.compose.material.icons.outlined.School
+import androidx.compose.material.icons.outlined.ShoppingCart
+import androidx.compose.material.icons.outlined.Smartphone
+import androidx.compose.material.icons.outlined.Spa
+import androidx.compose.material.icons.outlined.SportsEsports
+import androidx.compose.material.icons.outlined.StarBorder
+import androidx.compose.material.icons.outlined.Subscriptions
+import androidx.compose.material.icons.outlined.Train
+import androidx.compose.material.icons.outlined.TrendingUp
+import androidx.compose.material.icons.outlined.Tv
+import androidx.compose.material.icons.outlined.VolunteerActivism
+import androidx.compose.material.icons.outlined.WaterDrop
+import androidx.compose.material.icons.outlined.Wifi
+import androidx.compose.material.icons.outlined.Work
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -154,16 +195,17 @@ fun CategoryProgressRow(
     }
 }
 
-/** Paleta fija para los círculos de categoría. También es la oferta del selector de color al crearlas. */
+/**
+ * Paleta amplia para los círculos de categoría y oferta del selector de color. Tonos saturados
+ * repartidos por la rueda de color, todos legibles con el glifo blanco encima (≥3:1 en glifo grande).
+ */
 val categoryColors = listOf(
-    Color(0xFFFFB300),
-    Color(0xFF7E57C2),
-    Color(0xFF42A5F5),
-    Color(0xFFEC407A),
-    Color(0xFF26A69A),
-    Color(0xFF66BB6A),
-    Color(0xFFFF7043),
-    Color(0xFF8D6E63),
+    Color(0xFFE53935), Color(0xFFD81B60), Color(0xFFAD1457), Color(0xFF8E24AA),
+    Color(0xFF6A1B9A), Color(0xFF5E35B1), Color(0xFF3949AB), Color(0xFF1E88E5),
+    Color(0xFF1565C0), Color(0xFF0277BD), Color(0xFF00838F), Color(0xFF00897B),
+    Color(0xFF2E7D32), Color(0xFF43A047), Color(0xFF558B2F), Color(0xFF827717),
+    Color(0xFFEF6C00), Color(0xFFFB8C00), Color(0xFFF4511E), Color(0xFF6D4C41),
+    Color(0xFF8D6E63), Color(0xFF546E7A), Color(0xFF455A64), Color(0xFF757575),
 )
 
 /** Color por hash del nombre, fallback cuando la categoría no tiene color propio (color = 0). */
@@ -172,14 +214,71 @@ fun colorForCategory(name: String): Color = categoryColors[((name.hashCode() % c
 /** Color efectivo de una categoría: el guardado (ARGB en [storedColor]) si lo hay, si no el del hash. */
 fun categoryColor(name: String, storedColor: Long): Color = if (storedColor != 0L) Color(storedColor.toInt()) else colorForCategory(name)
 
-/** Emoji de la categoría dentro de un círculo de color. Avatar único usado en formularios y listas. */
+/**
+ * Iconos vectoriales (Material Outlined, ya disponibles vía material-icons-extended) ofrecidos al
+ * crear una categoría. La clave (string estable) es lo que se guarda en Category.icon.
+ */
+val categoryIcons: List<Pair<String, ImageVector>> = listOf(
+    "restaurant" to Icons.Outlined.Restaurant,
+    "groceries" to Icons.Outlined.ShoppingCart,
+    "shopping" to Icons.Outlined.LocalMall,
+    "car" to Icons.Outlined.DirectionsCar,
+    "fuel" to Icons.Outlined.LocalGasStation,
+    "transit" to Icons.Outlined.Train,
+    "home" to Icons.Outlined.Home,
+    "bills" to Icons.Outlined.Receipt,
+    "utilities" to Icons.Outlined.Bolt,
+    "water" to Icons.Outlined.WaterDrop,
+    "phone" to Icons.Outlined.Smartphone,
+    "internet" to Icons.Outlined.Wifi,
+    "tv" to Icons.Outlined.Tv,
+    "subs" to Icons.Outlined.Subscriptions,
+    "health" to Icons.Outlined.MedicalServices,
+    "gym" to Icons.Outlined.FitnessCenter,
+    "beauty" to Icons.Outlined.Spa,
+    "games" to Icons.Outlined.SportsEsports,
+    "movies" to Icons.Outlined.Movie,
+    "music" to Icons.Outlined.MusicNote,
+    "books" to Icons.Outlined.MenuBook,
+    "travel" to Icons.Outlined.Flight,
+    "beach" to Icons.Outlined.BeachAccess,
+    "clothes" to Icons.Outlined.Checkroom,
+    "education" to Icons.Outlined.School,
+    "kids" to Icons.Outlined.ChildCare,
+    "pets" to Icons.Outlined.Pets,
+    "coffee" to Icons.Outlined.LocalCafe,
+    "gifts" to Icons.Outlined.Redeem,
+    "celebration" to Icons.Outlined.Cake,
+    "donation" to Icons.Outlined.VolunteerActivism,
+    "tools" to Icons.Outlined.Build,
+    "work" to Icons.Outlined.Work,
+    "salary" to Icons.Outlined.Payments,
+    "card" to Icons.Outlined.CreditCard,
+    "savings" to Icons.Outlined.Savings,
+    "investment" to Icons.Outlined.TrendingUp,
+    "favorite" to Icons.Outlined.FavoriteBorder,
+    "star" to Icons.Outlined.StarBorder,
+    "other" to Icons.Outlined.Category,
+)
+
+private val iconsByKey = categoryIcons.toMap()
+
+/** Vector de una categoría por su clave; cae a un icono genérico si la clave es desconocida o legacy. */
+fun iconForKey(key: String): ImageVector = iconsByKey[key] ?: Icons.Outlined.Category
+
+/** Icono vectorial blanco dentro de un círculo de color. Avatar único usado en formularios y listas. */
 @Composable
 fun CategoryAvatar(icon: String, color: Color, modifier: Modifier = Modifier, size: Dp = 36.dp) {
     Box(
         modifier = modifier.size(size).clip(CircleShape).background(color),
         contentAlignment = Alignment.Center,
     ) {
-        Text(icon.ifBlank { "•" }, style = MaterialTheme.typography.titleMedium)
+        Icon(
+            imageVector = iconForKey(icon),
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(size * 0.58f),
+        )
     }
 }
 

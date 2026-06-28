@@ -25,21 +25,27 @@ fun seedIfEmpty(db: FinanzenDb) {
         db.currencyQueries.upsert("COP", "$", 0, 1.0)
         db.currencyQueries.upsert("MXN", "$", 2, 1.0)
 
+        // (nombre, clave de icono, color ARGB). Las claves deben existir en categoryIcons (UI);
+        // el color es un ARGB de la paleta para que el seed inicial se vea variado.
         val expenseSeeds = listOf(
-            "Alimentación" to "🍔",
-            "Transporte" to "🚗",
-            "Vivienda" to "🏠",
-            "Suscripciones" to "📺",
-            "Salud" to "🩺",
-            "Ocio" to "🎮",
+            Triple("Alimentación", "restaurant", 0xFFE53935),
+            Triple("Transporte", "car", 0xFF1E88E5),
+            Triple("Vivienda", "home", 0xFF00897B),
+            Triple("Suscripciones", "subs", 0xFF8E24AA),
+            Triple("Salud", "health", 0xFF43A047),
+            Triple("Ocio", "games", 0xFFF4511E),
         )
-        expenseSeeds.forEach { (name, icon) ->
-            db.categoryQueries.insert(parentId = null, name = name, icon = icon, color = 0, kind = "EXPENSE")
+        expenseSeeds.forEach { (name, icon, color) ->
+            db.categoryQueries.insert(parentId = null, name = name, icon = icon, color = color, kind = "EXPENSE")
         }
 
-        val incomeSeeds = listOf("Salario" to "💼", "Freelance" to "💻", "Otros" to "💰")
-        incomeSeeds.forEach { (name, icon) ->
-            db.categoryQueries.insert(parentId = null, name = name, icon = icon, color = 0, kind = "INCOME")
+        val incomeSeeds = listOf(
+            Triple("Salario", "salary", 0xFF3949AB),
+            Triple("Freelance", "work", 0xFF00838F),
+            Triple("Otros", "other", 0xFF546E7A),
+        )
+        incomeSeeds.forEach { (name, icon, color) ->
+            db.categoryQueries.insert(parentId = null, name = name, icon = icon, color = color, kind = "INCOME")
         }
 
         db.accountQueries.insert(
