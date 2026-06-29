@@ -86,6 +86,15 @@ fun AboutScreen(onBack: () -> Unit) {
                         "inyección de dependencias con Koin. Software de código abierto bajo sus respectivas licencias.",
                 )
             }
+
+            item {
+                InfoCard(
+                    title = "Iconos",
+                    body = "Iconos generales: Material Symbols (Apache 2.0). Logos de servicios: Simple Icons (CC0). " +
+                        "Las marcas y logotipos pertenecen a sus respectivos dueños; se muestran solo para que " +
+                        "identifiques tus categorías y no implican afiliación ni patrocinio.",
+                )
+            }
         }
     }
 }
