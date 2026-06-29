@@ -82,26 +82,25 @@ class SubscriptionsViewModel(
     private fun postDueCharges() {
         val today = todayEpochDay()
         subsRepo.activeNow().forEach { s ->
-            var next = s.nextChargeDate
-            while (next <= today) {
+            val due = chargesDueUpTo(s.nextChargeDate, today, s.frequency, s.intervalCount)
+            due.charges.forEach { chargeDay ->
                 txRepo.add(
                     accountId = s.accountId ?: ensureAccount().id,
                     categoryId = s.categoryId,
                     amountMinor = s.amountMinor,
                     currency = s.currency,
-                    epochDay = next,
+                    epochDay = chargeDay,
                     note = s.name,
                     kind = "EXPENSE",
                 )
-                next = nextChargeAfter(next, s.frequency, s.intervalCount)
             }
-            if (next != s.nextChargeDate) {
-                subsRepo.updateNextCharge(s.id, next)
+            if (due.next != s.nextChargeDate) {
+                subsRepo.updateNextCharge(s.id, due.next)
                 scheduler.scheduleReminder(
                     id = s.id,
                     title = s.name,
                     body = "Próximo cobro en ${s.remindDaysBefore} día(s)",
-                    atEpochDay = next - s.remindDaysBefore,
+                    atEpochDay = due.next - s.remindDaysBefore,
                 )
             }
         }
@@ -114,7 +113,26 @@ class SubscriptionsViewModel(
             accountRepo.all().first { it.id == id }
         }
 
+    /** Cobros pendientes hasta hoy ([charges], epoch days) y la nueva próxima fecha ([next]). */
+    data class DueCharges(val charges: List<Long>, val next: Long)
+
     companion object {
+        /**
+         * Calcula, de forma pura, todos los cobros con fecha ≤ [todayEpochDay] partiendo de
+         * [firstChargeEpochDay] y avanzando con [nextChargeAfter], más la próxima fecha resultante.
+         * Es la lógica del catch-up sin tocar la BD (testeable y sin bucle infinito: [nextChargeAfter]
+         * siempre avanza ≥1 día).
+         */
+        fun chargesDueUpTo(firstChargeEpochDay: Long, todayEpochDay: Long, frequency: String, interval: Long): DueCharges {
+            val charges = mutableListOf<Long>()
+            var next = firstChargeEpochDay
+            while (next <= todayEpochDay) {
+                charges += next
+                next = nextChargeAfter(next, frequency, interval)
+            }
+            return DueCharges(charges, next)
+        }
+
         /**
          * Próximo cobro **estrictamente posterior** a [fromEpochDay].
          * - DAILY: suma [interval] días (cada N días).
