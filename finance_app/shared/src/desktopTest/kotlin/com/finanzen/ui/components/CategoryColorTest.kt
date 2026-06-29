@@ -31,11 +31,13 @@ class CategoryColorTest {
     }
 
     @Test
-    fun los5GruposGeneralesTienenAlMenos10IconosYSinClavesDuplicadas() {
-        val generalTitles = listOf("Alimentación", "Transporte", "Hogar y servicios", "Ocio y entretenimiento", "Compras y otros")
-        val general = iconGroups.filter { it.title in generalTitles }
-        assertEquals(generalTitles.size, general.size)
-        general.forEach { group -> assertTrue(group.icons.size >= 10, "${group.title} tiene ${group.icons.size} (<10)") }
+    fun cadaGrupoTieneAlMenos10IconosYSinClavesDuplicadas() {
+        val expected = listOf(
+            "Alimentación", "Transporte", "Hogar y servicios", "Ocio y entretenimiento", "Compras y otros",
+            "Streaming", "Movilidad", "Google", "Estudio", "Videojuegos",
+        )
+        assertEquals(expected, iconGroups.map { it.title })
+        iconGroups.forEach { group -> assertTrue(group.icons.size >= 10, "${group.title} tiene ${group.icons.size} (<10)") }
         // Ninguna clave repetida en todo el catálogo.
         val keys = categoryIcons.map { it.first }
         assertEquals(keys.size, keys.toSet().size)

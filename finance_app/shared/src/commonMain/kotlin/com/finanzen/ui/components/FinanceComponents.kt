@@ -95,28 +95,55 @@ import com.finanzen.domain.Money
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalSpacing
 import finanzen.shared.generated.resources.Res
+import finanzen.shared.generated.resources.brand_americanairlines
 import finanzen.shared.generated.resources.brand_appletv
 import finanzen.shared.generated.resources.brand_coursera
+import finanzen.shared.generated.resources.brand_crunchyroll
+import finanzen.shared.generated.resources.brand_deezer
+import finanzen.shared.generated.resources.brand_delta
+import finanzen.shared.generated.resources.brand_discord
 import finanzen.shared.generated.resources.brand_duolingo
+import finanzen.shared.generated.resources.brand_ea
+import finanzen.shared.generated.resources.brand_easyjet
+import finanzen.shared.generated.resources.brand_edx
+import finanzen.shared.generated.resources.brand_emirates
 import finanzen.shared.generated.resources.brand_epicgames
 import finanzen.shared.generated.resources.brand_gmail
+import finanzen.shared.generated.resources.brand_google
+import finanzen.shared.generated.resources.brand_googlecalendar
+import finanzen.shared.generated.resources.brand_googlechrome
 import finanzen.shared.generated.resources.brand_googledrive
 import finanzen.shared.generated.resources.brand_googlemaps
+import finanzen.shared.generated.resources.brand_googlemeet
+import finanzen.shared.generated.resources.brand_googlephotos
 import finanzen.shared.generated.resources.brand_googleplay
+import finanzen.shared.generated.resources.brand_googletranslate
+import finanzen.shared.generated.resources.brand_grab
 import finanzen.shared.generated.resources.brand_hbomax
+import finanzen.shared.generated.resources.brand_hulu
 import finanzen.shared.generated.resources.brand_khanacademy
+import finanzen.shared.generated.resources.brand_lufthansa
 import finanzen.shared.generated.resources.brand_lyft
 import finanzen.shared.generated.resources.brand_netflix
+import finanzen.shared.generated.resources.brand_nintendo
 import finanzen.shared.generated.resources.brand_nintendoswitch
 import finanzen.shared.generated.resources.brand_notion
+import finanzen.shared.generated.resources.brand_paramountplus
 import finanzen.shared.generated.resources.brand_playstation
 import finanzen.shared.generated.resources.brand_primevideo
+import finanzen.shared.generated.resources.brand_quizlet
 import finanzen.shared.generated.resources.brand_riotgames
+import finanzen.shared.generated.resources.brand_ryanair
+import finanzen.shared.generated.resources.brand_skillshare
 import finanzen.shared.generated.resources.brand_spotify
 import finanzen.shared.generated.resources.brand_steam
 import finanzen.shared.generated.resources.brand_twitch
 import finanzen.shared.generated.resources.brand_uber
+import finanzen.shared.generated.resources.brand_ubisoft
+import finanzen.shared.generated.resources.brand_udacity
 import finanzen.shared.generated.resources.brand_udemy
+import finanzen.shared.generated.resources.brand_waze
+import finanzen.shared.generated.resources.brand_wikipedia
 import finanzen.shared.generated.resources.brand_xbox
 import finanzen.shared.generated.resources.brand_youtube
 import org.jetbrains.compose.resources.DrawableResource
@@ -375,26 +402,44 @@ val iconGroups: List<IconGroup> = listOf(
             "brand_netflix" to CategoryGlyph.Res(Res.drawable.brand_netflix),
             "brand_primevideo" to CategoryGlyph.Res(Res.drawable.brand_primevideo),
             "brand_hbomax" to CategoryGlyph.Res(Res.drawable.brand_hbomax),
-            "brand_spotify" to CategoryGlyph.Res(Res.drawable.brand_spotify),
+            "brand_hulu" to CategoryGlyph.Res(Res.drawable.brand_hulu),
+            "brand_paramountplus" to CategoryGlyph.Res(Res.drawable.brand_paramountplus),
+            "brand_crunchyroll" to CategoryGlyph.Res(Res.drawable.brand_crunchyroll),
             "brand_youtube" to CategoryGlyph.Res(Res.drawable.brand_youtube),
             "brand_appletv" to CategoryGlyph.Res(Res.drawable.brand_appletv),
             "brand_twitch" to CategoryGlyph.Res(Res.drawable.brand_twitch),
+            "brand_spotify" to CategoryGlyph.Res(Res.drawable.brand_spotify),
+            "brand_deezer" to CategoryGlyph.Res(Res.drawable.brand_deezer),
         ),
     ),
     IconGroup(
-        "Apps de transporte",
+        "Movilidad",
         listOf(
             "brand_uber" to CategoryGlyph.Res(Res.drawable.brand_uber),
             "brand_lyft" to CategoryGlyph.Res(Res.drawable.brand_lyft),
+            "brand_grab" to CategoryGlyph.Res(Res.drawable.brand_grab),
+            "brand_waze" to CategoryGlyph.Res(Res.drawable.brand_waze),
+            "brand_ryanair" to CategoryGlyph.Res(Res.drawable.brand_ryanair),
+            "brand_easyjet" to CategoryGlyph.Res(Res.drawable.brand_easyjet),
+            "brand_lufthansa" to CategoryGlyph.Res(Res.drawable.brand_lufthansa),
+            "brand_americanairlines" to CategoryGlyph.Res(Res.drawable.brand_americanairlines),
+            "brand_delta" to CategoryGlyph.Res(Res.drawable.brand_delta),
+            "brand_emirates" to CategoryGlyph.Res(Res.drawable.brand_emirates),
         ),
     ),
     IconGroup(
         "Google",
         listOf(
+            "brand_google" to CategoryGlyph.Res(Res.drawable.brand_google),
             "brand_gmail" to CategoryGlyph.Res(Res.drawable.brand_gmail),
             "brand_googledrive" to CategoryGlyph.Res(Res.drawable.brand_googledrive),
-            "brand_googleplay" to CategoryGlyph.Res(Res.drawable.brand_googleplay),
             "brand_googlemaps" to CategoryGlyph.Res(Res.drawable.brand_googlemaps),
+            "brand_googleplay" to CategoryGlyph.Res(Res.drawable.brand_googleplay),
+            "brand_googlechrome" to CategoryGlyph.Res(Res.drawable.brand_googlechrome),
+            "brand_googlephotos" to CategoryGlyph.Res(Res.drawable.brand_googlephotos),
+            "brand_googlecalendar" to CategoryGlyph.Res(Res.drawable.brand_googlecalendar),
+            "brand_googlemeet" to CategoryGlyph.Res(Res.drawable.brand_googlemeet),
+            "brand_googletranslate" to CategoryGlyph.Res(Res.drawable.brand_googletranslate),
         ),
     ),
     IconGroup(
@@ -403,8 +448,13 @@ val iconGroups: List<IconGroup> = listOf(
             "brand_duolingo" to CategoryGlyph.Res(Res.drawable.brand_duolingo),
             "brand_coursera" to CategoryGlyph.Res(Res.drawable.brand_coursera),
             "brand_udemy" to CategoryGlyph.Res(Res.drawable.brand_udemy),
-            "brand_notion" to CategoryGlyph.Res(Res.drawable.brand_notion),
+            "brand_edx" to CategoryGlyph.Res(Res.drawable.brand_edx),
+            "brand_udacity" to CategoryGlyph.Res(Res.drawable.brand_udacity),
+            "brand_skillshare" to CategoryGlyph.Res(Res.drawable.brand_skillshare),
             "brand_khanacademy" to CategoryGlyph.Res(Res.drawable.brand_khanacademy),
+            "brand_quizlet" to CategoryGlyph.Res(Res.drawable.brand_quizlet),
+            "brand_wikipedia" to CategoryGlyph.Res(Res.drawable.brand_wikipedia),
+            "brand_notion" to CategoryGlyph.Res(Res.drawable.brand_notion),
         ),
     ),
     IconGroup(
@@ -412,10 +462,14 @@ val iconGroups: List<IconGroup> = listOf(
         listOf(
             "brand_xbox" to CategoryGlyph.Res(Res.drawable.brand_xbox),
             "brand_playstation" to CategoryGlyph.Res(Res.drawable.brand_playstation),
-            "brand_steam" to CategoryGlyph.Res(Res.drawable.brand_steam),
+            "brand_nintendo" to CategoryGlyph.Res(Res.drawable.brand_nintendo),
             "brand_nintendoswitch" to CategoryGlyph.Res(Res.drawable.brand_nintendoswitch),
+            "brand_steam" to CategoryGlyph.Res(Res.drawable.brand_steam),
             "brand_epicgames" to CategoryGlyph.Res(Res.drawable.brand_epicgames),
             "brand_riotgames" to CategoryGlyph.Res(Res.drawable.brand_riotgames),
+            "brand_ea" to CategoryGlyph.Res(Res.drawable.brand_ea),
+            "brand_ubisoft" to CategoryGlyph.Res(Res.drawable.brand_ubisoft),
+            "brand_discord" to CategoryGlyph.Res(Res.drawable.brand_discord),
         ),
     ),
 )
