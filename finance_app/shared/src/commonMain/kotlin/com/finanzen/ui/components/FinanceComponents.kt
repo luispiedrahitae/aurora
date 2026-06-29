@@ -95,8 +95,15 @@ import com.finanzen.domain.Money
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalSpacing
 import finanzen.shared.generated.resources.Res
+import finanzen.shared.generated.resources.brand_airbnb
+import finanzen.shared.generated.resources.brand_aliexpress
+import finanzen.shared.generated.resources.brand_amazon
 import finanzen.shared.generated.resources.brand_americanairlines
+import finanzen.shared.generated.resources.brand_applemusic
 import finanzen.shared.generated.resources.brand_appletv
+import finanzen.shared.generated.resources.brand_avianca
+import finanzen.shared.generated.resources.brand_battledotnet
+import finanzen.shared.generated.resources.brand_bookingdotcom
 import finanzen.shared.generated.resources.brand_coursera
 import finanzen.shared.generated.resources.brand_crunchyroll
 import finanzen.shared.generated.resources.brand_deezer
@@ -108,10 +115,12 @@ import finanzen.shared.generated.resources.brand_easyjet
 import finanzen.shared.generated.resources.brand_edx
 import finanzen.shared.generated.resources.brand_emirates
 import finanzen.shared.generated.resources.brand_epicgames
+import finanzen.shared.generated.resources.brand_facebook
 import finanzen.shared.generated.resources.brand_gmail
 import finanzen.shared.generated.resources.brand_google
 import finanzen.shared.generated.resources.brand_googlecalendar
 import finanzen.shared.generated.resources.brand_googlechrome
+import finanzen.shared.generated.resources.brand_googleclassroom
 import finanzen.shared.generated.resources.brand_googledrive
 import finanzen.shared.generated.resources.brand_googlemaps
 import finanzen.shared.generated.resources.brand_googlemeet
@@ -121,14 +130,23 @@ import finanzen.shared.generated.resources.brand_googletranslate
 import finanzen.shared.generated.resources.brand_grab
 import finanzen.shared.generated.resources.brand_hbomax
 import finanzen.shared.generated.resources.brand_hulu
+import finanzen.shared.generated.resources.brand_ifood
+import finanzen.shared.generated.resources.brand_instagram
+import finanzen.shared.generated.resources.brand_kfc
 import finanzen.shared.generated.resources.brand_khanacademy
 import finanzen.shared.generated.resources.brand_lufthansa
 import finanzen.shared.generated.resources.brand_lyft
+import finanzen.shared.generated.resources.brand_mcdonalds
+import finanzen.shared.generated.resources.brand_mercadopago
+import finanzen.shared.generated.resources.brand_microsoftteams
 import finanzen.shared.generated.resources.brand_netflix
 import finanzen.shared.generated.resources.brand_nintendo
 import finanzen.shared.generated.resources.brand_nintendoswitch
 import finanzen.shared.generated.resources.brand_notion
+import finanzen.shared.generated.resources.brand_nubank
+import finanzen.shared.generated.resources.brand_openai
 import finanzen.shared.generated.resources.brand_paramountplus
+import finanzen.shared.generated.resources.brand_platzi
 import finanzen.shared.generated.resources.brand_playstation
 import finanzen.shared.generated.resources.brand_primevideo
 import finanzen.shared.generated.resources.brand_quizlet
@@ -137,13 +155,17 @@ import finanzen.shared.generated.resources.brand_ryanair
 import finanzen.shared.generated.resources.brand_skillshare
 import finanzen.shared.generated.resources.brand_spotify
 import finanzen.shared.generated.resources.brand_steam
+import finanzen.shared.generated.resources.brand_telegram
+import finanzen.shared.generated.resources.brand_tiktok
 import finanzen.shared.generated.resources.brand_twitch
 import finanzen.shared.generated.resources.brand_uber
 import finanzen.shared.generated.resources.brand_ubisoft
 import finanzen.shared.generated.resources.brand_udacity
 import finanzen.shared.generated.resources.brand_udemy
 import finanzen.shared.generated.resources.brand_waze
+import finanzen.shared.generated.resources.brand_whatsapp
 import finanzen.shared.generated.resources.brand_wikipedia
+import finanzen.shared.generated.resources.brand_x
 import finanzen.shared.generated.resources.brand_xbox
 import finanzen.shared.generated.resources.brand_youtube
 import org.jetbrains.compose.resources.DrawableResource
@@ -409,6 +431,7 @@ val iconGroups: List<IconGroup> = listOf(
             "brand_appletv" to CategoryGlyph.Res(Res.drawable.brand_appletv),
             "brand_twitch" to CategoryGlyph.Res(Res.drawable.brand_twitch),
             "brand_spotify" to CategoryGlyph.Res(Res.drawable.brand_spotify),
+            "brand_applemusic" to CategoryGlyph.Res(Res.drawable.brand_applemusic),
             "brand_deezer" to CategoryGlyph.Res(Res.drawable.brand_deezer),
         ),
     ),
@@ -447,12 +470,16 @@ val iconGroups: List<IconGroup> = listOf(
         listOf(
             "brand_duolingo" to CategoryGlyph.Res(Res.drawable.brand_duolingo),
             "brand_coursera" to CategoryGlyph.Res(Res.drawable.brand_coursera),
+            "brand_platzi" to CategoryGlyph.Res(Res.drawable.brand_platzi),
             "brand_udemy" to CategoryGlyph.Res(Res.drawable.brand_udemy),
             "brand_edx" to CategoryGlyph.Res(Res.drawable.brand_edx),
             "brand_udacity" to CategoryGlyph.Res(Res.drawable.brand_udacity),
             "brand_skillshare" to CategoryGlyph.Res(Res.drawable.brand_skillshare),
+            "brand_googleclassroom" to CategoryGlyph.Res(Res.drawable.brand_googleclassroom),
+            "brand_microsoftteams" to CategoryGlyph.Res(Res.drawable.brand_microsoftteams),
             "brand_khanacademy" to CategoryGlyph.Res(Res.drawable.brand_khanacademy),
             "brand_quizlet" to CategoryGlyph.Res(Res.drawable.brand_quizlet),
+            "brand_openai" to CategoryGlyph.Res(Res.drawable.brand_openai),
             "brand_wikipedia" to CategoryGlyph.Res(Res.drawable.brand_wikipedia),
             "brand_notion" to CategoryGlyph.Res(Res.drawable.brand_notion),
         ),
@@ -469,7 +496,44 @@ val iconGroups: List<IconGroup> = listOf(
             "brand_riotgames" to CategoryGlyph.Res(Res.drawable.brand_riotgames),
             "brand_ea" to CategoryGlyph.Res(Res.drawable.brand_ea),
             "brand_ubisoft" to CategoryGlyph.Res(Res.drawable.brand_ubisoft),
+            "brand_battledotnet" to CategoryGlyph.Res(Res.drawable.brand_battledotnet),
             "brand_discord" to CategoryGlyph.Res(Res.drawable.brand_discord),
+        ),
+    ),
+    IconGroup(
+        "Finanzas y pagos",
+        listOf(
+            "brand_nubank" to CategoryGlyph.Res(Res.drawable.brand_nubank),
+            "brand_mercadopago" to CategoryGlyph.Res(Res.drawable.brand_mercadopago),
+        ),
+    ),
+    IconGroup(
+        "Compras y viajes",
+        listOf(
+            "brand_amazon" to CategoryGlyph.Res(Res.drawable.brand_amazon),
+            "brand_aliexpress" to CategoryGlyph.Res(Res.drawable.brand_aliexpress),
+            "brand_airbnb" to CategoryGlyph.Res(Res.drawable.brand_airbnb),
+            "brand_bookingdotcom" to CategoryGlyph.Res(Res.drawable.brand_bookingdotcom),
+            "brand_avianca" to CategoryGlyph.Res(Res.drawable.brand_avianca),
+        ),
+    ),
+    IconGroup(
+        "Domicilios y comida",
+        listOf(
+            "brand_ifood" to CategoryGlyph.Res(Res.drawable.brand_ifood),
+            "brand_mcdonalds" to CategoryGlyph.Res(Res.drawable.brand_mcdonalds),
+            "brand_kfc" to CategoryGlyph.Res(Res.drawable.brand_kfc),
+        ),
+    ),
+    IconGroup(
+        "Redes sociales",
+        listOf(
+            "brand_whatsapp" to CategoryGlyph.Res(Res.drawable.brand_whatsapp),
+            "brand_instagram" to CategoryGlyph.Res(Res.drawable.brand_instagram),
+            "brand_tiktok" to CategoryGlyph.Res(Res.drawable.brand_tiktok),
+            "brand_facebook" to CategoryGlyph.Res(Res.drawable.brand_facebook),
+            "brand_x" to CategoryGlyph.Res(Res.drawable.brand_x),
+            "brand_telegram" to CategoryGlyph.Res(Res.drawable.brand_telegram),
         ),
     ),
 )
