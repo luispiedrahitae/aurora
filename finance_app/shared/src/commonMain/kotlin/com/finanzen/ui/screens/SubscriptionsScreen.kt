@@ -1,19 +1,24 @@
 package com.finanzen.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.Subscriptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -23,6 +28,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -37,14 +45,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.finanzen.domain.Money
 import com.finanzen.ui.components.FinanceCard
+import com.finanzen.ui.components.MoneyText
 import com.finanzen.ui.components.SectionHeader
 import com.finanzen.viewmodel.SubscriptionsViewModel
-import kotlinx.datetime.Clock
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
+import kotlinx.datetime.LocalDate
 import org.koin.compose.viewmodel.koinViewModel
+
+private val MESES_SUB = listOf("ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic")
+
+private fun fechaCorta(epochDay: Long): String {
+    val d = LocalDate.fromEpochDays(epochDay.toInt())
+    return "${d.dayOfMonth} ${MESES_SUB[d.monthNumber - 1]}"
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,25 +67,15 @@ fun SubscriptionsScreen(
     vm: SubscriptionsViewModel = koinViewModel(),
 ) {
     val subs by vm.subscriptions.collectAsState()
-    val recur by vm.recurring.collectAsState()
-    val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date.toEpochDays().toLong()
-    // Qué formulario está abierto: "sub", "recur" o null. Si venimos del FAB, abrimos "sub".
-    var openForm by remember { mutableStateOf<String?>(if (openAddInitially) "sub" else null) }
+    var showForm by remember { mutableStateOf(openAddInitially) }
 
-    if (openForm != null) {
-        val isRecurring = openForm == "recur"
-        ScheduleFormDialog(
-            title = if (isRecurring) "Nuevo gasto recurrente" else "Nueva suscripción",
+    if (showForm) {
+        SubscriptionFormDialog(
             parseAmount = vm::parseAmountToMinor,
-            onDismiss = { openForm = null },
-            onConfirm = { name, amountMinor, inDays, remindDays ->
-                val nextCharge = today + inDays
-                if (isRecurring) {
-                    vm.addRecurring(name, amountMinor, nextCharge, remindDays)
-                } else {
-                    vm.addSubscription(name, amountMinor, nextCharge, remindDays)
-                }
-                openForm = null
+            onDismiss = { showForm = false },
+            onConfirm = { name, amountMinor, frequency, interval, remindDays ->
+                vm.addSubscription(name, amountMinor, frequency, interval, remindDays)
+                showForm = false
             },
         )
     }
@@ -80,7 +83,7 @@ fun SubscriptionsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Suscripciones y recurrentes") },
+                title = { Text("Suscripciones") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Volver")
@@ -89,18 +92,11 @@ fun SubscriptionsScreen(
             )
         },
         floatingActionButton = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                ExtendedFloatingActionButton(
-                    onClick = { openForm = "sub" },
-                    icon = { Icon(Icons.Outlined.Add, null) },
-                    text = { Text("Suscripción") },
-                )
-                ExtendedFloatingActionButton(
-                    onClick = { openForm = "recur" },
-                    icon = { Icon(Icons.Outlined.Add, null) },
-                    text = { Text("Recurrente") },
-                )
-            }
+            ExtendedFloatingActionButton(
+                onClick = { showForm = true },
+                icon = { Icon(Icons.Outlined.Add, null) },
+                text = { Text("Suscripción") },
+            )
         },
     ) { inner ->
         LazyColumn(
@@ -108,38 +104,17 @@ fun SubscriptionsScreen(
             contentPadding = PaddingValues(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            item { SectionHeader("Suscripciones (${subs.size})") }
+            item { SectionHeader("Activas (${subs.size})") }
             if (subs.isEmpty()) {
-                item { EmptyText("Sin suscripciones. Usa + para añadir una.") }
+                item { EmptyText("Sin suscripciones. Usa + para añadir una; el cobro se registrará en Movimientos.") }
             } else {
-                items(subs, key = { "s-${it.id}" }) { s ->
-                    ScheduleItem(
-                        title = s.name,
+                items(subs, key = { it.id }) { s ->
+                    SubscriptionItem(
+                        name = s.name,
                         amountMinor = s.amountMinor,
                         currency = s.currency,
                         nextChargeEpochDay = s.nextChargeDate,
-                        today = today,
-                        frequency = "${s.frequency} ×${s.intervalCount}",
-                        remindDays = s.remindDaysBefore,
                         onDelete = { vm.deleteSubscription(s.id) },
-                    )
-                }
-            }
-
-            item { SectionHeader("Gastos recurrentes (${recur.size})") }
-            if (recur.isEmpty()) {
-                item { EmptyText("Sin recurrentes. Usa + para añadir un gasto fijo.") }
-            } else {
-                items(recur, key = { "r-${it.id}" }) { r ->
-                    ScheduleItem(
-                        title = r.name,
-                        amountMinor = r.amountMinor,
-                        currency = r.currency,
-                        nextChargeEpochDay = r.nextChargeDate,
-                        today = today,
-                        frequency = "${r.frequency} ×${r.intervalCount}",
-                        remindDays = r.remindDaysBefore,
-                        onDelete = { vm.deleteRecurring(r.id) },
                     )
                 }
             }
@@ -148,31 +123,34 @@ fun SubscriptionsScreen(
 }
 
 /**
- * Formulario de alta para suscripción o recurrente. `onConfirm(nombre, montoMinor, enDías, recordarDíasAntes)`.
- * ponytail: el próximo cobro se pide como "dentro de N días"; un calendario sería más natural si se pide.
+ * Alta de suscripción. La recurrencia se elige con un segmented control:
+ * "Cada X días" (DAILY) o "Día del mes" (MONTHLY). `onConfirm(nombre, montoMinor, frequency, interval, recordarDíasAntes)`.
  */
 @Composable
-private fun ScheduleFormDialog(
-    title: String,
+private fun SubscriptionFormDialog(
     parseAmount: (String) -> Long?,
     onDismiss: () -> Unit,
-    onConfirm: (name: String, amountMinor: Long, inDays: Long, remindDays: Long) -> Unit,
+    onConfirm: (name: String, amountMinor: Long, frequency: String, interval: Long, remindDays: Long) -> Unit,
 ) {
     var name by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
-    var inDays by remember { mutableStateOf("30") }
+    var monthly by remember { mutableStateOf(true) } // true = Día del mes, false = Cada X días
+    var dayOfMonth by remember { mutableStateOf("1") }
+    var everyDays by remember { mutableStateOf("30") }
     var remindDays by remember { mutableStateOf("2") }
 
     val amountMinor = parseAmount(amount)
-    val daysValid = inDays.toLongOrNull()?.let { it >= 0 } == true
+    val dayValid = dayOfMonth.toIntOrNull()?.let { it in 1..31 } == true
+    val everyValid = everyDays.toLongOrNull()?.let { it >= 1 } == true
     val remindValid = remindDays.toLongOrNull()?.let { it >= 0 } == true
-    val valid = name.isNotBlank() && amountMinor != null && amountMinor > 0 && daysValid && remindValid
+    val recurValid = if (monthly) dayValid else everyValid
+    val valid = name.isNotBlank() && amountMinor != null && amountMinor > 0 && recurValid && remindValid
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
+        title = { Text("Nueva suscripción") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
@@ -188,17 +166,43 @@ private fun ScheduleFormDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
                 )
-                OutlinedTextField(
-                    value = inDays,
-                    onValueChange = { inDays = it.filter(Char::isDigit) },
-                    label = { Text("Próximo cobro en (días)") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                Text("Recurrencia", style = MaterialTheme.typography.labelLarge)
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    SegmentedButton(
+                        selected = monthly,
+                        onClick = { monthly = true },
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                    ) { Text("Día del mes") }
+                    SegmentedButton(
+                        selected = !monthly,
+                        onClick = { monthly = false },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                    ) { Text("Cada X días") }
+                }
+                if (monthly) {
+                    OutlinedTextField(
+                        value = dayOfMonth,
+                        onValueChange = { dayOfMonth = it.filter(Char::isDigit).take(2) },
+                        label = { Text("Día del mes (1–31)") },
+                        isError = dayOfMonth.isNotEmpty() && !dayValid,
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                } else {
+                    OutlinedTextField(
+                        value = everyDays,
+                        onValueChange = { everyDays = it.filter(Char::isDigit).take(4) },
+                        label = { Text("Cada cuántos días") },
+                        isError = everyDays.isNotEmpty() && !everyValid,
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
                 OutlinedTextField(
                     value = remindDays,
-                    onValueChange = { remindDays = it.filter(Char::isDigit) },
+                    onValueChange = { remindDays = it.filter(Char::isDigit).take(3) },
                     label = { Text("Recordar (días antes)") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -208,7 +212,11 @@ private fun ScheduleFormDialog(
         },
         confirmButton = {
             Button(
-                onClick = { onConfirm(name.trim(), amountMinor!!, inDays.toLong(), remindDays.toLong()) },
+                onClick = {
+                    val frequency = if (monthly) "MONTHLY" else "DAILY"
+                    val interval = if (monthly) dayOfMonth.toLong() else everyDays.toLong()
+                    onConfirm(name.trim(), amountMinor!!, frequency, interval, remindDays.toLong())
+                },
                 enabled = valid,
             ) { Text("Guardar") }
         },
@@ -227,36 +235,49 @@ private fun EmptyText(text: String) {
     }
 }
 
+/** Tarjeta de suscripción: icono · nombre + próxima fecha · monto (héroe) · borrar discreto. */
 @Composable
-private fun ScheduleItem(
-    title: String,
+private fun SubscriptionItem(
+    name: String,
     amountMinor: Long,
     currency: String,
     nextChargeEpochDay: Long,
-    today: Long,
-    frequency: String,
-    remindDays: Long,
     onDelete: () -> Unit,
 ) {
-    val daysUntil = nextChargeEpochDay - today
-    val daysLabel = when {
-        daysUntil < 0L -> "vencida hace ${-daysUntil}d"
-        daysUntil == 0L -> "hoy"
-        daysUntil == 1L -> "mañana"
-        else -> "en ${daysUntil}d"
-    }
-    FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(12.dp)) {
-        Box {
-            Column {
-                Text(title, fontWeight = FontWeight.SemiBold)
+    FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(14.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    Icons.Outlined.Subscriptions,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+            Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                Text(name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text(
-                    "${Money(amountMinor, currency).format()} $currency · $frequency · próxima $daysLabel · recuerda ${remindDays}d antes",
+                    "Próximo: ${fechaCorta(nextChargeEpochDay)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            IconButton(onClick = onDelete, modifier = Modifier.align(Alignment.TopEnd)) {
-                Icon(Icons.Outlined.Delete, contentDescription = "Eliminar")
+            MoneyText(
+                amountMinor = amountMinor,
+                currency = currency,
+                style = MaterialTheme.typography.titleMedium,
+            )
+            IconButton(onClick = onDelete) {
+                Icon(
+                    Icons.Outlined.DeleteOutline,
+                    contentDescription = "Eliminar",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
         }
     }

@@ -166,6 +166,10 @@ class SubscriptionRepository(private val db: FinanzenDb) {
         return db.subscriptionQueries.selectAll().executeAsList().last().id
     }
 
+    fun activeNow(): List<Subscription> = db.subscriptionQueries.selectActive().executeAsList()
+
+    fun updateNextCharge(id: Long, nextChargeDateEpochDay: Long) = db.subscriptionQueries.updateNextCharge(nextChargeDateEpochDay, id)
+
     fun delete(id: Long) = db.subscriptionQueries.delete(id)
 }
 

@@ -34,7 +34,7 @@ data class MoreItem(val title: String, val subtitle: String, val icon: ImageVect
 @Composable
 fun MoreScreen(onNavigate: (route: String) -> Unit) {
     val items = listOf(
-        MoreItem("Suscripciones y recurrentes", "Recordatorios de cobros", Icons.Outlined.Repeat, true) {
+        MoreItem("Suscripciones", "Cobros recurrentes en Movimientos", Icons.Outlined.Repeat, true) {
             onNavigate("subscriptions")
         },
         MoreItem("Calendario", "Movimientos por día", Icons.Outlined.CalendarMonth, true) {

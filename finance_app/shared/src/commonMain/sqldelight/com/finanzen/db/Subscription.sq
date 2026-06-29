@@ -31,5 +31,8 @@ SET name = ?, amountMinor = ?, currency = ?, categoryId = ?, accountId = ?, freq
     intervalCount = ?, nextChargeDate = ?, remindDaysBefore = ?, active = ?
 WHERE id = ?;
 
+updateNextCharge:
+UPDATE Subscription SET nextChargeDate = ? WHERE id = ?;
+
 delete:
 DELETE FROM Subscription WHERE id = ?;
