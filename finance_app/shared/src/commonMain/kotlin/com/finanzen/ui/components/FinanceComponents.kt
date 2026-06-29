@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.BakeryDining
 import androidx.compose.material.icons.outlined.BeachAccess
 import androidx.compose.material.icons.outlined.Bolt
@@ -24,7 +25,9 @@ import androidx.compose.material.icons.outlined.Category
 import androidx.compose.material.icons.outlined.Checkroom
 import androidx.compose.material.icons.outlined.ChildCare
 import androidx.compose.material.icons.outlined.CleaningServices
+import androidx.compose.material.icons.outlined.Commute
 import androidx.compose.material.icons.outlined.CreditCard
+import androidx.compose.material.icons.outlined.DeliveryDining
 import androidx.compose.material.icons.outlined.DirectionsBoat
 import androidx.compose.material.icons.outlined.DirectionsBus
 import androidx.compose.material.icons.outlined.DirectionsCar
@@ -33,10 +36,12 @@ import androidx.compose.material.icons.outlined.Fastfood
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.Flight
+import androidx.compose.material.icons.outlined.Forum
 import androidx.compose.material.icons.outlined.GasMeter
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Icecream
 import androidx.compose.material.icons.outlined.Lightbulb
+import androidx.compose.material.icons.outlined.LiveTv
 import androidx.compose.material.icons.outlined.LocalBar
 import androidx.compose.material.icons.outlined.LocalCafe
 import androidx.compose.material.icons.outlined.LocalGasStation
@@ -64,6 +69,7 @@ import androidx.compose.material.icons.outlined.Spa
 import androidx.compose.material.icons.outlined.SportsEsports
 import androidx.compose.material.icons.outlined.SportsSoccer
 import androidx.compose.material.icons.outlined.StarBorder
+import androidx.compose.material.icons.outlined.Storefront
 import androidx.compose.material.icons.outlined.Subscriptions
 import androidx.compose.material.icons.outlined.TheaterComedy
 import androidx.compose.material.icons.outlined.Train
@@ -421,6 +427,7 @@ val iconGroups: List<IconGroup> = listOf(
     IconGroup(
         "Streaming",
         listOf(
+            "streaming" to vec(Icons.Outlined.LiveTv),
             "brand_netflix" to CategoryGlyph.Res(Res.drawable.brand_netflix),
             "brand_primevideo" to CategoryGlyph.Res(Res.drawable.brand_primevideo),
             "brand_hbomax" to CategoryGlyph.Res(Res.drawable.brand_hbomax),
@@ -438,6 +445,7 @@ val iconGroups: List<IconGroup> = listOf(
     IconGroup(
         "Movilidad",
         listOf(
+            "mobility" to vec(Icons.Outlined.Commute),
             "brand_uber" to CategoryGlyph.Res(Res.drawable.brand_uber),
             "brand_lyft" to CategoryGlyph.Res(Res.drawable.brand_lyft),
             "brand_grab" to CategoryGlyph.Res(Res.drawable.brand_grab),
@@ -503,6 +511,7 @@ val iconGroups: List<IconGroup> = listOf(
     IconGroup(
         "Finanzas y pagos",
         listOf(
+            "finance" to vec(Icons.Outlined.AccountBalanceWallet),
             "brand_nubank" to CategoryGlyph.Res(Res.drawable.brand_nubank),
             "brand_mercadopago" to CategoryGlyph.Res(Res.drawable.brand_mercadopago),
         ),
@@ -510,6 +519,7 @@ val iconGroups: List<IconGroup> = listOf(
     IconGroup(
         "Compras y viajes",
         listOf(
+            "commerce" to vec(Icons.Outlined.Storefront),
             "brand_amazon" to CategoryGlyph.Res(Res.drawable.brand_amazon),
             "brand_aliexpress" to CategoryGlyph.Res(Res.drawable.brand_aliexpress),
             "brand_airbnb" to CategoryGlyph.Res(Res.drawable.brand_airbnb),
@@ -520,6 +530,7 @@ val iconGroups: List<IconGroup> = listOf(
     IconGroup(
         "Domicilios y comida",
         listOf(
+            "delivery" to vec(Icons.Outlined.DeliveryDining),
             "brand_ifood" to CategoryGlyph.Res(Res.drawable.brand_ifood),
             "brand_mcdonalds" to CategoryGlyph.Res(Res.drawable.brand_mcdonalds),
             "brand_kfc" to CategoryGlyph.Res(Res.drawable.brand_kfc),
@@ -528,6 +539,7 @@ val iconGroups: List<IconGroup> = listOf(
     IconGroup(
         "Redes sociales",
         listOf(
+            "social" to vec(Icons.Outlined.Forum),
             "brand_whatsapp" to CategoryGlyph.Res(Res.drawable.brand_whatsapp),
             "brand_instagram" to CategoryGlyph.Res(Res.drawable.brand_instagram),
             "brand_tiktok" to CategoryGlyph.Res(Res.drawable.brand_tiktok),

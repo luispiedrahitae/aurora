@@ -46,4 +46,14 @@ class CategoryColorTest {
         val keys = categoryIcons.map { it.first }
         assertEquals(keys.size, keys.toSet().size)
     }
+
+    @Test
+    fun gruposDeMarcaEmpiezanConIconoGenerico() {
+        val marca = listOf("Streaming", "Movilidad", "Finanzas y pagos", "Compras y viajes", "Domicilios y comida", "Redes sociales")
+        val byTitle = iconGroups.associateBy { it.title }
+        marca.forEach { title ->
+            val first = byTitle.getValue(title).icons.first()
+            assertTrue(first.second is CategoryGlyph.Vec, "$title no empieza con genérico")
+        }
+    }
 }
