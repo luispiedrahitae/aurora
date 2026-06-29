@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.BakeryDining
 import androidx.compose.material.icons.outlined.BeachAccess
 import androidx.compose.material.icons.outlined.Bolt
 import androidx.compose.material.icons.outlined.Build
@@ -22,21 +23,36 @@ import androidx.compose.material.icons.outlined.Cake
 import androidx.compose.material.icons.outlined.Category
 import androidx.compose.material.icons.outlined.Checkroom
 import androidx.compose.material.icons.outlined.ChildCare
+import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.CreditCard
+import androidx.compose.material.icons.outlined.DirectionsBoat
+import androidx.compose.material.icons.outlined.DirectionsBus
 import androidx.compose.material.icons.outlined.DirectionsCar
+import androidx.compose.material.icons.outlined.EvStation
+import androidx.compose.material.icons.outlined.Fastfood
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.Flight
+import androidx.compose.material.icons.outlined.GasMeter
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Icecream
+import androidx.compose.material.icons.outlined.Lightbulb
+import androidx.compose.material.icons.outlined.LocalBar
 import androidx.compose.material.icons.outlined.LocalCafe
 import androidx.compose.material.icons.outlined.LocalGasStation
 import androidx.compose.material.icons.outlined.LocalMall
+import androidx.compose.material.icons.outlined.LocalParking
+import androidx.compose.material.icons.outlined.LocalPizza
+import androidx.compose.material.icons.outlined.LocalTaxi
 import androidx.compose.material.icons.outlined.MedicalServices
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.MusicNote
+import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Payments
+import androidx.compose.material.icons.outlined.PedalBike
 import androidx.compose.material.icons.outlined.Pets
+import androidx.compose.material.icons.outlined.RamenDining
 import androidx.compose.material.icons.outlined.Receipt
 import androidx.compose.material.icons.outlined.Redeem
 import androidx.compose.material.icons.outlined.Restaurant
@@ -46,14 +62,19 @@ import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material.icons.outlined.Smartphone
 import androidx.compose.material.icons.outlined.Spa
 import androidx.compose.material.icons.outlined.SportsEsports
+import androidx.compose.material.icons.outlined.SportsSoccer
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material.icons.outlined.Subscriptions
+import androidx.compose.material.icons.outlined.TheaterComedy
 import androidx.compose.material.icons.outlined.Train
 import androidx.compose.material.icons.outlined.TrendingUp
 import androidx.compose.material.icons.outlined.Tv
+import androidx.compose.material.icons.outlined.TwoWheeler
 import androidx.compose.material.icons.outlined.VolunteerActivism
 import androidx.compose.material.icons.outlined.WaterDrop
+import androidx.compose.material.icons.outlined.Weekend
 import androidx.compose.material.icons.outlined.Wifi
+import androidx.compose.material.icons.outlined.WineBar
 import androidx.compose.material.icons.outlined.Work
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -250,83 +271,157 @@ sealed interface CategoryGlyph {
     data class Res(val drawable: DrawableResource) : CategoryGlyph
 }
 
-/** Iconos generales (Material Outlined, vía material-icons-extended). */
-val generalIcons: List<Pair<String, CategoryGlyph>> = listOf(
-    "restaurant" to CategoryGlyph.Vec(Icons.Outlined.Restaurant),
-    "groceries" to CategoryGlyph.Vec(Icons.Outlined.ShoppingCart),
-    "shopping" to CategoryGlyph.Vec(Icons.Outlined.LocalMall),
-    "car" to CategoryGlyph.Vec(Icons.Outlined.DirectionsCar),
-    "fuel" to CategoryGlyph.Vec(Icons.Outlined.LocalGasStation),
-    "transit" to CategoryGlyph.Vec(Icons.Outlined.Train),
-    "home" to CategoryGlyph.Vec(Icons.Outlined.Home),
-    "bills" to CategoryGlyph.Vec(Icons.Outlined.Receipt),
-    "utilities" to CategoryGlyph.Vec(Icons.Outlined.Bolt),
-    "water" to CategoryGlyph.Vec(Icons.Outlined.WaterDrop),
-    "phone" to CategoryGlyph.Vec(Icons.Outlined.Smartphone),
-    "internet" to CategoryGlyph.Vec(Icons.Outlined.Wifi),
-    "tv" to CategoryGlyph.Vec(Icons.Outlined.Tv),
-    "subs" to CategoryGlyph.Vec(Icons.Outlined.Subscriptions),
-    "health" to CategoryGlyph.Vec(Icons.Outlined.MedicalServices),
-    "gym" to CategoryGlyph.Vec(Icons.Outlined.FitnessCenter),
-    "beauty" to CategoryGlyph.Vec(Icons.Outlined.Spa),
-    "games" to CategoryGlyph.Vec(Icons.Outlined.SportsEsports),
-    "movies" to CategoryGlyph.Vec(Icons.Outlined.Movie),
-    "music" to CategoryGlyph.Vec(Icons.Outlined.MusicNote),
-    "books" to CategoryGlyph.Vec(Icons.Outlined.MenuBook),
-    "travel" to CategoryGlyph.Vec(Icons.Outlined.Flight),
-    "beach" to CategoryGlyph.Vec(Icons.Outlined.BeachAccess),
-    "clothes" to CategoryGlyph.Vec(Icons.Outlined.Checkroom),
-    "education" to CategoryGlyph.Vec(Icons.Outlined.School),
-    "kids" to CategoryGlyph.Vec(Icons.Outlined.ChildCare),
-    "pets" to CategoryGlyph.Vec(Icons.Outlined.Pets),
-    "coffee" to CategoryGlyph.Vec(Icons.Outlined.LocalCafe),
-    "gifts" to CategoryGlyph.Vec(Icons.Outlined.Redeem),
-    "celebration" to CategoryGlyph.Vec(Icons.Outlined.Cake),
-    "donation" to CategoryGlyph.Vec(Icons.Outlined.VolunteerActivism),
-    "tools" to CategoryGlyph.Vec(Icons.Outlined.Build),
-    "work" to CategoryGlyph.Vec(Icons.Outlined.Work),
-    "salary" to CategoryGlyph.Vec(Icons.Outlined.Payments),
-    "card" to CategoryGlyph.Vec(Icons.Outlined.CreditCard),
-    "savings" to CategoryGlyph.Vec(Icons.Outlined.Savings),
-    "investment" to CategoryGlyph.Vec(Icons.Outlined.TrendingUp),
-    "favorite" to CategoryGlyph.Vec(Icons.Outlined.FavoriteBorder),
-    "star" to CategoryGlyph.Vec(Icons.Outlined.StarBorder),
-    "other" to CategoryGlyph.Vec(Icons.Outlined.Category),
-)
+private fun vec(image: ImageVector): CategoryGlyph = CategoryGlyph.Vec(image)
+
+/** Grupo de iconos con subtítulo; el selector renderiza una sección por grupo. */
+data class IconGroup(val title: String, val icons: List<Pair<String, CategoryGlyph>>)
 
 /**
- * Iconos de marca/servicio. Logos de Simple Icons (CC0); las marcas pertenecen a sus dueños — uso
- * descriptivo para etiquetar movimientos. La clave guardada es el nombre del drawable (brand_*).
+ * Iconos ofrecidos al crear una categoría, organizados en subcategorías. Generales = Material Outlined
+ * (material-icons-extended); marcas = logos Simple Icons (CC0). La clave (string) va en Category.icon;
+ * las claves existentes se conservan para no romper datos sembrados.
  */
-val brandIcons: List<Pair<String, CategoryGlyph>> = listOf(
-    "brand_netflix" to CategoryGlyph.Res(Res.drawable.brand_netflix),
-    "brand_primevideo" to CategoryGlyph.Res(Res.drawable.brand_primevideo),
-    "brand_hbomax" to CategoryGlyph.Res(Res.drawable.brand_hbomax),
-    "brand_spotify" to CategoryGlyph.Res(Res.drawable.brand_spotify),
-    "brand_youtube" to CategoryGlyph.Res(Res.drawable.brand_youtube),
-    "brand_appletv" to CategoryGlyph.Res(Res.drawable.brand_appletv),
-    "brand_twitch" to CategoryGlyph.Res(Res.drawable.brand_twitch),
-    "brand_uber" to CategoryGlyph.Res(Res.drawable.brand_uber),
-    "brand_lyft" to CategoryGlyph.Res(Res.drawable.brand_lyft),
-    "brand_gmail" to CategoryGlyph.Res(Res.drawable.brand_gmail),
-    "brand_googledrive" to CategoryGlyph.Res(Res.drawable.brand_googledrive),
-    "brand_googleplay" to CategoryGlyph.Res(Res.drawable.brand_googleplay),
-    "brand_googlemaps" to CategoryGlyph.Res(Res.drawable.brand_googlemaps),
-    "brand_duolingo" to CategoryGlyph.Res(Res.drawable.brand_duolingo),
-    "brand_coursera" to CategoryGlyph.Res(Res.drawable.brand_coursera),
-    "brand_udemy" to CategoryGlyph.Res(Res.drawable.brand_udemy),
-    "brand_notion" to CategoryGlyph.Res(Res.drawable.brand_notion),
-    "brand_khanacademy" to CategoryGlyph.Res(Res.drawable.brand_khanacademy),
-    "brand_xbox" to CategoryGlyph.Res(Res.drawable.brand_xbox),
-    "brand_playstation" to CategoryGlyph.Res(Res.drawable.brand_playstation),
-    "brand_steam" to CategoryGlyph.Res(Res.drawable.brand_steam),
-    "brand_nintendoswitch" to CategoryGlyph.Res(Res.drawable.brand_nintendoswitch),
-    "brand_epicgames" to CategoryGlyph.Res(Res.drawable.brand_epicgames),
-    "brand_riotgames" to CategoryGlyph.Res(Res.drawable.brand_riotgames),
+val iconGroups: List<IconGroup> = listOf(
+    IconGroup(
+        "Alimentación",
+        listOf(
+            "restaurant" to vec(Icons.Outlined.Restaurant),
+            "groceries" to vec(Icons.Outlined.ShoppingCart),
+            "coffee" to vec(Icons.Outlined.LocalCafe),
+            "fastfood" to vec(Icons.Outlined.Fastfood),
+            "localpizza" to vec(Icons.Outlined.LocalPizza),
+            "ramen" to vec(Icons.Outlined.RamenDining),
+            "icecream" to vec(Icons.Outlined.Icecream),
+            "bakery" to vec(Icons.Outlined.BakeryDining),
+            "localbar" to vec(Icons.Outlined.LocalBar),
+            "wine" to vec(Icons.Outlined.WineBar),
+        ),
+    ),
+    IconGroup(
+        "Transporte",
+        listOf(
+            "car" to vec(Icons.Outlined.DirectionsCar),
+            "fuel" to vec(Icons.Outlined.LocalGasStation),
+            "transit" to vec(Icons.Outlined.Train),
+            "bus" to vec(Icons.Outlined.DirectionsBus),
+            "taxi" to vec(Icons.Outlined.LocalTaxi),
+            "flight" to vec(Icons.Outlined.Flight),
+            "motorcycle" to vec(Icons.Outlined.TwoWheeler),
+            "bike" to vec(Icons.Outlined.PedalBike),
+            "parking" to vec(Icons.Outlined.LocalParking),
+            "ev" to vec(Icons.Outlined.EvStation),
+            "boat" to vec(Icons.Outlined.DirectionsBoat),
+        ),
+    ),
+    IconGroup(
+        "Hogar y servicios",
+        listOf(
+            "home" to vec(Icons.Outlined.Home),
+            "bills" to vec(Icons.Outlined.Receipt),
+            "utilities" to vec(Icons.Outlined.Bolt),
+            "water" to vec(Icons.Outlined.WaterDrop),
+            "gas" to vec(Icons.Outlined.GasMeter),
+            "internet" to vec(Icons.Outlined.Wifi),
+            "phone" to vec(Icons.Outlined.Smartphone),
+            "tv" to vec(Icons.Outlined.Tv),
+            "subs" to vec(Icons.Outlined.Subscriptions),
+            "cleaning" to vec(Icons.Outlined.CleaningServices),
+            "furniture" to vec(Icons.Outlined.Weekend),
+            "lightbulb" to vec(Icons.Outlined.Lightbulb),
+            "tools" to vec(Icons.Outlined.Build),
+        ),
+    ),
+    IconGroup(
+        "Ocio y entretenimiento",
+        listOf(
+            "games" to vec(Icons.Outlined.SportsEsports),
+            "movies" to vec(Icons.Outlined.Movie),
+            "music" to vec(Icons.Outlined.MusicNote),
+            "books" to vec(Icons.Outlined.MenuBook),
+            "sports" to vec(Icons.Outlined.SportsSoccer),
+            "gym" to vec(Icons.Outlined.FitnessCenter),
+            "travel" to vec(Icons.Outlined.Flight),
+            "beach" to vec(Icons.Outlined.BeachAccess),
+            "art" to vec(Icons.Outlined.Palette),
+            "theater" to vec(Icons.Outlined.TheaterComedy),
+            "pets" to vec(Icons.Outlined.Pets),
+            "celebration" to vec(Icons.Outlined.Cake),
+        ),
+    ),
+    IconGroup(
+        "Compras y otros",
+        listOf(
+            "shopping" to vec(Icons.Outlined.LocalMall),
+            "clothes" to vec(Icons.Outlined.Checkroom),
+            "beauty" to vec(Icons.Outlined.Spa),
+            "gifts" to vec(Icons.Outlined.Redeem),
+            "health" to vec(Icons.Outlined.MedicalServices),
+            "education" to vec(Icons.Outlined.School),
+            "kids" to vec(Icons.Outlined.ChildCare),
+            "card" to vec(Icons.Outlined.CreditCard),
+            "work" to vec(Icons.Outlined.Work),
+            "salary" to vec(Icons.Outlined.Payments),
+            "savings" to vec(Icons.Outlined.Savings),
+            "investment" to vec(Icons.Outlined.TrendingUp),
+            "donation" to vec(Icons.Outlined.VolunteerActivism),
+            "favorite" to vec(Icons.Outlined.FavoriteBorder),
+            "star" to vec(Icons.Outlined.StarBorder),
+            "other" to vec(Icons.Outlined.Category),
+        ),
+    ),
+    IconGroup(
+        "Streaming",
+        listOf(
+            "brand_netflix" to CategoryGlyph.Res(Res.drawable.brand_netflix),
+            "brand_primevideo" to CategoryGlyph.Res(Res.drawable.brand_primevideo),
+            "brand_hbomax" to CategoryGlyph.Res(Res.drawable.brand_hbomax),
+            "brand_spotify" to CategoryGlyph.Res(Res.drawable.brand_spotify),
+            "brand_youtube" to CategoryGlyph.Res(Res.drawable.brand_youtube),
+            "brand_appletv" to CategoryGlyph.Res(Res.drawable.brand_appletv),
+            "brand_twitch" to CategoryGlyph.Res(Res.drawable.brand_twitch),
+        ),
+    ),
+    IconGroup(
+        "Apps de transporte",
+        listOf(
+            "brand_uber" to CategoryGlyph.Res(Res.drawable.brand_uber),
+            "brand_lyft" to CategoryGlyph.Res(Res.drawable.brand_lyft),
+        ),
+    ),
+    IconGroup(
+        "Google",
+        listOf(
+            "brand_gmail" to CategoryGlyph.Res(Res.drawable.brand_gmail),
+            "brand_googledrive" to CategoryGlyph.Res(Res.drawable.brand_googledrive),
+            "brand_googleplay" to CategoryGlyph.Res(Res.drawable.brand_googleplay),
+            "brand_googlemaps" to CategoryGlyph.Res(Res.drawable.brand_googlemaps),
+        ),
+    ),
+    IconGroup(
+        "Estudio",
+        listOf(
+            "brand_duolingo" to CategoryGlyph.Res(Res.drawable.brand_duolingo),
+            "brand_coursera" to CategoryGlyph.Res(Res.drawable.brand_coursera),
+            "brand_udemy" to CategoryGlyph.Res(Res.drawable.brand_udemy),
+            "brand_notion" to CategoryGlyph.Res(Res.drawable.brand_notion),
+            "brand_khanacademy" to CategoryGlyph.Res(Res.drawable.brand_khanacademy),
+        ),
+    ),
+    IconGroup(
+        "Videojuegos",
+        listOf(
+            "brand_xbox" to CategoryGlyph.Res(Res.drawable.brand_xbox),
+            "brand_playstation" to CategoryGlyph.Res(Res.drawable.brand_playstation),
+            "brand_steam" to CategoryGlyph.Res(Res.drawable.brand_steam),
+            "brand_nintendoswitch" to CategoryGlyph.Res(Res.drawable.brand_nintendoswitch),
+            "brand_epicgames" to CategoryGlyph.Res(Res.drawable.brand_epicgames),
+            "brand_riotgames" to CategoryGlyph.Res(Res.drawable.brand_riotgames),
+        ),
+    ),
 )
 
-/** Todos los iconos ofrecidos al crear una categoría (generales + marcas). La clave va en Category.icon. */
-val categoryIcons: List<Pair<String, CategoryGlyph>> = generalIcons + brandIcons
+/** Todos los iconos en plano (para lookups). La clave va en Category.icon. */
+val categoryIcons: List<Pair<String, CategoryGlyph>> = iconGroups.flatMap { it.icons }
 
 private val glyphByKey = categoryIcons.toMap()
 

@@ -51,10 +51,9 @@ import com.finanzen.ui.components.CategoryAvatar
 import com.finanzen.ui.components.CategoryGlyph
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.SectionHeader
-import com.finanzen.ui.components.brandIcons
 import com.finanzen.ui.components.categoryColor
 import com.finanzen.ui.components.categoryColors
-import com.finanzen.ui.components.generalIcons
+import com.finanzen.ui.components.iconGroups
 import com.finanzen.viewmodel.CategoriesViewModel
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
@@ -68,7 +67,7 @@ fun CategoriesScreen(
     val categories by vm.categories.collectAsState()
     var name by remember { mutableStateOf("") }
     var kind by remember { mutableStateOf("EXPENSE") }
-    var icon by remember { mutableStateOf(generalIcons.first().first) }
+    var icon by remember { mutableStateOf(iconGroups.first().icons.first().first) }
     var color by remember { mutableStateOf(categoryColors.first()) }
 
     val parents = categories.filter { it.parentId == null }
@@ -127,7 +126,7 @@ fun CategoriesScreen(
                             onClick = {
                                 vm.add(name, kind, parentId = null, icon = icon, color = color.toArgb().toLong())
                                 name = ""
-                                icon = generalIcons.first().first
+                                icon = iconGroups.first().icons.first().first
                                 color = categoryColors.first()
                             },
                             enabled = name.isNotBlank(),
@@ -189,8 +188,9 @@ private fun CategoryRow(category: Category, onDelete: (Long) -> Unit) {
 
 @Composable
 private fun IconPicker(selected: String, onSelect: (String) -> Unit) {
-    IconSection("Icono", generalIcons, selected, onSelect)
-    IconSection("Servicios", brandIcons, selected, onSelect)
+    iconGroups.forEach { group ->
+        IconSection(group.title, group.icons, selected, onSelect)
+    }
 }
 
 @Composable
