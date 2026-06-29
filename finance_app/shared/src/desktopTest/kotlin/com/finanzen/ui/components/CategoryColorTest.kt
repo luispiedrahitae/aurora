@@ -3,6 +3,7 @@ package com.finanzen.ui.components
 import androidx.compose.ui.graphics.toArgb
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class CategoryColorTest {
     @Test
@@ -20,11 +21,12 @@ class CategoryColorTest {
     }
 
     @Test
-    fun iconForKeyResuelveClaveConocidaYCaeAlFallback() {
-        val (key, vector) = categoryIcons.first()
-        assertEquals(vector, iconForKey(key))
-        // Clave desconocida (o emoji legacy) -> icono genérico, nunca null.
-        assertEquals(iconForKey("other"), iconForKey("🍔"))
-        assertEquals(iconForKey("other"), iconForKey("no_existe"))
+    fun glyphForKeyResuelveGeneralMarcaYFallback() {
+        // Clave general -> Vec; clave de marca -> Res.
+        assertTrue(glyphForKey(generalIcons.first().first) is CategoryGlyph.Vec)
+        assertTrue(glyphForKey("brand_netflix") is CategoryGlyph.Res)
+        // Clave desconocida o emoji legacy -> fallback genérico (Vec), nunca crash.
+        assertEquals(glyphForKey("other"), glyphForKey("🍔"))
+        assertEquals(glyphForKey("other"), glyphForKey("no_existe"))
     }
 }

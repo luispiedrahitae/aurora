@@ -48,12 +48,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.finanzen.db.Category
 import com.finanzen.ui.components.CategoryAvatar
+import com.finanzen.ui.components.CategoryGlyph
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.SectionHeader
+import com.finanzen.ui.components.brandIcons
 import com.finanzen.ui.components.categoryColor
 import com.finanzen.ui.components.categoryColors
-import com.finanzen.ui.components.categoryIcons
+import com.finanzen.ui.components.generalIcons
 import com.finanzen.viewmodel.CategoriesViewModel
+import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,7 +68,7 @@ fun CategoriesScreen(
     val categories by vm.categories.collectAsState()
     var name by remember { mutableStateOf("") }
     var kind by remember { mutableStateOf("EXPENSE") }
-    var icon by remember { mutableStateOf(categoryIcons.first().first) }
+    var icon by remember { mutableStateOf(generalIcons.first().first) }
     var color by remember { mutableStateOf(categoryColors.first()) }
 
     val parents = categories.filter { it.parentId == null }
@@ -124,7 +127,7 @@ fun CategoriesScreen(
                             onClick = {
                                 vm.add(name, kind, parentId = null, icon = icon, color = color.toArgb().toLong())
                                 name = ""
-                                icon = categoryIcons.first().first
+                                icon = generalIcons.first().first
                                 color = categoryColors.first()
                             },
                             enabled = name.isNotBlank(),
@@ -186,10 +189,22 @@ private fun CategoryRow(category: Category, onDelete: (Long) -> Unit) {
 
 @Composable
 private fun IconPicker(selected: String, onSelect: (String) -> Unit) {
-    Text("Icono", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    IconSection("Icono", generalIcons, selected, onSelect)
+    IconSection("Servicios", brandIcons, selected, onSelect)
+}
+
+@Composable
+private fun IconSection(
+    title: String,
+    icons: List<Pair<String, CategoryGlyph>>,
+    selected: String,
+    onSelect: (String) -> Unit,
+) {
+    Text(title, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        categoryIcons.forEach { (key, vector) ->
+        icons.forEach { (key, glyph) ->
             val isSelected = key == selected
+            val tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
             Box(
                 modifier = Modifier
                     .size(40.dp)
@@ -201,12 +216,11 @@ private fun IconPicker(selected: String, onSelect: (String) -> Unit) {
                     .clickable { onSelect(key) },
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    imageVector = vector,
-                    contentDescription = key,
-                    tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(22.dp),
-                )
+                val glyphModifier = Modifier.size(22.dp)
+                when (glyph) {
+                    is CategoryGlyph.Vec -> Icon(glyph.image, contentDescription = key, tint = tint, modifier = glyphModifier)
+                    is CategoryGlyph.Res -> Icon(painterResource(glyph.drawable), contentDescription = key, tint = tint, modifier = glyphModifier)
+                }
             }
         }
     }

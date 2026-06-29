@@ -73,6 +73,33 @@ import androidx.compose.ui.unit.dp
 import com.finanzen.domain.Money
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalSpacing
+import finanzen.shared.generated.resources.Res
+import finanzen.shared.generated.resources.brand_appletv
+import finanzen.shared.generated.resources.brand_coursera
+import finanzen.shared.generated.resources.brand_duolingo
+import finanzen.shared.generated.resources.brand_epicgames
+import finanzen.shared.generated.resources.brand_gmail
+import finanzen.shared.generated.resources.brand_googledrive
+import finanzen.shared.generated.resources.brand_googlemaps
+import finanzen.shared.generated.resources.brand_googleplay
+import finanzen.shared.generated.resources.brand_hbomax
+import finanzen.shared.generated.resources.brand_khanacademy
+import finanzen.shared.generated.resources.brand_lyft
+import finanzen.shared.generated.resources.brand_netflix
+import finanzen.shared.generated.resources.brand_nintendoswitch
+import finanzen.shared.generated.resources.brand_notion
+import finanzen.shared.generated.resources.brand_playstation
+import finanzen.shared.generated.resources.brand_primevideo
+import finanzen.shared.generated.resources.brand_riotgames
+import finanzen.shared.generated.resources.brand_spotify
+import finanzen.shared.generated.resources.brand_steam
+import finanzen.shared.generated.resources.brand_twitch
+import finanzen.shared.generated.resources.brand_uber
+import finanzen.shared.generated.resources.brand_udemy
+import finanzen.shared.generated.resources.brand_xbox
+import finanzen.shared.generated.resources.brand_youtube
+import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.painterResource
 
 /**
  * Superficie base de todas las tarjetas: tonal (sin sombras pesadas), radio `large`, padding
@@ -215,70 +242,109 @@ fun colorForCategory(name: String): Color = categoryColors[((name.hashCode() % c
 fun categoryColor(name: String, storedColor: Long): Color = if (storedColor != 0L) Color(storedColor.toInt()) else colorForCategory(name)
 
 /**
- * Iconos vectoriales (Material Outlined, ya disponibles vía material-icons-extended) ofrecidos al
- * crear una categoría. La clave (string estable) es lo que se guarda en Category.icon.
+ * Glifo de una categoría: o un vector de Material (iconos generales) o un drawable de marca
+ * (logos de servicios, de Simple Icons / CC0). Ambos se pintan monocromos blancos sobre el círculo.
  */
-val categoryIcons: List<Pair<String, ImageVector>> = listOf(
-    "restaurant" to Icons.Outlined.Restaurant,
-    "groceries" to Icons.Outlined.ShoppingCart,
-    "shopping" to Icons.Outlined.LocalMall,
-    "car" to Icons.Outlined.DirectionsCar,
-    "fuel" to Icons.Outlined.LocalGasStation,
-    "transit" to Icons.Outlined.Train,
-    "home" to Icons.Outlined.Home,
-    "bills" to Icons.Outlined.Receipt,
-    "utilities" to Icons.Outlined.Bolt,
-    "water" to Icons.Outlined.WaterDrop,
-    "phone" to Icons.Outlined.Smartphone,
-    "internet" to Icons.Outlined.Wifi,
-    "tv" to Icons.Outlined.Tv,
-    "subs" to Icons.Outlined.Subscriptions,
-    "health" to Icons.Outlined.MedicalServices,
-    "gym" to Icons.Outlined.FitnessCenter,
-    "beauty" to Icons.Outlined.Spa,
-    "games" to Icons.Outlined.SportsEsports,
-    "movies" to Icons.Outlined.Movie,
-    "music" to Icons.Outlined.MusicNote,
-    "books" to Icons.Outlined.MenuBook,
-    "travel" to Icons.Outlined.Flight,
-    "beach" to Icons.Outlined.BeachAccess,
-    "clothes" to Icons.Outlined.Checkroom,
-    "education" to Icons.Outlined.School,
-    "kids" to Icons.Outlined.ChildCare,
-    "pets" to Icons.Outlined.Pets,
-    "coffee" to Icons.Outlined.LocalCafe,
-    "gifts" to Icons.Outlined.Redeem,
-    "celebration" to Icons.Outlined.Cake,
-    "donation" to Icons.Outlined.VolunteerActivism,
-    "tools" to Icons.Outlined.Build,
-    "work" to Icons.Outlined.Work,
-    "salary" to Icons.Outlined.Payments,
-    "card" to Icons.Outlined.CreditCard,
-    "savings" to Icons.Outlined.Savings,
-    "investment" to Icons.Outlined.TrendingUp,
-    "favorite" to Icons.Outlined.FavoriteBorder,
-    "star" to Icons.Outlined.StarBorder,
-    "other" to Icons.Outlined.Category,
+sealed interface CategoryGlyph {
+    data class Vec(val image: ImageVector) : CategoryGlyph
+    data class Res(val drawable: DrawableResource) : CategoryGlyph
+}
+
+/** Iconos generales (Material Outlined, vía material-icons-extended). */
+val generalIcons: List<Pair<String, CategoryGlyph>> = listOf(
+    "restaurant" to CategoryGlyph.Vec(Icons.Outlined.Restaurant),
+    "groceries" to CategoryGlyph.Vec(Icons.Outlined.ShoppingCart),
+    "shopping" to CategoryGlyph.Vec(Icons.Outlined.LocalMall),
+    "car" to CategoryGlyph.Vec(Icons.Outlined.DirectionsCar),
+    "fuel" to CategoryGlyph.Vec(Icons.Outlined.LocalGasStation),
+    "transit" to CategoryGlyph.Vec(Icons.Outlined.Train),
+    "home" to CategoryGlyph.Vec(Icons.Outlined.Home),
+    "bills" to CategoryGlyph.Vec(Icons.Outlined.Receipt),
+    "utilities" to CategoryGlyph.Vec(Icons.Outlined.Bolt),
+    "water" to CategoryGlyph.Vec(Icons.Outlined.WaterDrop),
+    "phone" to CategoryGlyph.Vec(Icons.Outlined.Smartphone),
+    "internet" to CategoryGlyph.Vec(Icons.Outlined.Wifi),
+    "tv" to CategoryGlyph.Vec(Icons.Outlined.Tv),
+    "subs" to CategoryGlyph.Vec(Icons.Outlined.Subscriptions),
+    "health" to CategoryGlyph.Vec(Icons.Outlined.MedicalServices),
+    "gym" to CategoryGlyph.Vec(Icons.Outlined.FitnessCenter),
+    "beauty" to CategoryGlyph.Vec(Icons.Outlined.Spa),
+    "games" to CategoryGlyph.Vec(Icons.Outlined.SportsEsports),
+    "movies" to CategoryGlyph.Vec(Icons.Outlined.Movie),
+    "music" to CategoryGlyph.Vec(Icons.Outlined.MusicNote),
+    "books" to CategoryGlyph.Vec(Icons.Outlined.MenuBook),
+    "travel" to CategoryGlyph.Vec(Icons.Outlined.Flight),
+    "beach" to CategoryGlyph.Vec(Icons.Outlined.BeachAccess),
+    "clothes" to CategoryGlyph.Vec(Icons.Outlined.Checkroom),
+    "education" to CategoryGlyph.Vec(Icons.Outlined.School),
+    "kids" to CategoryGlyph.Vec(Icons.Outlined.ChildCare),
+    "pets" to CategoryGlyph.Vec(Icons.Outlined.Pets),
+    "coffee" to CategoryGlyph.Vec(Icons.Outlined.LocalCafe),
+    "gifts" to CategoryGlyph.Vec(Icons.Outlined.Redeem),
+    "celebration" to CategoryGlyph.Vec(Icons.Outlined.Cake),
+    "donation" to CategoryGlyph.Vec(Icons.Outlined.VolunteerActivism),
+    "tools" to CategoryGlyph.Vec(Icons.Outlined.Build),
+    "work" to CategoryGlyph.Vec(Icons.Outlined.Work),
+    "salary" to CategoryGlyph.Vec(Icons.Outlined.Payments),
+    "card" to CategoryGlyph.Vec(Icons.Outlined.CreditCard),
+    "savings" to CategoryGlyph.Vec(Icons.Outlined.Savings),
+    "investment" to CategoryGlyph.Vec(Icons.Outlined.TrendingUp),
+    "favorite" to CategoryGlyph.Vec(Icons.Outlined.FavoriteBorder),
+    "star" to CategoryGlyph.Vec(Icons.Outlined.StarBorder),
+    "other" to CategoryGlyph.Vec(Icons.Outlined.Category),
 )
 
-private val iconsByKey = categoryIcons.toMap()
+/**
+ * Iconos de marca/servicio. Logos de Simple Icons (CC0); las marcas pertenecen a sus dueños — uso
+ * descriptivo para etiquetar movimientos. La clave guardada es el nombre del drawable (brand_*).
+ */
+val brandIcons: List<Pair<String, CategoryGlyph>> = listOf(
+    "brand_netflix" to CategoryGlyph.Res(Res.drawable.brand_netflix),
+    "brand_primevideo" to CategoryGlyph.Res(Res.drawable.brand_primevideo),
+    "brand_hbomax" to CategoryGlyph.Res(Res.drawable.brand_hbomax),
+    "brand_spotify" to CategoryGlyph.Res(Res.drawable.brand_spotify),
+    "brand_youtube" to CategoryGlyph.Res(Res.drawable.brand_youtube),
+    "brand_appletv" to CategoryGlyph.Res(Res.drawable.brand_appletv),
+    "brand_twitch" to CategoryGlyph.Res(Res.drawable.brand_twitch),
+    "brand_uber" to CategoryGlyph.Res(Res.drawable.brand_uber),
+    "brand_lyft" to CategoryGlyph.Res(Res.drawable.brand_lyft),
+    "brand_gmail" to CategoryGlyph.Res(Res.drawable.brand_gmail),
+    "brand_googledrive" to CategoryGlyph.Res(Res.drawable.brand_googledrive),
+    "brand_googleplay" to CategoryGlyph.Res(Res.drawable.brand_googleplay),
+    "brand_googlemaps" to CategoryGlyph.Res(Res.drawable.brand_googlemaps),
+    "brand_duolingo" to CategoryGlyph.Res(Res.drawable.brand_duolingo),
+    "brand_coursera" to CategoryGlyph.Res(Res.drawable.brand_coursera),
+    "brand_udemy" to CategoryGlyph.Res(Res.drawable.brand_udemy),
+    "brand_notion" to CategoryGlyph.Res(Res.drawable.brand_notion),
+    "brand_khanacademy" to CategoryGlyph.Res(Res.drawable.brand_khanacademy),
+    "brand_xbox" to CategoryGlyph.Res(Res.drawable.brand_xbox),
+    "brand_playstation" to CategoryGlyph.Res(Res.drawable.brand_playstation),
+    "brand_steam" to CategoryGlyph.Res(Res.drawable.brand_steam),
+    "brand_nintendoswitch" to CategoryGlyph.Res(Res.drawable.brand_nintendoswitch),
+    "brand_epicgames" to CategoryGlyph.Res(Res.drawable.brand_epicgames),
+    "brand_riotgames" to CategoryGlyph.Res(Res.drawable.brand_riotgames),
+)
 
-/** Vector de una categoría por su clave; cae a un icono genérico si la clave es desconocida o legacy. */
-fun iconForKey(key: String): ImageVector = iconsByKey[key] ?: Icons.Outlined.Category
+/** Todos los iconos ofrecidos al crear una categoría (generales + marcas). La clave va en Category.icon. */
+val categoryIcons: List<Pair<String, CategoryGlyph>> = generalIcons + brandIcons
 
-/** Icono vectorial blanco dentro de un círculo de color. Avatar único usado en formularios y listas. */
+private val glyphByKey = categoryIcons.toMap()
+
+/** Glifo de una categoría por su clave; cae a un icono genérico si la clave es desconocida o legacy. */
+fun glyphForKey(key: String): CategoryGlyph = glyphByKey[key] ?: CategoryGlyph.Vec(Icons.Outlined.Category)
+
+/** Glifo blanco (vector Material o logo de marca) dentro de un círculo de color. Avatar único. */
 @Composable
 fun CategoryAvatar(icon: String, color: Color, modifier: Modifier = Modifier, size: Dp = 36.dp) {
     Box(
         modifier = modifier.size(size).clip(CircleShape).background(color),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            imageVector = iconForKey(icon),
-            contentDescription = null,
-            tint = Color.White,
-            modifier = Modifier.size(size * 0.58f),
-        )
+        val glyphModifier = Modifier.size(size * 0.58f)
+        when (val glyph = glyphForKey(icon)) {
+            is CategoryGlyph.Vec -> Icon(glyph.image, contentDescription = null, tint = Color.White, modifier = glyphModifier)
+            is CategoryGlyph.Res -> Icon(painterResource(glyph.drawable), contentDescription = null, tint = Color.White, modifier = glyphModifier)
+        }
     }
 }
 
