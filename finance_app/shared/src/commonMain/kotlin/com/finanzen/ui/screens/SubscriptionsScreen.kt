@@ -73,8 +73,8 @@ fun SubscriptionsScreen(
         SubscriptionFormDialog(
             parseAmount = vm::parseAmountToMinor,
             onDismiss = { showForm = false },
-            onConfirm = { name, amountMinor, frequency, interval, remindDays ->
-                vm.addSubscription(name, amountMinor, frequency, interval, remindDays)
+            onConfirm = { name, amountMinor, frequency, interval ->
+                vm.addSubscription(name, amountMinor, frequency, interval)
                 showForm = false
             },
         )
@@ -124,27 +124,26 @@ fun SubscriptionsScreen(
 
 /**
  * Alta de suscripción. La recurrencia se elige con un segmented control:
- * "Cada X días" (DAILY) o "Día del mes" (MONTHLY). `onConfirm(nombre, montoMinor, frequency, interval, recordarDíasAntes)`.
+ * "Cada X días" (DAILY) o "Día del mes" (MONTHLY). `onConfirm(nombre, montoMinor, frequency, interval)`.
+ * Los días de antelación del recordatorio son una preferencia global (Más › Notificaciones).
  */
 @Composable
 private fun SubscriptionFormDialog(
     parseAmount: (String) -> Long?,
     onDismiss: () -> Unit,
-    onConfirm: (name: String, amountMinor: Long, frequency: String, interval: Long, remindDays: Long) -> Unit,
+    onConfirm: (name: String, amountMinor: Long, frequency: String, interval: Long) -> Unit,
 ) {
     var name by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
     var monthly by remember { mutableStateOf(true) } // true = Día del mes, false = Cada X días
     var dayOfMonth by remember { mutableStateOf("1") }
     var everyDays by remember { mutableStateOf("30") }
-    var remindDays by remember { mutableStateOf("2") }
 
     val amountMinor = parseAmount(amount)
     val dayValid = dayOfMonth.toIntOrNull()?.let { it in 1..31 } == true
     val everyValid = everyDays.toLongOrNull()?.let { it >= 1 } == true
-    val remindValid = remindDays.toLongOrNull()?.let { it >= 0 } == true
     val recurValid = if (monthly) dayValid else everyValid
-    val valid = name.isNotBlank() && amountMinor != null && amountMinor > 0 && recurValid && remindValid
+    val valid = name.isNotBlank() && amountMinor != null && amountMinor > 0 && recurValid
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -161,7 +160,7 @@ private fun SubscriptionFormDialog(
                 OutlinedTextField(
                     value = amount,
                     onValueChange = { amount = it },
-                    label = { Text("Monto (ej. 12.99)") },
+                    label = { Text("Monto") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
@@ -172,12 +171,14 @@ private fun SubscriptionFormDialog(
                         selected = monthly,
                         onClick = { monthly = true },
                         shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                    ) { Text("Día del mes") }
+                        icon = {},
+                    ) { Text("DÍA DEL MES") }
                     SegmentedButton(
                         selected = !monthly,
                         onClick = { monthly = false },
                         shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                    ) { Text("Cada X días") }
+                        icon = {},
+                    ) { Text("CADA X DÍAS") }
                 }
                 if (monthly) {
                     OutlinedTextField(
@@ -200,14 +201,6 @@ private fun SubscriptionFormDialog(
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
-                OutlinedTextField(
-                    value = remindDays,
-                    onValueChange = { remindDays = it.filter(Char::isDigit).take(3) },
-                    label = { Text("Recordar (días antes)") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(),
-                )
             }
         },
         confirmButton = {
@@ -215,7 +208,7 @@ private fun SubscriptionFormDialog(
                 onClick = {
                     val frequency = if (monthly) "MONTHLY" else "DAILY"
                     val interval = if (monthly) dayOfMonth.toLong() else everyDays.toLong()
-                    onConfirm(name.trim(), amountMinor!!, frequency, interval, remindDays.toLong())
+                    onConfirm(name.trim(), amountMinor!!, frequency, interval)
                 },
                 enabled = valid,
             ) { Text("Guardar") }

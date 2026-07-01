@@ -23,9 +23,11 @@ data class BudgetRow(
     val categoryName: String,
     val limitMinor: Long,
     val spentMinor: Long,
+    val icon: String = "",
+    val color: Long = 0L,
 )
 
-data class BudgetsData(val periodMonth: Long, val rows: List<BudgetRow>)
+data class BudgetsData(val periodMonth: Long, val rows: List<BudgetRow>, val currency: String = "")
 
 class BudgetsViewModel(
     private val budgetRepo: BudgetRepository,
@@ -71,9 +73,12 @@ class BudgetsViewModel(
                     categoryName = cat.name,
                     limitMinor = limitByCat[cat.id] ?: 0L,
                     spentMinor = spentByCat[cat.id] ?: 0L,
+                    icon = cat.icon,
+                    color = cat.color,
                 )
             }
-            return BudgetsData(period, rows)
+            val currency = txs.firstOrNull()?.currency ?: ""
+            return BudgetsData(period, rows, currency)
         }
     }
 }

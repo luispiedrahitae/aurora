@@ -46,6 +46,12 @@ class SettingsViewModel(
     private val mutableBudgetNotif = MutableStateFlow(repo.budgetNotificationsEnabled())
     val budgetNotifications: StateFlow<Boolean> = mutableBudgetNotif.asStateFlow()
 
+    private val mutableRemindDays = MutableStateFlow(repo.reminderDaysBefore())
+    val remindDaysBefore: StateFlow<Long> = mutableRemindDays.asStateFlow()
+
+    private val mutableHideAmounts = MutableStateFlow(repo.hideAmountsEnabled())
+    val hideAmounts: StateFlow<Boolean> = mutableHideAmounts.asStateFlow()
+
     fun setTheme(mode: ThemeMode) {
         repo.setThemeMode(mode.name.lowercase())
         mutableTheme.value = mode
@@ -69,6 +75,16 @@ class SettingsViewModel(
     fun setBudgetNotifications(enabled: Boolean) {
         repo.setBudgetNotificationsEnabled(enabled)
         mutableBudgetNotif.value = enabled
+    }
+
+    fun setRemindDaysBefore(days: Long) {
+        repo.setReminderDaysBefore(days)
+        mutableRemindDays.value = days
+    }
+
+    fun setHideAmounts(enabled: Boolean) {
+        repo.setHideAmountsEnabled(enabled)
+        mutableHideAmounts.value = enabled
     }
 
     fun setBaseCurrency(code: String) {

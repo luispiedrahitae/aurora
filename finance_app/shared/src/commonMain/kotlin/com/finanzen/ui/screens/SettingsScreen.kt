@@ -25,18 +25,24 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -52,6 +58,7 @@ import com.finanzen.ui.components.SectionHeader
 import com.finanzen.ui.theme.AccentPreset
 import com.finanzen.viewmodel.SettingsViewModel
 import com.finanzen.viewmodel.ThemeMode
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -63,14 +70,11 @@ fun SettingsScreen(
     val theme by vm.theme.collectAsState()
     val accent by vm.accent.collectAsState()
     val dynamicColor by vm.dynamicColor.collectAsState()
-    val baseCurrency by vm.baseCurrency.collectAsState()
-    val cardNotif by vm.cardNotifications.collectAsState()
-    val budgetNotif by vm.budgetNotifications.collectAsState()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Temas y apariencia") },
+                title = { Text("Apariencia") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Volver")
@@ -88,32 +92,9 @@ fun SettingsScreen(
             item {
                 FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(0.dp)) {
                     Column {
-                        ThemeOption("Sistema", "Sigue el modo claro/oscuro del dispositivo", ThemeMode.SYSTEM, theme, vm::setTheme)
-                        ThemeOption("Claro", "Siempre claro", ThemeMode.LIGHT, theme, vm::setTheme)
-                        ThemeOption("Oscuro", "Siempre oscuro", ThemeMode.DARK, theme, vm::setTheme)
-                    }
-                }
-            }
-
-            if (vm.dynamicSupported) {
-                item { SectionHeader("Color dinámico") }
-                item {
-                    FinanceCard(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("Material You", fontWeight = FontWeight.SemiBold)
-                                Text(
-                                    "Tinta la app con los colores de tu fondo de pantalla.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
-                            }
-                            Switch(checked = dynamicColor, onCheckedChange = vm::setDynamicColor)
-                        }
+                        ThemeOption("Sistema", ThemeMode.SYSTEM, theme, vm::setTheme)
+                        ThemeOption("Claro", ThemeMode.LIGHT, theme, vm::setTheme)
+                        ThemeOption("Oscuro", ThemeMode.DARK, theme, vm::setTheme)
                     }
                 }
             }
@@ -125,7 +106,7 @@ fun SettingsScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(
                             if (accentActive) {
-                                "Elige el color que identifica la app."
+                                "Color de la app: ${accent.label}."
                             } else {
                                 "El color dinámico está activo. Desactívalo para elegir un acento."
                             },
@@ -150,42 +131,48 @@ fun SettingsScreen(
                 }
             }
 
-            item { SectionHeader("Notificaciones") }
-            item {
-                FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(0.dp)) {
-                    Column {
-                        ToggleRow(
-                            "Corte y pago de tarjetas",
-                            "Recuérdame el día de corte y de pago de mis tarjetas de crédito.",
-                            cardNotif,
-                            vm::setCardNotifications,
-                        )
-                        ToggleRow(
-                            "Presupuesto alcanzado",
-                            "Avísame cuando un gasto alcance el límite de una categoría.",
-                            budgetNotif,
-                            vm::setBudgetNotifications,
-                        )
-                    }
-                }
-            }
-
-            item { SectionHeader("Moneda") }
-            item {
-                FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(0.dp)) {
-                    Column {
-                        Text(
-                            "Moneda única de la app. Cambiarla re-etiqueta tus montos existentes sin convertirlos.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
-                        )
-                        vm.currencies.forEach { currency ->
-                            CurrencyOption(currency.code, currency.symbol, baseCurrency, vm::setBaseCurrency)
+            if (vm.dynamicSupported) {
+                item { SectionHeader("Modo") }
+                item {
+                    FinanceCard(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Text("Dinámico", fontWeight = FontWeight.SemiBold)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Switch(checked = dynamicColor, onCheckedChange = vm::setDynamicColor)
+                                InfoTooltip("Usa los colores de tu fondo de pantalla para teñir la app.")
+                            }
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * Icono "i" con tooltip (hover en desktop, toque/toque-largo en móvil). Buen patrón para explicar
+ * un control sin recargar la fila con texto.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun InfoTooltip(text: String) {
+    val state = rememberTooltipState(isPersistent = false)
+    val scope = rememberCoroutineScope()
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+        tooltip = { PlainTooltip { Text(text) } },
+        state = state,
+    ) {
+        IconButton(onClick = { scope.launch { state.show() } }) {
+            Icon(
+                Icons.Outlined.Info,
+                contentDescription = "Qué es el color dinámico",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -228,44 +215,8 @@ private fun AccentSwatch(
 }
 
 @Composable
-private fun ToggleRow(title: String, subtitle: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, fontWeight = FontWeight.SemiBold)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        Switch(checked = checked, onCheckedChange = onChange)
-    }
-}
-
-@Composable
-private fun CurrencyOption(
-    code: String,
-    symbol: String,
-    selected: String,
-    onSelect: (String) -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .selectable(selected = selected == code, onClick = { onSelect(code) })
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        RadioButton(selected = selected == code, onClick = { onSelect(code) })
-        Text("$code ($symbol)", fontWeight = FontWeight.SemiBold)
-    }
-}
-
-@Composable
 private fun ThemeOption(
     title: String,
-    subtitle: String,
     mode: ThemeMode,
     selected: ThemeMode,
     onSelect: (ThemeMode) -> Unit,
@@ -274,14 +225,11 @@ private fun ThemeOption(
         modifier = Modifier
             .fillMaxWidth()
             .selectable(selected = selected == mode, onClick = { onSelect(mode) })
-            .padding(16.dp),
+            .padding(horizontal = 16.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         RadioButton(selected = selected == mode, onClick = { onSelect(mode) })
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, fontWeight = FontWeight.SemiBold)
-            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+        Text(title, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
     }
 }

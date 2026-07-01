@@ -13,105 +13,223 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ArrowDownward
+import androidx.compose.material.icons.outlined.ArrowUpward
+import androidx.compose.material.icons.outlined.Visibility
+import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.finanzen.domain.Money
+import com.finanzen.ui.components.AutoSizeText
 import com.finanzen.ui.components.CategoryProgressRow
 import com.finanzen.ui.components.FinanceCard
-import com.finanzen.ui.components.MoneyText
+import com.finanzen.ui.components.MainTabHeader
 import com.finanzen.ui.components.SectionHeader
-import com.finanzen.ui.components.StatPill
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalSpacing
+import com.finanzen.ui.theme.PillShape
 import com.finanzen.viewmodel.CategorySlice
 import com.finanzen.viewmodel.DashboardViewModel
 import com.finanzen.viewmodel.MonthNet
+import com.finanzen.viewmodel.SettingsViewModel
+import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.math.absoluteValue
 
+private val MESES_LARGOS = listOf(
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+)
+
 @Composable
-fun DashboardScreen(vm: DashboardViewModel = koinViewModel()) {
+fun DashboardScreen(
+    vm: DashboardViewModel = koinViewModel(),
+    settingsVm: SettingsViewModel = koinInject(),
+) {
     val data by vm.data.collectAsState()
+    val hideAmounts by settingsVm.hideAmounts.collectAsState()
     val spacing = LocalSpacing.current
+    val monthLabel = remember {
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        "${MESES_LARGOS[today.monthNumber - 1]} ${today.year}"
+    }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        // bottom extra para que el FAB central no tape la última tarjeta.
-        contentPadding = PaddingValues(start = spacing.lg, end = spacing.lg, top = spacing.lg, bottom = 96.dp),
-        verticalArrangement = Arrangement.spacedBy(spacing.lg),
-    ) {
-        item { BalanceHeroCard(data.totalBalanceMinor, data.monthIncomeMinor, data.monthExpenseMinor, data.currency) }
-
-        item { SectionHeader("Flujo de los últimos 6 meses") }
-        item { CashflowCard(data.cashflow, data.currency) }
-
-        item { SectionHeader("Top categorías del mes") }
-        if (data.topCategories.isEmpty()) {
+    Column(Modifier.fillMaxSize()) {
+        MainTabHeader(title = "Resumen", subtitle = monthLabel)
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            // bottom extra para que el FAB central no tape la última tarjeta.
+            contentPadding = PaddingValues(start = spacing.lg, end = spacing.lg, top = spacing.sm, bottom = 96.dp),
+            verticalArrangement = Arrangement.spacedBy(spacing.lg),
+        ) {
             item {
-                Text(
-                    "Sin gastos este mes. Añade movimientos desde la pestaña Movimientos.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                BalanceHeroCard(
+                    monthIncome = data.monthIncomeMinor,
+                    monthExpense = data.monthExpenseMinor,
+                    currency = data.currency,
+                    hidden = hideAmounts,
+                    onToggleHidden = { settingsVm.setHideAmounts(!hideAmounts) },
                 )
             }
-        } else {
-            items(data.topCategories, key = { it.name }) { slice ->
-                FinanceCard { CategoryRow(slice, data.currency) }
+
+            item { SectionHeader("Flujo de los últimos 6 meses") }
+            item { CashflowCard(data.cashflow, data.currency) }
+
+            item { SectionHeader("Top categorías del mes") }
+            if (data.topCategories.isEmpty()) {
+                item {
+                    Text(
+                        "Sin gastos este mes. Añade movimientos desde la pestaña Movimientos.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            } else {
+                // Una sola tarjeta con todas las filas dentro (en vez de una tarjeta por categoría).
+                item {
+                    FinanceCard {
+                        Column(verticalArrangement = Arrangement.spacedBy(spacing.lg)) {
+                            data.topCategories.forEach { slice -> CategoryRow(slice, data.currency) }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private const val MASK = "••••••"
+
+@Composable
+private fun BalanceHeroCard(
+    monthIncome: Long,
+    monthExpense: Long,
+    currency: String,
+    hidden: Boolean,
+    onToggleHidden: () -> Unit,
+) {
+    val spacing = LocalSpacing.current
+    val onSurface = MaterialTheme.colorScheme.onSurface
+    val onSurfaceVar = MaterialTheme.colorScheme.onSurfaceVariant
+    // Tarjeta neutra (no primaryContainer): los colores semánticos verde/rojo contrastan como es debido
+    // en cualquier acento/dinámico, sin lavar el texto sobre el contenedor de color.
+    val darkUi = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val incomeGreen = if (darkUi) Color(0xFF57D9A3) else Color(0xFF1E7D5A)
+    val expenseRed = if (darkUi) Color(0xFFFF5449) else Color(0xFFC62828)
+
+    // El balance es el neto del mes (ingresos − gastos). Sin código de moneda; auto-encoge a una línea.
+    val balance = monthIncome - monthExpense
+    val balanceColor = if (balance >= 0) onSurface else expenseRed
+    val balanceText = if (hidden) MASK else Money(balance, currency).format()
+
+    val totalFlow = monthIncome + monthExpense
+    val incomeFraction by animateFloatAsState(
+        targetValue = if (totalFlow > 0) (monthIncome.toFloat() / totalFlow.toFloat()).coerceIn(0f, 1f) else 0f,
+        animationSpec = tween(700),
+    )
+
+    FinanceCard(color = MaterialTheme.colorScheme.surfaceContainerHigh, contentPadding = PaddingValues(spacing.xl)) {
+        Column(verticalArrangement = Arrangement.spacedBy(spacing.lg)) {
+            Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Balance", style = MaterialTheme.typography.labelLarge, color = onSurfaceVar)
+                    IconButton(onClick = onToggleHidden, modifier = Modifier.size(24.dp)) {
+                        Icon(
+                            if (hidden) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                            contentDescription = if (hidden) "Mostrar montos" else "Ocultar montos",
+                            tint = onSurfaceVar,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
+                AutoSizeText(
+                    text = balanceText,
+                    modifier = Modifier.fillMaxWidth(),
+                    color = balanceColor,
+                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.displaySmall,
+                )
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                // Barra de proporción ingreso vs gasto del mes.
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(8.dp)
+                        .clip(PillShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                ) {
+                    if (totalFlow > 0) {
+                        Box(Modifier.fillMaxHeight().weight(incomeFraction.coerceAtLeast(0.001f)).background(incomeGreen))
+                        Box(Modifier.fillMaxHeight().weight((1f - incomeFraction).coerceAtLeast(0.001f)).background(expenseRed))
+                    }
+                }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    FlowItem(
+                        Icons.Outlined.ArrowUpward,
+                        "Ingresos",
+                        if (hidden) MASK else Money(monthIncome, currency).format(),
+                        incomeGreen,
+                        onSurfaceVar,
+                        Alignment.Start,
+                    )
+                    FlowItem(
+                        Icons.Outlined.ArrowDownward,
+                        "Gastos",
+                        if (hidden) MASK else Money(monthExpense, currency).format(),
+                        expenseRed,
+                        onSurfaceVar,
+                        Alignment.End,
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun BalanceHeroCard(balance: Long, monthIncome: Long, monthExpense: Long, currency: String) {
-    val finance = LocalFinanceColors.current
-    val spacing = LocalSpacing.current
-    // ponytail: anima como Float; para saldos > ~9 dígitos pierde precisión visual durante el barrido,
-    // el valor final mostrado siempre es el Long exacto. Suficiente para finanzas personales.
-    val animated by animateFloatAsState(targetValue = balance.toFloat(), animationSpec = tween(700))
-    val balanceColor = if (balance >= 0) MaterialTheme.colorScheme.onPrimaryContainer else finance.expense
-
-    FinanceCard(color = MaterialTheme.colorScheme.primaryContainer, contentPadding = PaddingValues(spacing.xl)) {
-        Column(verticalArrangement = Arrangement.spacedBy(spacing.lg)) {
-            Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
-                Text(
-                    "Balance total",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f),
-                )
-                MoneyText(
-                    amountMinor = animated.toLong(),
-                    currency = currency,
-                    style = MaterialTheme.typography.displayLarge,
-                    colorOverride = balanceColor,
-                )
-            }
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
-                StatPill("Ingresos", monthIncome, currency, finance.income, finance.incomeContainer, Modifier.weight(1f))
-                StatPill("Gastos", monthExpense, currency, finance.expense, finance.expenseContainer, Modifier.weight(1f))
-                StatPill(
-                    "Neto",
-                    monthIncome - monthExpense,
-                    currency,
-                    MaterialTheme.colorScheme.onSurface,
-                    MaterialTheme.colorScheme.surfaceContainerHigh,
-                    Modifier.weight(1f),
-                )
-            }
+private fun FlowItem(
+    icon: ImageVector,
+    label: String,
+    valueText: String,
+    accent: Color,
+    labelColor: Color,
+    align: Alignment.Horizontal,
+) {
+    Column(horizontalAlignment = align, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(14.dp))
+            Text(label, style = MaterialTheme.typography.labelMedium, color = labelColor.copy(alpha = 0.7f))
         }
+        Text(valueText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = accent)
     }
 }
 
@@ -120,19 +238,19 @@ private fun CashflowCard(cashflow: List<MonthNet>, currency: String) {
     val maxAbs = (cashflow.maxOfOrNull { it.netMinor.absoluteValue } ?: 0L).coerceAtLeast(1L)
     FinanceCard {
         Row(
-            modifier = Modifier.fillMaxWidth().height(150.dp),
+            modifier = Modifier.fillMaxWidth().height(140.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.Bottom,
         ) {
             cashflow.forEach { month ->
-                CashflowBar(month, maxAbs, currency, Modifier.weight(1f))
+                CashflowBar(month, maxAbs, Modifier.weight(1f))
             }
         }
     }
 }
 
 @Composable
-private fun CashflowBar(month: MonthNet, maxAbs: Long, currency: String, modifier: Modifier) {
+private fun CashflowBar(month: MonthNet, maxAbs: Long, modifier: Modifier) {
     val finance = LocalFinanceColors.current
     val targetFraction = (month.netMinor.absoluteValue.toFloat() / maxAbs.toFloat()).coerceIn(0f, 1f)
     val fraction by animateFloatAsState(targetValue = targetFraction, animationSpec = tween(600))
@@ -143,21 +261,15 @@ private fun CashflowBar(month: MonthNet, maxAbs: Long, currency: String, modifie
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Bottom,
     ) {
-        Text(
-            Money(month.netMinor, currency).format(),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            maxLines = 1,
-        )
         Box(
             modifier = Modifier
-                .padding(vertical = 4.dp)
+                .padding(bottom = 6.dp)
                 .width(28.dp)
                 .fillMaxHeight(fraction.coerceAtLeast(0.02f))
                 .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
                 .background(gradient),
         )
-        Text(month.label, style = MaterialTheme.typography.labelSmall)
+        Text(month.label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

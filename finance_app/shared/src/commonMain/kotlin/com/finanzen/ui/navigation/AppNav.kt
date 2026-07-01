@@ -41,8 +41,10 @@ import com.finanzen.ui.screens.BackupScreen
 import com.finanzen.ui.screens.BudgetsScreen
 import com.finanzen.ui.screens.CalendarScreen
 import com.finanzen.ui.screens.CategoriesScreen
+import com.finanzen.ui.screens.CurrencyScreen
 import com.finanzen.ui.screens.DashboardScreen
 import com.finanzen.ui.screens.MoreScreen
+import com.finanzen.ui.screens.NotificationsScreen
 import com.finanzen.ui.screens.ReportsScreen
 import com.finanzen.ui.screens.SecuritySettingsScreen
 import com.finanzen.ui.screens.SettingsScreen
@@ -61,8 +63,8 @@ fun AppNav() {
     val currentRoute = backStack?.destination?.route
 
     val showNav = TopDestination.entries.any { it.route == currentRoute }
-    // El FAB desplegable solo crea movimientos/suscripciones, así que aparece donde tiene sentido.
-    val showFab = currentRoute == TopDestination.Dashboard.route || currentRoute == TopDestination.Transactions.route
+    // El FAB desplegable solo crea movimientos/suscripciones; vive solo en Movimientos (no en Dashboard).
+    val showFab = currentRoute == TopDestination.Transactions.route
 
     val onSelect: (TopDestination) -> Unit = { dest ->
         if (currentRoute != dest.route) {
@@ -103,7 +105,14 @@ fun AppNav() {
                             selected = currentRoute == dest.route,
                             onClick = { onSelect(dest) },
                             icon = { Icon(dest.icon, contentDescription = dest.label) },
-                            label = { Text(dest.label) },
+                            label = {
+                                Text(
+                                    dest.label,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                )
+                            },
                         )
                     }
                 }
@@ -122,14 +131,23 @@ fun AppNav() {
                                     selected = currentRoute == dest.route,
                                     onClick = { onSelect(dest) },
                                     icon = { Icon(dest.icon, contentDescription = dest.label) },
-                                    label = { Text(dest.label) },
+                                    label = {
+                                        Text(
+                                            dest.label,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            maxLines = 1,
+                                            softWrap = false,
+                                        )
+                                    },
                                 )
                             }
                         }
                     }
                 },
             ) { inner ->
-                Box(Modifier.fillMaxSize().padding(inner)) {
+                // Solo el inset inferior (nav bar). El superior lo aporta cada pantalla una sola vez:
+                // las que tienen TopAppBar vía su barra; las "desnudas" vía windowInsetsPadding propio.
+                Box(Modifier.fillMaxSize().padding(bottom = inner.calculateBottomPadding())) {
                     AppNavHost(navController)
                     if (showFab) SpeedDialFab(speedDialActions, contentDescription = "Agregar movimiento")
                 }
@@ -183,6 +201,12 @@ private fun AppNavHost(navController: NavHostController, modifier: Modifier = Mo
         }
         composable("settings") {
             SettingsScreen(onBack = { navController.popBackStack() })
+        }
+        composable("notifications") {
+            NotificationsScreen(onBack = { navController.popBackStack() })
+        }
+        composable("currency") {
+            CurrencyScreen(onBack = { navController.popBackStack() })
         }
         composable("about") {
             AboutScreen(onBack = { navController.popBackStack() })

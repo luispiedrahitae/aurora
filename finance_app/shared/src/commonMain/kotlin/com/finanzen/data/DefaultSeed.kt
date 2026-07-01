@@ -31,7 +31,6 @@ fun seedIfEmpty(db: FinanzenDb) {
             Triple("Alimentación", "restaurant", 0xFFE53935),
             Triple("Transporte", "car", 0xFF1E88E5),
             Triple("Vivienda", "home", 0xFF00897B),
-            Triple("Suscripciones", "subs", 0xFF8E24AA),
             Triple("Salud", "health", 0xFF43A047),
             Triple("Ocio", "games", 0xFFF4511E),
         )

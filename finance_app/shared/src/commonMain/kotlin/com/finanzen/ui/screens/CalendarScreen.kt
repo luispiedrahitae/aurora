@@ -39,9 +39,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.finanzen.db.Category
 import com.finanzen.db.TransactionRow
 import com.finanzen.domain.Money
+import com.finanzen.ui.components.CategoryAvatar
 import com.finanzen.ui.components.FinanceCard
+import com.finanzen.ui.components.KindAvatar
+import com.finanzen.ui.components.categoryColor
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.viewmodel.TransactionsViewModel
 import kotlinx.datetime.Clock
@@ -71,6 +75,8 @@ fun CalendarScreen(
     vm: TransactionsViewModel = koinViewModel(),
 ) {
     val rows by vm.transactions.collectAsState()
+    val categories by vm.categories.collectAsState()
+    val categoriesById = remember(categories) { categories.associateBy { it.id } }
     val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
     var month by remember { mutableStateOf(LocalDate(today.year, today.month, 1)) }
     var selected by remember { mutableStateOf(today) }
@@ -169,7 +175,9 @@ fun CalendarScreen(
                     )
                 }
             } else {
-                items(selectedRows, key = { it.id }) { row -> DayTxRow(row, onClick = { onEdit(row.id) }) }
+                items(selectedRows, key = { it.id }) { row ->
+                    DayTxRow(row, category = row.categoryId?.let { categoriesById[it] }, onClick = { onEdit(row.id) })
+                }
             }
         }
     }
@@ -243,34 +251,55 @@ private fun MonthGrid(
 }
 
 @Composable
-private fun DayTxRow(row: TransactionRow, onClick: () -> Unit) {
+private fun DayTxRow(row: TransactionRow, category: Category?, onClick: () -> Unit) {
     val finance = LocalFinanceColors.current
     val isTransfer = row.kind == "TRANSFER"
     val isIncome = row.kind == "INCOME"
-    FinanceCard(onClick = onClick, modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(12.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        modifier = Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).clickable(onClick = onClick).padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        if (category != null) {
+            CategoryAvatar(icon = category.icon, color = categoryColor(category.name, category.color))
+        } else {
+            KindAvatar(kind = row.kind)
+        }
+        Column(Modifier.weight(1f)) {
             Text(
                 if (isTransfer) row.note.ifBlank { "Transferencia" } else row.note.ifBlank { "(sin nota)" },
-                modifier = Modifier.weight(1f),
                 fontWeight = FontWeight.Medium,
                 style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
             )
             Text(
-                when {
-                    isTransfer -> "⇄ ${Money(row.amountMinor, row.currency).format()}"
-                    isIncome -> "+${Money(row.amountMinor, row.currency).format()}"
-                    else -> "−${Money(row.amountMinor, row.currency).format()}"
-                },
-                fontWeight = FontWeight.SemiBold,
-                style = MaterialTheme.typography.titleMedium,
-                color = when {
-                    isTransfer -> MaterialTheme.colorScheme.onSurfaceVariant
-                    isIncome -> finance.income
-                    else -> finance.expense
-                },
+                category?.name ?: kindLabelCal(row.kind),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
             )
         }
+        Text(
+            when {
+                isTransfer -> "⇄ ${Money(row.amountMinor, row.currency).format()}"
+                isIncome -> "+${Money(row.amountMinor, row.currency).format()}"
+                else -> "−${Money(row.amountMinor, row.currency).format()}"
+            },
+            fontWeight = FontWeight.SemiBold,
+            style = MaterialTheme.typography.titleMedium,
+            color = when {
+                isTransfer -> MaterialTheme.colorScheme.onSurfaceVariant
+                isIncome -> finance.income
+                else -> finance.expense
+            },
+        )
     }
+}
+
+private fun kindLabelCal(kind: String): String = when (kind) {
+    "INCOME" -> "Ingreso"
+    "TRANSFER" -> "Transferencia"
+    else -> "Gasto"
 }
 
 private fun dayHeading(date: LocalDate): String = "${date.dayOfMonth} de ${MONTHS[date.monthNumber - 1].lowercase()} ${date.year}"

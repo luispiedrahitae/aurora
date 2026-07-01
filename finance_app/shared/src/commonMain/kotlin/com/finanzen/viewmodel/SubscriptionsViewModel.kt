@@ -3,6 +3,7 @@ package com.finanzen.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.finanzen.data.AccountRepository
+import com.finanzen.data.SettingsRepository
 import com.finanzen.data.SubscriptionRepository
 import com.finanzen.data.TransactionRepository
 import com.finanzen.db.Subscription
@@ -22,6 +23,7 @@ class SubscriptionsViewModel(
     private val subsRepo: SubscriptionRepository,
     private val accountRepo: AccountRepository,
     private val txRepo: TransactionRepository,
+    private val settingsRepo: SettingsRepository,
     private val scheduler: NotificationScheduler,
 ) : ViewModel() {
 
@@ -37,9 +39,10 @@ class SubscriptionsViewModel(
      * Crea la suscripción, registra el cobro de **hoy** como gasto en Movimientos y programa el siguiente.
      * [frequency] = "DAILY" (cada [interval] días) o "MONTHLY" (mismo día del mes).
      */
-    fun addSubscription(name: String, amountMinor: Long, frequency: String, interval: Long, remindDaysBefore: Long) {
+    fun addSubscription(name: String, amountMinor: Long, frequency: String, interval: Long) {
         val account = ensureAccount()
         val today = todayEpochDay()
+        val remindDaysBefore = settingsRepo.reminderDaysBefore()
         // Cobrar ahora: el gasto aparece de inmediato en Movimientos.
         txRepo.add(
             accountId = account.id,

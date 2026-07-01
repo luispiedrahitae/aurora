@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -22,12 +23,12 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -44,10 +45,13 @@ import com.finanzen.db.Card
 import com.finanzen.db.InstallmentPlan
 import com.finanzen.domain.InstallmentMath
 import com.finanzen.domain.Money
+import com.finanzen.ui.components.AccountTypeAvatar
 import com.finanzen.ui.components.EmptyState
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.LabeledDropdown
+import com.finanzen.ui.components.MainTabHeader
 import com.finanzen.ui.theme.LocalFinanceColors
+import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.viewmodel.AccountsViewModel
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
@@ -69,6 +73,7 @@ fun AccountsTabScreen(vm: AccountsViewModel = koinViewModel()) {
     val balances by vm.balances.collectAsState()
     val cards by vm.cards.collectAsState()
     val plansByAccount by vm.plansByAccount.collectAsState()
+    val spacing = LocalSpacing.current
     var showForm by remember { mutableStateOf(false) }
 
     if (showForm) {
@@ -84,7 +89,9 @@ fun AccountsTabScreen(vm: AccountsViewModel = koinViewModel()) {
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Cuentas") }) },
+        // El tope lo aporta MainTabHeader (única fuente del inset superior); el Scaffold se queda solo
+        // por el FAB, así que neutralizamos sus insets de contenido.
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { showForm = true },
@@ -93,30 +100,33 @@ fun AccountsTabScreen(vm: AccountsViewModel = koinViewModel()) {
             )
         },
     ) { inner ->
-        if (accounts.isEmpty()) {
-            Box(Modifier.fillMaxSize().padding(inner), contentAlignment = Alignment.Center) {
-                EmptyState(
-                    icon = Icons.Outlined.AccountBalanceWallet,
-                    title = "Sin cuentas",
-                    subtitle = "Usa el botón + para crear tu primera cuenta.",
-                    modifier = Modifier.padding(32.dp),
-                )
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(inner),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                items(accounts, key = { it.id }) { account ->
-                    AccountRow(
-                        account = account,
-                        balanceMinor = balances[account.id] ?: account.openingBalanceMinor,
-                        card = cards[account.id],
-                        plans = plansByAccount[account.id].orEmpty(),
-                        onDelete = { vm.delete(account.id) },
-                        onDeletePlan = { vm.deletePlan(it) },
+        Column(Modifier.fillMaxSize().padding(inner)) {
+            MainTabHeader(title = "Cuentas")
+            if (accounts.isEmpty()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    EmptyState(
+                        icon = Icons.Outlined.AccountBalanceWallet,
+                        title = "Sin cuentas",
+                        subtitle = "Usa el botón + para crear tu primera cuenta.",
+                        modifier = Modifier.padding(32.dp),
                     )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(start = spacing.lg, end = spacing.lg, top = spacing.sm, bottom = 96.dp),
+                    verticalArrangement = Arrangement.spacedBy(spacing.md),
+                ) {
+                    items(accounts, key = { it.id }) { account ->
+                        AccountRow(
+                            account = account,
+                            balanceMinor = balances[account.id] ?: account.openingBalanceMinor,
+                            card = cards[account.id],
+                            plans = plansByAccount[account.id].orEmpty(),
+                            onDelete = { vm.delete(account.id) },
+                            onDeletePlan = { vm.deletePlan(it) },
+                        )
+                    }
                 }
             }
         }
@@ -133,13 +143,16 @@ private fun AccountRow(
     onDeletePlan: (Long) -> Unit,
 ) {
     val isCredit = account.type == "CREDIT"
-    FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(12.dp)) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+    val finance = LocalFinanceColors.current
+    val spacing = LocalSpacing.current
+    FinanceCard(modifier = Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(spacing.md)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(spacing.md)) {
+                AccountTypeAvatar(account.type)
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(account.name, fontWeight = FontWeight.SemiBold)
+                    Text(account.name, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.titleMedium)
                     Text(
-                        accountSubtitle(account, card, balanceMinor),
+                        typeLabel(account.type),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -149,23 +162,71 @@ private fun AccountRow(
                         "${Money(balanceMinor, account.currency).format()} ${account.currency}",
                         fontWeight = FontWeight.SemiBold,
                         style = MaterialTheme.typography.titleMedium,
-                        color = if (balanceMinor < 0) LocalFinanceColors.current.expense else MaterialTheme.colorScheme.onSurface,
+                        color = if (balanceMinor < 0) finance.expense else MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
-                        if (isCredit) "saldo (deuda si −)" else "saldo actual",
+                        if (isCredit) "deuda" else "saldo",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 IconButton(onClick = onDelete) {
-                    Icon(Icons.Outlined.Delete, contentDescription = "Eliminar")
+                    Icon(Icons.Outlined.Delete, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+
+            if (isCredit && card != null) {
+                CreditDetails(card, balanceMinor, account.currency)
+            }
+
             if (plans.isNotEmpty()) {
                 HorizontalDivider()
                 val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()).toEpochDays().toLong() }
                 plans.forEach { plan -> PlanRow(plan, account.currency, today, onDelete = { onDeletePlan(plan.id) }) }
             }
+        }
+    }
+}
+
+/** Cupo/disponible de una tarjeta de crédito como mini-barra + corte/pago/interés en una línea. */
+@Composable
+private fun CreditDetails(card: Card, balanceMinor: Long, currency: String) {
+    val finance = LocalFinanceColors.current
+    val limit = card.creditLimitMinor
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (limit != null && limit > 0) {
+            val debt = (-balanceMinor).coerceAtLeast(0L)
+            val available = limit + balanceMinor // = cupo − deuda
+            val frac = (debt.toFloat() / limit.toFloat()).coerceIn(0f, 1f)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(
+                    "Disponible ${Money(available, currency).format()}",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Medium,
+                )
+                Text(
+                    "Cupo ${Money(limit, currency).format()}",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            LinearProgressIndicator(
+                progress = { frac },
+                modifier = Modifier.fillMaxWidth(),
+                color = if (frac >= 0.9f) finance.expense else MaterialTheme.colorScheme.primary,
+            )
+        }
+        val meta = buildList {
+            card.cutoffDay?.let { add("Corte $it") }
+            card.dueDay?.let { add("Pago $it") }
+            card.interestRate?.let { if (it > 0.0) add("$it%") }
+        }
+        if (meta.isNotEmpty()) {
+            Text(
+                meta.joinToString(" · "),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -189,24 +250,6 @@ private fun PlanRow(plan: InstallmentPlan, currency: String, todayEpochDay: Long
             Icon(Icons.Outlined.Delete, contentDescription = "Eliminar cuota")
         }
     }
-}
-
-/** Subtítulo según el tipo: crédito muestra cupo/disponible + corte/pago; el resto, tipo + inicial. */
-private fun accountSubtitle(account: Account, card: Card?, balanceMinor: Long): String {
-    if (account.type != "CREDIT" || card == null) {
-        return "${typeLabel(account.type)} · inicial ${Money(account.openingBalanceMinor, account.currency).format()}"
-    }
-    val parts = mutableListOf("Crédito")
-    card.creditLimitMinor?.let { limit ->
-        // Disponible = cupo − deuda; la deuda es el saldo negativo (balance ≤ 0).
-        val available = limit + balanceMinor
-        parts += "cupo ${Money(limit, account.currency).format()}"
-        parts += "disp. ${Money(available, account.currency).format()}"
-    }
-    card.cutoffDay?.let { parts += "corte $it" }
-    card.dueDay?.let { parts += "pago $it" }
-    card.interestRate?.let { if (it > 0.0) parts += "int. $it%" }
-    return parts.joinToString(" · ")
 }
 
 /** Alta de cuenta: el formulario cambia según el tipo elegido. */

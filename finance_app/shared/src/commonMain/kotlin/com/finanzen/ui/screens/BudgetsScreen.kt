@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -12,7 +13,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.PieChart
 import androidx.compose.material3.AlertDialog
@@ -20,14 +20,12 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -40,18 +38,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.finanzen.domain.Money
+import com.finanzen.ui.components.CategoryAvatar
 import com.finanzen.ui.components.EmptyState
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.LabeledDropdown
+import com.finanzen.ui.components.MainTabHeader
+import com.finanzen.ui.components.categoryColor
 import com.finanzen.ui.theme.LocalFinanceColors
+import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.viewmodel.BudgetRow
 import com.finanzen.viewmodel.BudgetsViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Presupuestos del mes. Pestaña de nivel superior (sin back) o pantalla secundaria si [onBack] != null.
- * Lista las categorías con presupuesto (barra + % + monto) y un (+) para asignar/editar uno.
+ * Presupuestos del mes. Pestaña de nivel superior. Lista las categorías con presupuesto
+ * (avatar + barra + % + monto) y un (+) para asignar/editar uno.
  */
+// ponytail: onBack se conserva por compatibilidad de firma; hoy solo se usa como pestaña (sin back).
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BudgetsScreen(
@@ -59,6 +62,7 @@ fun BudgetsScreen(
     vm: BudgetsViewModel = koinViewModel(),
 ) {
     val data by vm.data.collectAsState()
+    val spacing = LocalSpacing.current
     val budgeted = data.rows.filter { it.limitMinor > 0 }
     var editing by remember { mutableStateOf<BudgetRow?>(null) }
     var showAdd by remember { mutableStateOf(false) }
@@ -80,18 +84,8 @@ fun BudgetsScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Presupuesto") },
-                navigationIcon = {
-                    if (onBack != null) {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Volver")
-                        }
-                    }
-                },
-            )
-        },
+        // El tope lo aporta MainTabHeader; el Scaffold se queda solo por el FAB.
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
             if (data.rows.isNotEmpty()) {
                 ExtendedFloatingActionButton(
@@ -102,27 +96,31 @@ fun BudgetsScreen(
             }
         },
     ) { inner ->
-        if (data.rows.isEmpty()) {
-            EmptyMessage("Sin presupuestos", "Crea categorías de gasto para asignarles presupuesto.", inner)
-        } else if (budgeted.isEmpty()) {
-            EmptyMessage("Sin presupuestos", "Usa el botón + para asignar uno a una categoría.", inner)
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(inner),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                items(budgeted, key = { it.categoryId }) { row ->
-                    BudgetRowCard(row, onClick = { editing = row })
-                }
+        Column(Modifier.fillMaxSize().padding(inner)) {
+            MainTabHeader(title = "Presupuesto")
+            when {
+                data.rows.isEmpty() ->
+                    EmptyMessage("Sin presupuestos", "Crea categorías de gasto para asignarles presupuesto.")
+                budgeted.isEmpty() ->
+                    EmptyMessage("Sin presupuestos", "Usa el botón + para asignar uno a una categoría.")
+                else ->
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(start = spacing.lg, end = spacing.lg, top = spacing.sm, bottom = 96.dp),
+                        verticalArrangement = Arrangement.spacedBy(spacing.md),
+                    ) {
+                        items(budgeted, key = { it.categoryId }) { row ->
+                            BudgetRowCard(row, data.currency, onClick = { editing = row })
+                        }
+                    }
             }
         }
     }
 }
 
 @Composable
-private fun EmptyMessage(title: String, subtitle: String, inner: PaddingValues) {
-    Box(Modifier.fillMaxSize().padding(inner), contentAlignment = Alignment.Center) {
+private fun EmptyMessage(title: String, subtitle: String) {
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         EmptyState(
             icon = Icons.Outlined.PieChart,
             title = title,
@@ -133,17 +131,20 @@ private fun EmptyMessage(title: String, subtitle: String, inner: PaddingValues) 
 }
 
 @Composable
-private fun BudgetRowCard(row: BudgetRow, onClick: () -> Unit) {
+private fun BudgetRowCard(row: BudgetRow, currency: String, onClick: () -> Unit) {
     val fraction = (row.spentMinor.toFloat() / row.limitMinor.toFloat()).coerceIn(0f, 1f)
     val pct = (row.spentMinor * 100 / row.limitMinor).toInt()
     val over = row.spentMinor > row.limitMinor
     val finance = LocalFinanceColors.current
+    val spacing = LocalSpacing.current
     val barColor = if (over) finance.expense else MaterialTheme.colorScheme.primary
+    val curSuffix = if (currency.isNotBlank()) " $currency" else ""
 
-    FinanceCard(modifier = Modifier.fillMaxWidth(), onClick = onClick, contentPadding = PaddingValues(12.dp)) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(row.categoryName, fontWeight = FontWeight.SemiBold)
+    FinanceCard(modifier = Modifier.fillMaxWidth(), onClick = onClick) {
+        Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(spacing.md)) {
+                CategoryAvatar(icon = row.icon, color = categoryColor(row.categoryName, row.color), size = 36.dp)
+                Text(row.categoryName, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                 Text(
                     "$pct%",
                     fontWeight = FontWeight.SemiBold,
@@ -152,7 +153,7 @@ private fun BudgetRowCard(row: BudgetRow, onClick: () -> Unit) {
             }
             LinearProgressIndicator(progress = { fraction }, modifier = Modifier.fillMaxWidth(), color = barColor)
             Text(
-                "Gastado ${Money(row.spentMinor, "").format()} de ${Money(row.limitMinor, "").format()}",
+                "Gastado ${Money(row.spentMinor, currency).format()} de ${Money(row.limitMinor, currency).format()}$curSuffix",
                 style = MaterialTheme.typography.bodySmall,
                 color = if (over) finance.expense else MaterialTheme.colorScheme.onSurfaceVariant,
             )

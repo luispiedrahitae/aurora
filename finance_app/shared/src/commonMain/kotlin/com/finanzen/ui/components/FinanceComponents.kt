@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -16,6 +17,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
+import androidx.compose.material.icons.outlined.ArrowDownward
+import androidx.compose.material.icons.outlined.ArrowUpward
 import androidx.compose.material.icons.outlined.BakeryDining
 import androidx.compose.material.icons.outlined.BeachAccess
 import androidx.compose.material.icons.outlined.Bolt
@@ -71,6 +74,7 @@ import androidx.compose.material.icons.outlined.SportsSoccer
 import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material.icons.outlined.Storefront
 import androidx.compose.material.icons.outlined.Subscriptions
+import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material.icons.outlined.TheaterComedy
 import androidx.compose.material.icons.outlined.Train
 import androidx.compose.material.icons.outlined.TrendingUp
@@ -88,15 +92,21 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.finanzen.domain.Money
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalSpacing
@@ -222,6 +232,50 @@ fun MoneyText(
     val sign = if (signed && amountMinor > 0) "+" else "" // Money.format ya antepone "-"
     val text = "$sign${Money(amountMinor, currency).format()}" + if (showCurrency) " $currency" else ""
     Text(text, modifier = modifier, style = style, fontWeight = fontWeight, color = color)
+}
+
+/**
+ * Texto que se encoge hasta caber en **una sola línea** dentro del ancho disponible. Mide con
+ * [rememberTextMeasurer] bajando de [maxFontSize] a [minFontSize] hasta que entra. Útil para el balance
+ * del Dashboard, que debe quedar en un renglón sin importar la magnitud.
+ */
+@Composable
+fun AutoSizeText(
+    text: String,
+    modifier: Modifier = Modifier,
+    maxFontSize: TextUnit = 40.sp,
+    minFontSize: TextUnit = 16.sp,
+    color: Color = Color.Unspecified,
+    fontWeight: FontWeight? = null,
+    style: TextStyle = MaterialTheme.typography.displaySmall,
+) {
+    BoxWithConstraints(modifier) {
+        val measurer = rememberTextMeasurer()
+        val maxWidthPx = constraints.maxWidth
+        val fitted = remember(text, maxWidthPx, maxFontSize, minFontSize, style) {
+            var size = maxFontSize
+            while (size.value > minFontSize.value) {
+                val width = measurer.measure(
+                    text = AnnotatedString(text),
+                    style = style.copy(fontSize = size, fontWeight = fontWeight ?: style.fontWeight),
+                    maxLines = 1,
+                    softWrap = false,
+                ).size.width
+                if (width <= maxWidthPx) break
+                size = (size.value - 1f).sp
+            }
+            size
+        }
+        Text(
+            text,
+            style = style,
+            fontSize = fitted,
+            fontWeight = fontWeight,
+            color = color,
+            maxLines = 1,
+            softWrap = false,
+        )
+    }
 }
 
 /** Píldora compacta para ingreso/gasto/neto del Dashboard. */
@@ -570,6 +624,62 @@ fun CategoryAvatar(icon: String, color: Color, modifier: Modifier = Modifier, si
             is CategoryGlyph.Vec -> Icon(glyph.image, contentDescription = null, tint = Color.White, modifier = glyphModifier)
             is CategoryGlyph.Res -> Icon(painterResource(glyph.drawable), contentDescription = null, tint = Color.White, modifier = glyphModifier)
         }
+    }
+}
+
+/** Icono por tipo de cuenta (efectivo/débito/ahorros/crédito). */
+fun accountTypeIcon(type: String): ImageVector = when (type) {
+    "CASH" -> Icons.Outlined.Payments
+    "SAVINGS" -> Icons.Outlined.Savings
+    "DEBIT", "CREDIT" -> Icons.Outlined.CreditCard
+    else -> Icons.Outlined.AccountBalanceWallet
+}
+
+/**
+ * Avatar por tipo de movimiento: círculo tenue del color semántico + flecha. Fallback cuando el
+ * movimiento no tiene categoría (transferencias, o ingreso/gasto sin categoría asignada).
+ */
+@Composable
+fun KindAvatar(kind: String, modifier: Modifier = Modifier, size: Dp = 40.dp) {
+    val finance = LocalFinanceColors.current
+    val container: Color
+    val icon: ImageVector
+    val tint: Color
+    when (kind) {
+        "INCOME" -> {
+            container = finance.incomeContainer
+            icon = Icons.Outlined.ArrowUpward
+            tint = finance.income
+        }
+        "TRANSFER" -> {
+            container = MaterialTheme.colorScheme.surfaceContainerHigh
+            icon = Icons.Outlined.SwapHoriz
+            tint = finance.neutral
+        }
+        else -> {
+            container = finance.expenseContainer
+            icon = Icons.Outlined.ArrowDownward
+            tint = finance.expense
+        }
+    }
+    Box(modifier.size(size).clip(CircleShape).background(container), contentAlignment = Alignment.Center) {
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(size * 0.5f))
+    }
+}
+
+/** Avatar por tipo de cuenta: círculo con el contenedor primario + icono del tipo. */
+@Composable
+fun AccountTypeAvatar(type: String, modifier: Modifier = Modifier, size: Dp = 40.dp) {
+    Box(
+        modifier.size(size).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            accountTypeIcon(type),
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+            modifier = Modifier.size(size * 0.5f),
+        )
     }
 }
 

@@ -32,6 +32,16 @@ class SettingsRepository(private val db: FinanzenDb) {
 
     fun setBudgetNotificationsEnabled(enabled: Boolean) = db.settingQueries.put(KEY_NOTIFY_BUDGET, enabled.toString())
 
+    /** Oculta los montos del resumen (balance/ingresos/gastos) por privacidad. Apagado por defecto. */
+    fun hideAmountsEnabled(): Boolean = db.settingQueries.get(KEY_HIDE_AMOUNTS).executeAsOneOrNull()?.toBooleanStrictOrNull() ?: false
+
+    fun setHideAmountsEnabled(enabled: Boolean) = db.settingQueries.put(KEY_HIDE_AMOUNTS, enabled.toString())
+
+    /** Días de antelación del recordatorio de cobro de suscripciones. Global; default 2. */
+    fun reminderDaysBefore(): Long = db.settingQueries.get(KEY_NOTIFY_REMIND_DAYS).executeAsOneOrNull()?.toLongOrNull() ?: 2
+
+    fun setReminderDaysBefore(days: Long) = db.settingQueries.put(KEY_NOTIFY_REMIND_DAYS, days.toString())
+
     /** Moneda única de la app. La app no maneja FX; todos los montos se asumen en esta moneda. */
     fun baseCurrency(): String = db.settingQueries.get(KEY_CURRENCY).executeAsOneOrNull() ?: DEFAULT_CURRENCY
 
@@ -58,5 +68,7 @@ class SettingsRepository(private val db: FinanzenDb) {
         const val KEY_DYNAMIC = "app.dynamic_color"
         const val KEY_NOTIFY_CARDS = "notif.cards"
         const val KEY_NOTIFY_BUDGET = "notif.budget"
+        const val KEY_NOTIFY_REMIND_DAYS = "notif.remind_days"
+        const val KEY_HIDE_AMOUNTS = "ui.hide_amounts"
     }
 }
