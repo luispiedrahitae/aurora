@@ -2,9 +2,11 @@ package com.finanzen.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -34,16 +36,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.finanzen.domain.Money
 import com.finanzen.ui.components.CategoryAvatar
 import com.finanzen.ui.components.PickerField
 import com.finanzen.ui.components.categoryColor
+import com.finanzen.ui.format.formatFechaCorta
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.viewmodel.TransactionsViewModel
 import kotlinx.datetime.Clock
-import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 import org.koin.compose.viewmodel.koinViewModel
@@ -59,6 +63,7 @@ fun TransactionFormScreen(
     vm: TransactionsViewModel = koinViewModel(),
 ) {
     val accounts by vm.accounts.collectAsState()
+    val allAccounts by vm.allAccounts.collectAsState()
     val categories by vm.categories.collectAsState()
 
     val existing = remember(transactionId) { transactionId?.let(vm::transactionById) }
@@ -76,12 +81,16 @@ fun TransactionFormScreen(
     var interestText by remember { mutableStateOf("") }
 
     val isTransfer = kind == "TRANSFER"
-    val selectedAccount = accounts.firstOrNull { it.id == accountId } ?: accounts.firstOrNull()
+    val selectedAccount = accounts.firstOrNull { it.id == accountId }
+        ?: existing?.let { allAccounts.firstOrNull { a -> a.id == accountId } }
+        ?: accounts.firstOrNull()
     val destOptions = accounts.filter { it.id != selectedAccount?.id }
     val selectedDest = accounts.firstOrNull { it.id == toAccountId }
+        ?: existing?.let { allAccounts.firstOrNull { a -> a.id == toAccountId } }
     val categoryOptions = categories.filter { it.kind == kind }
     val selectedCategory = categoryOptions.firstOrNull { it.id == categoryId }
     val finance = LocalFinanceColors.current
+    val haptic = LocalHapticFeedback.current
 
     if (showDatePicker) {
         val dpState = rememberDatePickerStateFor(dateEpochDay)
@@ -100,7 +109,7 @@ fun TransactionFormScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (existing == null) "Nueva transacción" else "Editar transacción") },
+                title = { Text(if (existing == null) "Nuevo movimiento" else "Editar movimiento") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Volver")
@@ -207,7 +216,8 @@ fun TransactionFormScreen(
 
             OutlinedButton(onClick = { showDatePicker = true }, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Outlined.CalendarMonth, contentDescription = null)
-                Text("  ${LocalDate.fromEpochDays(dateEpochDay.toInt())}")
+                Spacer(Modifier.width(8.dp))
+                Text(formatFechaCorta(dateEpochDay))
             }
 
             error?.let { Text(it, color = finance.expense, style = MaterialTheme.typography.bodySmall) }
@@ -223,6 +233,7 @@ fun TransactionFormScreen(
                             account.id == dest.id -> error = "Origen y destino deben ser distintos."
                             minor == null || minor <= 0 -> error = "Monto inválido."
                             else -> {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 vm.saveTransfer(existing?.id, account.id, dest.id, minor, note, dateEpochDay)
                                 onBack()
                             }
@@ -232,6 +243,7 @@ fun TransactionFormScreen(
                             account == null -> error = "Crea una cuenta primero (pestaña Cuentas)."
                             minor == null || minor <= 0 -> error = "Monto inválido."
                             else -> {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 vm.save(
                                     id = existing?.id,
                                     accountId = account.id,
