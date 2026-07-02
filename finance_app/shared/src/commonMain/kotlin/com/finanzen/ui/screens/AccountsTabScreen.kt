@@ -173,7 +173,7 @@ fun AccountsTabScreen(vm: AccountsViewModel = koinViewModel()) {
     ) { inner ->
         Column(Modifier.fillMaxSize().padding(inner)) {
             MainTabHeader(title = "Cuentas")
-            if (accounts.isEmpty()) {
+            if (accounts.isEmpty() && archivedAccounts.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     EmptyState(
                         icon = Icons.Outlined.AccountBalanceWallet,
