@@ -37,9 +37,12 @@ class AccountsViewModel(
     val accounts: StateFlow<List<Account>> =
         accountRepo.observeAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    val archivedAccounts: StateFlow<List<Account>> =
+        accountRepo.observeArchived().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     /** Saldo actual por cuenta (id → minor) = saldo inicial + ingresos − gastos ± transferencias. */
     val balances: StateFlow<Map<Long, Long>> =
-        combine(accountRepo.observeAll(), txRepo.observeAll()) { accts, txs -> computeBalances(accts, txs) }
+        combine(accountRepo.observeAllIncludingArchived(), txRepo.observeAll()) { accts, txs -> computeBalances(accts, txs) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     /** Metadatos de tarjeta por cuenta (cupo/corte/pago/interés) para las cuentas de crédito. */
@@ -126,6 +129,9 @@ class AccountsViewModel(
         cardRepo.byAccount(id)?.let { cardRepo.delete(it.id) }
         accountRepo.delete(id)
     }
+
+    fun archive(id: Long) = accountRepo.archive(id)
+    fun unarchive(id: Long) = accountRepo.unarchive(id)
 
     fun deletePlan(id: Long) = planRepo.delete(id)
 

@@ -35,6 +35,9 @@ class TransactionsViewModel(
     val accounts: StateFlow<List<Account>> =
         accountRepo.observeAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    val allAccounts: StateFlow<List<Account>> =
+        accountRepo.observeAllIncludingArchived().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     val categories: StateFlow<List<Category>> =
         categoryRepo.observeAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -58,7 +61,7 @@ class TransactionsViewModel(
         interestRate: Double? = null,
     ) {
         val account = accounts.value.firstOrNull { it.id == accountId }
-            ?: accountRepo.all().firstOrNull { it.id == accountId }
+            ?: accountRepo.allIncludingArchived().firstOrNull { it.id == accountId }
         val currency = account?.currency ?: "USD"
         if (id == null) {
             val planId = maybeCreatePlan(account, kind, amountMinor, installments, interestRate, dateEpochDay, note)
@@ -114,7 +117,7 @@ class TransactionsViewModel(
         dateEpochDay: Long,
     ) {
         val currency = accounts.value.firstOrNull { it.id == fromAccountId }?.currency
-            ?: accountRepo.all().firstOrNull { it.id == fromAccountId }?.currency
+            ?: accountRepo.allIncludingArchived().firstOrNull { it.id == fromAccountId }?.currency
             ?: "USD"
         if (id == null) {
             txRepo.addTransfer(fromAccountId, toAccountId, amountMinor, currency, dateEpochDay, note)

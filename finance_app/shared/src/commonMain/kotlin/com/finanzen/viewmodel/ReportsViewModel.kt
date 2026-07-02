@@ -25,7 +25,7 @@ class ReportsViewModel(
     fun exportTransactionsCsv() {
         val rows = db.transactionQueries.selectAll().executeAsList()
         val cats = db.categoryQueries.selectAll().executeAsList().associate { it.id to it.name }
-        val accs = accountRepo.all().associate { it.id to it.name }
+        val accs = accountRepo.allIncludingArchived().associate { it.id to it.name }
         val csv = ReportBuilder.transactionsCsv(rows, cats, accs)
         val result = exporter.saveCsv("finanzen-transacciones", csv)
         _status.value = ExportStatus(result, isError = result.startsWith("error") || result.startsWith("stub"))

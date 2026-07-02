@@ -8,23 +8,28 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
-import androidx.compose.material.icons.outlined.ChevronLeft
-import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
@@ -35,24 +40,31 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.finanzen.db.Account
 import com.finanzen.db.Category
 import com.finanzen.db.TransactionRow
-import com.finanzen.domain.Money
 import com.finanzen.ui.components.CategoryAvatar
 import com.finanzen.ui.components.EmptyState
 import com.finanzen.ui.components.KindAvatar
 import com.finanzen.ui.components.MainTabHeader
 import com.finanzen.ui.components.MoneyText
+import com.finanzen.ui.components.MonthSelector
 import com.finanzen.ui.components.categoryColor
+import com.finanzen.ui.format.formatDiaMes
+import com.finanzen.ui.format.formatMesAnio
+import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.viewmodel.TransactionsViewModel
+import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
@@ -60,17 +72,6 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
 import org.koin.compose.viewmodel.koinViewModel
-
-private val MESES = listOf("ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic")
-private val MESES_LARGOS = listOf(
-    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
-)
-
-private fun dayHeaderLabel(epochDay: Long): String {
-    val d = LocalDate.fromEpochDays(epochDay.toInt())
-    return "${d.dayOfMonth} ${MESES[d.monthNumber - 1]}"
-}
 
 private fun monthPeriod(d: LocalDate): Long = (d.year * 100 + d.monthNumber).toLong()
 
@@ -98,20 +99,26 @@ fun TransactionsScreen(
 ) {
     val rows by vm.transactions.collectAsState()
     val categories by vm.categories.collectAsState()
-    val accounts by vm.accounts.collectAsState()
+    val accounts by vm.allAccounts.collectAsState()
     val spacing = LocalSpacing.current
     var query by remember { mutableStateOf("") }
     val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
     var month by remember { mutableStateOf(LocalDate(today.year, today.month, 1)) }
-    // Días expandidos (acordeón). Ausente = cerrado; todos cerrados por defecto.
+    // Días expandidos (acordeón). Ausente = abierto; todos expandidos por defecto, el acordeón
+    // sirve para colapsar días concretos en meses densos.
     val expandedDays = remember { mutableStateMapOf<Long, Boolean>() }
+    var pendingDeleteIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
 
     val categoriesById = remember(categories) { categories.associateBy { it.id } }
     val accountsById = remember(accounts) { accounts.associateBy { it.id } }
     val period = monthPeriod(month)
 
-    val groups = remember(rows, query, period) {
+    val groups = remember(rows, query, period, pendingDeleteIds) {
         rows.asSequence()
+            .filter { it.id !in pendingDeleteIds }
             .filter { periodOfEpochDay(it.date) == period }
             .filter { query.isBlank() || it.note.contains(query, ignoreCase = true) }
             .groupBy { it.date }
@@ -119,81 +126,91 @@ fun TransactionsScreen(
     }
     val searching = query.isNotBlank()
 
-    Column(Modifier.fillMaxSize()) {
-        MainTabHeader(title = "Movimientos")
-        Column(Modifier.fillMaxSize().padding(horizontal = spacing.lg)) {
-            MonthSelector(
-                label = "${MESES_LARGOS[month.monthNumber - 1]} ${month.year}",
-                onPrev = { month = month.plus(DatePeriod(months = -1)) },
-                onNext = { month = month.plus(DatePeriod(months = 1)) },
+    fun requestDelete(id: Long) {
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        pendingDeleteIds = pendingDeleteIds + id
+        scope.launch {
+            val result = snackbarHostState.showSnackbar(
+                message = "Movimiento eliminado",
+                actionLabel = "Deshacer",
+                duration = SnackbarDuration.Short,
             )
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                modifier = Modifier.fillMaxWidth().padding(bottom = spacing.sm),
-                placeholder = { Text("Buscar por nota") },
-                leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
-                singleLine = true,
-                shape = MaterialTheme.shapes.medium,
-            )
-
-            if (groups.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    EmptyState(
-                        icon = Icons.AutoMirrored.Outlined.ReceiptLong,
-                        title = if (searching) "Sin resultados" else "Sin movimientos",
-                        subtitle = if (searching) "Prueba con otra búsqueda o cambia de mes." else "Usa el botón + para registrar tu primer movimiento.",
-                        modifier = Modifier.padding(spacing.xl),
-                    )
-                }
+            if (result == SnackbarResult.ActionPerformed) {
+                pendingDeleteIds = pendingDeleteIds - id
             } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 96.dp, top = spacing.xs),
-                ) {
-                    groups.forEach { (day, dayRows) ->
-                        // Con búsqueda activa se muestran expandidos para ver los resultados.
-                        val expanded = searching || (expandedDays[day] == true)
-                        item(key = "h_$day") {
-                            DayHeader(
-                                label = dayHeaderLabel(day),
-                                balanceMinor = dayBalance(dayRows),
-                                currency = dayRows.first().currency,
-                                expanded = expanded,
-                                onToggle = { expandedDays[day] = !(expandedDays[day] == true) },
-                            )
-                        }
-                        if (expanded) {
-                            items(dayRows, key = { it.id }) { row ->
-                                TransactionItem(
-                                    row = row,
-                                    category = row.categoryId?.let { categoriesById[it] },
-                                    account = accountsById[row.accountId],
-                                    onClick = { onEdit(row.id) },
-                                    onDelete = { vm.delete(row.id) },
+                vm.delete(id)
+                pendingDeleteIds = pendingDeleteIds - id
+            }
+        }
+    }
+
+    Scaffold(
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+    ) { inner ->
+        Column(Modifier.fillMaxSize().padding(inner)) {
+            MainTabHeader(title = "Movimientos")
+            Column(Modifier.fillMaxSize().padding(horizontal = spacing.lg)) {
+                MonthSelector(
+                    label = formatMesAnio(month),
+                    onPrev = { month = month.plus(DatePeriod(months = -1)) },
+                    onNext = { month = month.plus(DatePeriod(months = 1)) },
+                )
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { query = it },
+                    modifier = Modifier.fillMaxWidth().padding(bottom = spacing.sm),
+                    placeholder = { Text("Buscar por nota") },
+                    leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
+                    singleLine = true,
+                    // ponytail: alineado al shape.small (12dp) del resto de inputs; una unificación
+                    // vía wrapper FinanZenTextField queda pendiente si aparecen más outliers.
+                    shape = MaterialTheme.shapes.small,
+                )
+
+                if (groups.isEmpty()) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        EmptyState(
+                            icon = Icons.AutoMirrored.Outlined.ReceiptLong,
+                            title = if (searching) "Sin resultados" else "Sin movimientos",
+                            subtitle = if (searching) "Prueba con otra búsqueda o cambia de mes." else "Usa el botón + para registrar tu primer movimiento.",
+                            modifier = Modifier.padding(spacing.xl),
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(bottom = 96.dp, top = spacing.xs),
+                    ) {
+                        groups.forEach { (day, dayRows) ->
+                            // Con búsqueda activa se muestran expandidos para ver los resultados.
+                            val expanded = searching || (expandedDays[day] != false)
+                            item(key = "h_$day") {
+                                DayHeader(
+                                    label = formatDiaMes(day),
+                                    balanceMinor = dayBalance(dayRows),
+                                    currency = dayRows.first().currency,
+                                    expanded = expanded,
+                                    onToggle = { expandedDays[day] = !(expandedDays[day] != false) },
+                                    modifier = Modifier.animateItem(),
                                 )
+                            }
+                            if (expanded) {
+                                items(dayRows, key = { it.id }) { row ->
+                                    TransactionItem(
+                                        row = row,
+                                        category = row.categoryId?.let { categoriesById[it] },
+                                        account = accountsById[row.accountId],
+                                        onClick = { onEdit(row.id) },
+                                        onDelete = { requestDelete(row.id) },
+                                        modifier = Modifier.animateItem(),
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun MonthSelector(label: String, onPrev: () -> Unit, onNext: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = LocalSpacing.current.sm),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        IconButton(onClick = onPrev) {
-            Icon(Icons.Outlined.ChevronLeft, contentDescription = "Mes anterior")
-        }
-        Text(label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-        IconButton(onClick = onNext) {
-            Icon(Icons.Outlined.ChevronRight, contentDescription = "Mes siguiente")
         }
     }
 }
@@ -206,10 +223,11 @@ private fun DayHeader(
     currency: String,
     expanded: Boolean,
     onToggle: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val spacing = LocalSpacing.current
     Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(vertical = spacing.sm),
+        modifier = modifier.fillMaxWidth().clickable(onClick = onToggle).padding(vertical = spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(spacing.sm),
     ) {
@@ -220,9 +238,9 @@ private fun DayHeader(
         )
         Text(
             label,
-            style = MaterialTheme.typography.labelLarge,
+            style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f),
         )
         MoneyText(
@@ -231,7 +249,6 @@ private fun DayHeader(
             style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
             signed = true,
-            showCurrency = false,
         )
     }
 }
@@ -244,6 +261,7 @@ private fun TransactionItem(
     account: Account?,
     onClick: () -> Unit,
     onDelete: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val isTransfer = row.kind == "TRANSFER"
     val isIncome = row.kind == "INCOME"
@@ -263,6 +281,7 @@ private fun TransactionItem(
 
     SwipeToDismissBox(
         state = dismissState,
+        modifier = modifier,
         enableDismissFromStartToEnd = false,
         backgroundContent = {
             Box(
@@ -280,6 +299,7 @@ private fun TransactionItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .clip(MaterialTheme.shapes.medium)
                 .background(MaterialTheme.colorScheme.background)
                 .clickable(onClick = onClick)
                 .padding(vertical = spacing.md),
@@ -307,19 +327,26 @@ private fun TransactionItem(
             }
             Column(horizontalAlignment = Alignment.End) {
                 if (isTransfer) {
-                    Text(
-                        "⇄ ${Money(row.amountMinor, row.currency).format()}",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Icon(
+                            Icons.Outlined.SwapHoriz,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Text(
+                            LocalMoneyFormat.current.format(row.amountMinor, row.currency),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 } else {
                     MoneyText(
                         amountMinor = signedAmount,
                         currency = row.currency,
                         style = MaterialTheme.typography.titleMedium,
                         signed = true,
-                        showCurrency = false,
                     )
                 }
                 if (account != null) {

@@ -61,6 +61,7 @@ class DashboardViewModel(
         private const val DEFAULT_CURRENCY = "USD"
         private const val TOP_CATEGORIES = 5
         private const val CASHFLOW_MONTHS = 6
+        private val NET_WORTH_TYPES = setOf("CASH", "DEBIT", "SAVINGS")
 
         private fun monthKey(year: Int, monthNumber: Int): Int = year * 100 + monthNumber
         private fun monthKeyOf(epochDay: Long): Int = LocalDate.fromEpochDays(epochDay.toInt()).let { monthKey(it.year, it.monthNumber) }
@@ -92,9 +93,10 @@ class DashboardViewModel(
             val currentKey = monthKey(firstOfMonth.year, firstOfMonth.monthNumber)
             val currency = accounts.firstOrNull()?.currency ?: txs.firstOrNull()?.currency ?: DEFAULT_CURRENCY
 
-            val allIncome = txs.filter { it.kind == "INCOME" }.sumOf { it.amountMinor }
-            val allExpense = txs.filter { it.kind == "EXPENSE" }.sumOf { it.amountMinor }
-            val totalBalance = accounts.sumOf { it.openingBalanceMinor } + allIncome - allExpense
+            val countedAccountIds = accounts.filter { it.type in NET_WORTH_TYPES }.map { it.id }.toSet()
+            val allIncome = txs.filter { it.kind == "INCOME" && it.accountId in countedAccountIds }.sumOf { it.amountMinor }
+            val allExpense = txs.filter { it.kind == "EXPENSE" && it.accountId in countedAccountIds }.sumOf { it.amountMinor }
+            val totalBalance = accounts.filter { it.type in NET_WORTH_TYPES }.sumOf { it.openingBalanceMinor } + allIncome - allExpense
 
             val monthTx = txs.filter { monthKeyOf(it.date) == currentKey }
             val monthIncome = monthTx.filter { it.kind == "INCOME" }.sumOf { it.amountMinor }

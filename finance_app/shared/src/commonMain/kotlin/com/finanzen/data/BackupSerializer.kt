@@ -16,7 +16,7 @@ object BackupSerializer {
         currencies = db.currencyQueries.selectAll().executeAsList().map {
             CurrencyDto(it.code, it.symbol, it.decimals, it.rateToBase)
         },
-        accounts = db.accountQueries.selectAll().executeAsList().map {
+        accounts = db.accountQueries.selectAllAny().executeAsList().map {
             AccountDto(it.id, it.name, it.type, it.currency, it.openingBalanceMinor, it.color, it.archived)
         },
         cards = db.cardQueries.selectAll().executeAsList().map {
