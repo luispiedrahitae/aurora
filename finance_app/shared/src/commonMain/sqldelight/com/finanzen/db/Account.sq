@@ -25,6 +25,15 @@ WHERE id = ?;
 archive:
 UPDATE Account SET archived = 1 WHERE id = ?;
 
+selectArchived:
+SELECT * FROM Account WHERE archived = 1 ORDER BY name;
+
+selectAllAny:
+SELECT * FROM Account ORDER BY name;
+
+unarchive:
+UPDATE Account SET archived = 0 WHERE id = ?;
+
 setAllCurrency:
 UPDATE Account SET currency = ?;
 
