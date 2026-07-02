@@ -106,11 +106,9 @@ class AccountRepository(private val db: FinanzenDb) {
 
     fun delete(id: Long) = db.accountQueries.delete(id)
 
-    fun observeArchived(): Flow<List<Account>> =
-        db.accountQueries.selectArchived().asFlow().mapToList(Dispatchers.Default)
+    fun observeArchived(): Flow<List<Account>> = db.accountQueries.selectArchived().asFlow().mapToList(Dispatchers.Default)
 
-    fun observeAllIncludingArchived(): Flow<List<Account>> =
-        db.accountQueries.selectAllAny().asFlow().mapToList(Dispatchers.Default)
+    fun observeAllIncludingArchived(): Flow<List<Account>> = db.accountQueries.selectAllAny().asFlow().mapToList(Dispatchers.Default)
 
     fun allIncludingArchived(): List<Account> = db.accountQueries.selectAllAny().executeAsList()
 
