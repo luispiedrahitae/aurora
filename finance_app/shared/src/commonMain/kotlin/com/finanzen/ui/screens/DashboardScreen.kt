@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowDownward
 import androidx.compose.material.icons.outlined.ArrowUpward
+import androidx.compose.material.icons.outlined.PieChart
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Icon
@@ -35,17 +36,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.finanzen.domain.Money
 import com.finanzen.ui.components.AutoSizeText
 import com.finanzen.ui.components.CategoryProgressRow
+import com.finanzen.ui.components.EmptyState
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.MainTabHeader
 import com.finanzen.ui.components.SectionHeader
+import com.finanzen.ui.format.formatMesAnio
 import com.finanzen.ui.theme.LocalFinanceColors
+import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.ui.theme.PillShape
 import com.finanzen.viewmodel.CategorySlice
@@ -59,11 +65,6 @@ import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.math.absoluteValue
 
-private val MESES_LARGOS = listOf(
-    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
-)
-
 @Composable
 fun DashboardScreen(
     vm: DashboardViewModel = koinViewModel(),
@@ -73,8 +74,7 @@ fun DashboardScreen(
     val hideAmounts by settingsVm.hideAmounts.collectAsState()
     val spacing = LocalSpacing.current
     val monthLabel = remember {
-        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
-        "${MESES_LARGOS[today.monthNumber - 1]} ${today.year}"
+        formatMesAnio(Clock.System.todayIn(TimeZone.currentSystemDefault()))
     }
 
     Column(Modifier.fillMaxSize()) {
@@ -101,10 +101,11 @@ fun DashboardScreen(
             item { SectionHeader("Top categorías del mes") }
             if (data.topCategories.isEmpty()) {
                 item {
-                    Text(
-                        "Sin gastos este mes. Añade movimientos desde la pestaña Movimientos.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    EmptyState(
+                        icon = Icons.Outlined.PieChart,
+                        title = "Sin gastos este mes",
+                        subtitle = "Añade movimientos desde la pestaña Movimientos.",
+                        modifier = Modifier.padding(spacing.xl),
                     )
                 }
             } else {
@@ -121,7 +122,7 @@ fun DashboardScreen(
     }
 }
 
-private const val MASK = "••••••"
+private const val MASK = "******"
 
 @Composable
 private fun BalanceHeroCard(
@@ -136,19 +137,23 @@ private fun BalanceHeroCard(
     val onSurfaceVar = MaterialTheme.colorScheme.onSurfaceVariant
     // Tarjeta neutra (no primaryContainer): los colores semánticos verde/rojo contrastan como es debido
     // en cualquier acento/dinámico, sin lavar el texto sobre el contenedor de color.
-    val darkUi = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-    val incomeGreen = if (darkUi) Color(0xFF57D9A3) else Color(0xFF1E7D5A)
-    val expenseRed = if (darkUi) Color(0xFFFF5449) else Color(0xFFC62828)
+    val finance = LocalFinanceColors.current
+    val incomeGreen = finance.income
+    val expenseRed = finance.expense
+    val haptic = LocalHapticFeedback.current
 
-    // El balance es el neto del mes (ingresos − gastos). Sin código de moneda; auto-encoge a una línea.
+    // El balance es el neto del mes (ingresos − gastos). Sin símbolo de moneda: el número solo,
+    // para que la cifra grande siempre quepa. Los ingresos/gastos de abajo sí llevan símbolo.
+    val fmt = LocalMoneyFormat.current
     val balance = monthIncome - monthExpense
     val balanceColor = if (balance >= 0) onSurface else expenseRed
-    val balanceText = if (hidden) MASK else Money(balance, currency).format()
+    val animatedBalance by animateFloatAsState(targetValue = balance.toFloat(), animationSpec = tween(400))
+    val balanceText = if (hidden) MASK else Money(animatedBalance.toLong(), currency).format()
 
     val totalFlow = monthIncome + monthExpense
     val incomeFraction by animateFloatAsState(
         targetValue = if (totalFlow > 0) (monthIncome.toFloat() / totalFlow.toFloat()).coerceIn(0f, 1f) else 0f,
-        animationSpec = tween(700),
+        animationSpec = tween(400),
     )
 
     FinanceCard(color = MaterialTheme.colorScheme.surfaceContainerHigh, contentPadding = PaddingValues(spacing.xl)) {
@@ -160,7 +165,10 @@ private fun BalanceHeroCard(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text("Balance", style = MaterialTheme.typography.labelLarge, color = onSurfaceVar)
-                    IconButton(onClick = onToggleHidden, modifier = Modifier.size(24.dp)) {
+                    IconButton(onClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onToggleHidden()
+                    }) {
                         Icon(
                             if (hidden) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
                             contentDescription = if (hidden) "Mostrar montos" else "Ocultar montos",
@@ -172,9 +180,10 @@ private fun BalanceHeroCard(
                 AutoSizeText(
                     text = balanceText,
                     modifier = Modifier.fillMaxWidth(),
+                    maxFontSize = MaterialTheme.typography.displayLarge.fontSize,
                     color = balanceColor,
                     fontWeight = FontWeight.SemiBold,
-                    style = MaterialTheme.typography.displaySmall,
+                    style = MaterialTheme.typography.displayLarge,
                 )
             }
 
@@ -196,7 +205,7 @@ private fun BalanceHeroCard(
                     FlowItem(
                         Icons.Outlined.ArrowUpward,
                         "Ingresos",
-                        if (hidden) MASK else Money(monthIncome, currency).format(),
+                        if (hidden) MASK else fmt.format(monthIncome, currency),
                         incomeGreen,
                         onSurfaceVar,
                         Alignment.Start,
@@ -204,7 +213,7 @@ private fun BalanceHeroCard(
                     FlowItem(
                         Icons.Outlined.ArrowDownward,
                         "Gastos",
-                        if (hidden) MASK else Money(monthExpense, currency).format(),
+                        if (hidden) MASK else fmt.format(monthExpense, currency),
                         expenseRed,
                         onSurfaceVar,
                         Alignment.End,
@@ -227,7 +236,7 @@ private fun FlowItem(
     Column(horizontalAlignment = align, verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(14.dp))
-            Text(label, style = MaterialTheme.typography.labelMedium, color = labelColor.copy(alpha = 0.7f))
+            Text(label, style = MaterialTheme.typography.labelMedium, color = labelColor)
         }
         Text(valueText, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = accent)
     }
@@ -243,17 +252,18 @@ private fun CashflowCard(cashflow: List<MonthNet>, currency: String) {
             verticalAlignment = Alignment.Bottom,
         ) {
             cashflow.forEach { month ->
-                CashflowBar(month, maxAbs, Modifier.weight(1f))
+                CashflowBar(month, maxAbs, currency, Modifier.weight(1f))
             }
         }
     }
 }
 
 @Composable
-private fun CashflowBar(month: MonthNet, maxAbs: Long, modifier: Modifier) {
+private fun CashflowBar(month: MonthNet, maxAbs: Long, currency: String, modifier: Modifier) {
     val finance = LocalFinanceColors.current
+    val fmt = LocalMoneyFormat.current
     val targetFraction = (month.netMinor.absoluteValue.toFloat() / maxAbs.toFloat()).coerceIn(0f, 1f)
-    val fraction by animateFloatAsState(targetValue = targetFraction, animationSpec = tween(600))
+    val fraction by animateFloatAsState(targetValue = targetFraction, animationSpec = tween(400))
     val barColor = if (month.netMinor >= 0) finance.income else finance.expense
     val gradient = Brush.verticalGradient(listOf(barColor.copy(alpha = 0.85f), barColor))
     Column(
@@ -261,9 +271,17 @@ private fun CashflowBar(month: MonthNet, maxAbs: Long, modifier: Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Bottom,
     ) {
+        // Etiqueta de valor con signo: un mes negativo no depende solo del color para leerse como tal.
+        Text(
+            fmt.format(month.netMinor, currency, signed = true, decimals = 0),
+            style = MaterialTheme.typography.labelSmall,
+            color = barColor,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
         Box(
             modifier = Modifier
-                .padding(bottom = 6.dp)
+                .padding(top = 2.dp, bottom = 6.dp)
                 .width(28.dp)
                 .fillMaxHeight(fraction.coerceAtLeast(0.02f))
                 .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))

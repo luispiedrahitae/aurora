@@ -4,10 +4,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.finanzen.data.CategoryRepository
 import com.finanzen.data.TransactionRepository
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.datetime.Clock
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
 
 data class CategorySlice(val name: String, val amountMinor: Long, val pct: Float, val colorHex: Long)
 
@@ -23,13 +28,27 @@ class AnalysisViewModel(
     categoryRepo: CategoryRepository,
 ) : ViewModel() {
 
-    val data: StateFlow<AnalysisData> =
-        combine(txRepo.observeAll(), categoryRepo.observeAll()) { txs, cats ->
-            val incomes = txs.filter { it.kind == "INCOME" }.sumOf { it.amountMinor }
-            val expenses = txs.filter { it.kind == "EXPENSE" }.sumOf { it.amountMinor }
-            val currency = txs.firstOrNull()?.currency ?: "USD"
+    private val _month = MutableStateFlow(
+        run {
+            val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+            LocalDate(today.year, today.month, 1)
+        },
+    )
+    val month: StateFlow<LocalDate> = _month
 
-            val byCatId = txs.filter { it.kind == "EXPENSE" }
+    fun setMonth(month: LocalDate) {
+        _month.value = month
+    }
+
+    val data: StateFlow<AnalysisData> =
+        combine(txRepo.observeAll(), categoryRepo.observeAll(), _month) { txs, cats, month ->
+            val period = monthPeriod(month)
+            val periodTxs = txs.filter { periodOfEpochDay(it.date) == period }
+            val incomes = periodTxs.filter { it.kind == "INCOME" }.sumOf { it.amountMinor }
+            val expenses = periodTxs.filter { it.kind == "EXPENSE" }.sumOf { it.amountMinor }
+            val currency = periodTxs.firstOrNull()?.currency ?: txs.firstOrNull()?.currency ?: "USD"
+
+            val byCatId = periodTxs.filter { it.kind == "EXPENSE" }
                 .groupBy { it.categoryId }
                 .mapValues { (_, list) -> list.sumOf { it.amountMinor } }
 
@@ -51,6 +70,10 @@ class AnalysisViewModel(
             SharingStarted.WhileSubscribed(5_000),
             AnalysisData(0, 0, emptyList(), "USD"),
         )
+
+    private fun monthPeriod(d: LocalDate): Long = (d.year * 100 + d.monthNumber).toLong()
+
+    private fun periodOfEpochDay(epochDay: Long): Long = monthPeriod(LocalDate.fromEpochDays(epochDay.toInt()))
 
     companion object {
         private val palette: List<Long> = listOf(

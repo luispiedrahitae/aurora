@@ -101,10 +101,11 @@ fun AppNav() {
             Row(Modifier.fillMaxSize()) {
                 NavigationRail {
                     TopDestination.entries.forEach { dest ->
+                        val selected = currentRoute == dest.route
                         NavigationRailItem(
-                            selected = currentRoute == dest.route,
+                            selected = selected,
                             onClick = { onSelect(dest) },
-                            icon = { Icon(dest.icon, contentDescription = dest.label) },
+                            icon = { Icon(if (selected) dest.selectedIcon else dest.icon, contentDescription = dest.label) },
                             label = {
                                 Text(
                                     dest.label,
@@ -127,10 +128,11 @@ fun AppNav() {
                     if (showNav) {
                         NavigationBar {
                             TopDestination.entries.forEach { dest ->
+                                val selected = currentRoute == dest.route
                                 NavigationBarItem(
-                                    selected = currentRoute == dest.route,
+                                    selected = selected,
                                     onClick = { onSelect(dest) },
-                                    icon = { Icon(dest.icon, contentDescription = dest.label) },
+                                    icon = { Icon(if (selected) dest.selectedIcon else dest.icon, contentDescription = dest.label) },
                                     label = {
                                         Text(
                                             dest.label,

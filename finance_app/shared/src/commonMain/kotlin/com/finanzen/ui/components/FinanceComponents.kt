@@ -26,6 +26,8 @@ import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Cake
 import androidx.compose.material.icons.outlined.Category
 import androidx.compose.material.icons.outlined.Checkroom
+import androidx.compose.material.icons.outlined.ChevronLeft
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.ChildCare
 import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.Commute
@@ -87,6 +89,7 @@ import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material.icons.outlined.WineBar
 import androidx.compose.material.icons.outlined.Work
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -109,6 +112,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.finanzen.domain.Money
 import com.finanzen.ui.theme.LocalFinanceColors
+import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.ui.theme.LocalSpacing
 import finanzen.shared.generated.resources.Res
 import finanzen.shared.generated.resources.brand_airbnb
@@ -217,10 +221,9 @@ fun MoneyText(
     amountMinor: Long,
     currency: String,
     modifier: Modifier = Modifier,
-    style: androidx.compose.ui.text.TextStyle = MaterialTheme.typography.bodyLarge,
+    style: TextStyle = MaterialTheme.typography.bodyLarge,
     fontWeight: FontWeight? = FontWeight.SemiBold,
     signed: Boolean = false,
-    showCurrency: Boolean = true,
     colorOverride: Color? = null,
 ) {
     val finance = LocalFinanceColors.current
@@ -229,8 +232,8 @@ fun MoneyText(
         amountMinor >= 0 -> finance.income
         else -> finance.expense
     }
-    val sign = if (signed && amountMinor > 0) "+" else "" // Money.format ya antepone "-"
-    val text = "$sign${Money(amountMinor, currency).format()}" + if (showCurrency) " $currency" else ""
+    // El símbolo y su posición ($ antes/después/ninguno) los aporta el formato global.
+    val text = LocalMoneyFormat.current.format(amountMinor, currency, signed)
     Text(text, modifier = modifier, style = style, fontWeight = fontWeight, color = color)
 }
 
@@ -278,30 +281,6 @@ fun AutoSizeText(
     }
 }
 
-/** Píldora compacta para ingreso/gasto/neto del Dashboard. */
-@Composable
-fun StatPill(
-    label: String,
-    amountMinor: Long,
-    currency: String,
-    accent: Color,
-    container: Color,
-    modifier: Modifier = Modifier,
-) {
-    Surface(modifier = modifier, shape = MaterialTheme.shapes.medium, color = container) {
-        Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            MoneyText(
-                amountMinor = amountMinor,
-                currency = currency,
-                style = MaterialTheme.typography.titleMedium,
-                showCurrency = false,
-                colorOverride = accent,
-            )
-        }
-    }
-}
-
 /** Encabezado de sección consistente. */
 @Composable
 fun SectionHeader(text: String, modifier: Modifier = Modifier) {
@@ -314,6 +293,24 @@ fun SectionHeader(text: String, modifier: Modifier = Modifier) {
     )
 }
 
+/** Selector de mes con flechas prev/next, reutilizado por las pantallas que filtran por periodo. */
+@Composable
+fun MonthSelector(label: String, onPrev: () -> Unit, onNext: () -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier.fillMaxWidth().padding(vertical = LocalSpacing.current.sm),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        IconButton(onClick = onPrev) {
+            Icon(Icons.Outlined.ChevronLeft, contentDescription = "Mes anterior")
+        }
+        Text(label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        IconButton(onClick = onNext) {
+            Icon(Icons.Outlined.ChevronRight, contentDescription = "Mes siguiente")
+        }
+    }
+}
+
 /** Fila de categoría con barra de progreso redondeada (tokens en vez de RoundedCornerShape(4dp)). */
 @Composable
 fun CategoryProgressRow(
@@ -324,7 +321,7 @@ fun CategoryProgressRow(
     color: Color,
     modifier: Modifier = Modifier,
 ) {
-    val animatedPct by animateFloatAsState(targetValue = pct.coerceIn(0f, 1f), animationSpec = tween(600))
+    val animatedPct by animateFloatAsState(targetValue = pct.coerceIn(0f, 1f), animationSpec = tween(400))
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),

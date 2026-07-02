@@ -5,6 +5,8 @@ import com.finanzen.data.CurrencyRepository
 import com.finanzen.data.SettingsRepository
 import com.finanzen.db.Currency
 import com.finanzen.ui.theme.AccentPreset
+import com.finanzen.ui.theme.MoneyFormat
+import com.finanzen.ui.theme.SymbolPosition
 import com.finanzen.ui.theme.dynamicColorSupported
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -52,6 +54,9 @@ class SettingsViewModel(
     private val mutableHideAmounts = MutableStateFlow(repo.hideAmountsEnabled())
     val hideAmounts: StateFlow<Boolean> = mutableHideAmounts.asStateFlow()
 
+    private val mutableSymbolPos = MutableStateFlow(MoneyFormat.parse(repo.symbolPosition()))
+    val symbolPosition: StateFlow<SymbolPosition> = mutableSymbolPos.asStateFlow()
+
     fun setTheme(mode: ThemeMode) {
         repo.setThemeMode(mode.name.lowercase())
         mutableTheme.value = mode
@@ -85,6 +90,11 @@ class SettingsViewModel(
     fun setHideAmounts(enabled: Boolean) {
         repo.setHideAmountsEnabled(enabled)
         mutableHideAmounts.value = enabled
+    }
+
+    fun setSymbolPosition(pos: SymbolPosition) {
+        repo.setSymbolPosition(pos.name.lowercase())
+        mutableSymbolPos.value = pos
     }
 
     fun setBaseCurrency(code: String) {

@@ -18,8 +18,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.ChevronLeft
-import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -41,12 +40,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.finanzen.db.Category
 import com.finanzen.db.TransactionRow
-import com.finanzen.domain.Money
 import com.finanzen.ui.components.CategoryAvatar
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.KindAvatar
+import com.finanzen.ui.components.MonthSelector
 import com.finanzen.ui.components.categoryColor
+import com.finanzen.ui.format.formatFechaLarga
+import com.finanzen.ui.format.formatMesAnio
 import com.finanzen.ui.theme.LocalFinanceColors
+import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.viewmodel.TransactionsViewModel
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DatePeriod
@@ -58,10 +60,6 @@ import kotlinx.datetime.todayIn
 import org.koin.compose.viewmodel.koinViewModel
 
 private val WEEKDAYS = listOf("L", "M", "X", "J", "V", "S", "D")
-private val MONTHS = listOf(
-    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
-)
 
 private fun LocalDate.epochDay(): Long = toEpochDays().toLong()
 
@@ -114,23 +112,11 @@ fun CalendarScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    IconButton(onClick = { month = month.plus(DatePeriod(months = -1)) }) {
-                        Icon(Icons.Outlined.ChevronLeft, contentDescription = "Mes anterior")
-                    }
-                    Text(
-                        "${MONTHS[month.monthNumber - 1]} ${month.year}",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    IconButton(onClick = { month = month.plus(DatePeriod(months = 1)) }) {
-                        Icon(Icons.Outlined.ChevronRight, contentDescription = "Mes siguiente")
-                    }
-                }
+                MonthSelector(
+                    label = formatMesAnio(month),
+                    onPrev = { month = month.plus(DatePeriod(months = -1)) },
+                    onNext = { month = month.plus(DatePeriod(months = 1)) },
+                )
             }
 
             item {
@@ -253,6 +239,7 @@ private fun MonthGrid(
 @Composable
 private fun DayTxRow(row: TransactionRow, category: Category?, onClick: () -> Unit) {
     val finance = LocalFinanceColors.current
+    val fmt = LocalMoneyFormat.current
     val isTransfer = row.kind == "TRANSFER"
     val isIncome = row.kind == "INCOME"
     Row(
@@ -279,20 +266,29 @@ private fun DayTxRow(row: TransactionRow, category: Category?, onClick: () -> Un
                 maxLines = 1,
             )
         }
-        Text(
-            when {
-                isTransfer -> "⇄ ${Money(row.amountMinor, row.currency).format()}"
-                isIncome -> "+${Money(row.amountMinor, row.currency).format()}"
-                else -> "−${Money(row.amountMinor, row.currency).format()}"
-            },
-            fontWeight = FontWeight.SemiBold,
-            style = MaterialTheme.typography.titleMedium,
-            color = when {
-                isTransfer -> MaterialTheme.colorScheme.onSurfaceVariant
-                isIncome -> finance.income
-                else -> finance.expense
-            },
-        )
+        if (isTransfer) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Icon(
+                    Icons.Outlined.SwapHoriz,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp),
+                )
+                Text(
+                    fmt.format(row.amountMinor, row.currency),
+                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        } else {
+            Text(
+                if (isIncome) fmt.format(row.amountMinor, row.currency, signed = true) else fmt.format(-row.amountMinor, row.currency),
+                fontWeight = FontWeight.SemiBold,
+                style = MaterialTheme.typography.titleMedium,
+                color = if (isIncome) finance.income else finance.expense,
+            )
+        }
     }
 }
 
@@ -302,4 +298,4 @@ private fun kindLabelCal(kind: String): String = when (kind) {
     else -> "Gasto"
 }
 
-private fun dayHeading(date: LocalDate): String = "${date.dayOfMonth} de ${MONTHS[date.monthNumber - 1].lowercase()} ${date.year}"
+private fun dayHeading(date: LocalDate): String = formatFechaLarga(date)

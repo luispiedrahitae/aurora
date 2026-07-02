@@ -37,6 +37,11 @@ class SettingsRepository(private val db: FinanzenDb) {
 
     fun setHideAmountsEnabled(enabled: Boolean) = db.settingQueries.put(KEY_HIDE_AMOUNTS, enabled.toString())
 
+    /** Posición del símbolo de moneda en los montos: prefix (default) | suffix | none. */
+    fun symbolPosition(): String = db.settingQueries.get(KEY_SYMBOL_POS).executeAsOneOrNull() ?: "prefix"
+
+    fun setSymbolPosition(pos: String) = db.settingQueries.put(KEY_SYMBOL_POS, pos)
+
     /** Días de antelación del recordatorio de cobro de suscripciones. Global; default 2. */
     fun reminderDaysBefore(): Long = db.settingQueries.get(KEY_NOTIFY_REMIND_DAYS).executeAsOneOrNull()?.toLongOrNull() ?: 2
 
@@ -70,5 +75,6 @@ class SettingsRepository(private val db: FinanzenDb) {
         const val KEY_NOTIFY_BUDGET = "notif.budget"
         const val KEY_NOTIFY_REMIND_DAYS = "notif.remind_days"
         const val KEY_HIDE_AMOUNTS = "ui.hide_amounts"
+        const val KEY_SYMBOL_POS = "ui.symbol_pos"
     }
 }

@@ -18,7 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.finanzen.domain.Money
+import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.viewmodel.CategorySlice
 import io.github.koalaplot.core.pie.DefaultSlice
@@ -34,6 +34,7 @@ import io.github.koalaplot.core.util.ExperimentalKoalaPlotApi
 fun CategoryPieChart(slices: List<CategorySlice>, currency: String, modifier: Modifier = Modifier) {
     if (slices.isEmpty()) return
     val spacing = LocalSpacing.current
+    val fmt = LocalMoneyFormat.current
     val values = slices.map { it.amountMinor.toFloat() }
     val totalMinor = slices.sumOf { it.amountMinor }
 
@@ -52,7 +53,7 @@ fun CategoryPieChart(slices: List<CategorySlice>, currency: String, modifier: Mo
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Text(
-                            Money(totalMinor, currency).format(),
+                            fmt.format(totalMinor, currency),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                         )
@@ -69,6 +70,7 @@ fun CategoryPieChart(slices: List<CategorySlice>, currency: String, modifier: Mo
 @Composable
 private fun LegendRow(slice: CategorySlice, currency: String) {
     val spacing = LocalSpacing.current
+    val fmt = LocalMoneyFormat.current
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -82,7 +84,7 @@ private fun LegendRow(slice: CategorySlice, currency: String) {
         )
         Text(slice.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
         Text(
-            Money(slice.amountMinor, currency).format(),
+            fmt.format(slice.amountMinor, currency),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

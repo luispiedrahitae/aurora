@@ -29,56 +29,57 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.MainTabHeader
+import com.finanzen.ui.theme.LocalSpacing
 
-data class MoreItem(val title: String, val subtitle: String, val icon: ImageVector, val enabled: Boolean, val onClick: () -> Unit)
+data class MoreItem(val title: String, val subtitle: String, val icon: ImageVector, val onClick: () -> Unit)
 
 @Composable
 fun MoreScreen(onNavigate: (route: String) -> Unit) {
     val items = listOf(
-        MoreItem("Suscripciones", "Cobros recurrentes en Movimientos", Icons.Outlined.Repeat, true) {
+        MoreItem("Suscripciones", "Cobros recurrentes en Movimientos", Icons.Outlined.Repeat) {
             onNavigate("subscriptions")
         },
-        MoreItem("Calendario", "Movimientos por día", Icons.Outlined.CalendarMonth, true) {
+        MoreItem("Calendario", "Movimientos por día", Icons.Outlined.CalendarMonth) {
             onNavigate("calendar")
         },
-        MoreItem("Análisis", "Gastos por categoría", Icons.Outlined.Analytics, true) {
+        MoreItem("Análisis", "Gastos por categoría", Icons.Outlined.Analytics) {
             onNavigate("analysis")
         },
-        MoreItem("Reportes", "Exportar CSV / PDF", Icons.Outlined.Description, true) {
+        MoreItem("Reportes", "Exportar CSV / PDF", Icons.Outlined.Description) {
             onNavigate("reports")
         },
-        MoreItem("Backup", "Exportar / importar tu data", Icons.Outlined.Backup, true) {
+        MoreItem("Backup", "Exportar / importar tu data", Icons.Outlined.Backup) {
             onNavigate("backup")
         },
-        MoreItem("Categorías", "Personalizar", Icons.Outlined.AutoAwesome, true) {
+        MoreItem("Categorías", "Personalizar", Icons.Outlined.AutoAwesome) {
             onNavigate("categories")
         },
-        MoreItem("Notificaciones", "Recordatorios y avisos", Icons.Outlined.Notifications, true) {
+        MoreItem("Notificaciones", "Recordatorios y avisos", Icons.Outlined.Notifications) {
             onNavigate("notifications")
         },
-        MoreItem("Seguridad", "Bloqueo con PIN", Icons.Outlined.Settings, true) {
+        MoreItem("Seguridad", "Bloqueo con PIN", Icons.Outlined.Settings) {
             onNavigate("security")
         },
-        MoreItem("Apariencia", "Tema, color de acento y color dinámico", Icons.Outlined.DarkMode, true) {
+        MoreItem("Apariencia", "Tema, color de acento y color dinámico", Icons.Outlined.DarkMode) {
             onNavigate("settings")
         },
-        MoreItem("Moneda", "Moneda única de la app", Icons.Outlined.Payments, true) {
+        MoreItem("Moneda", "Moneda única de la app", Icons.Outlined.Payments) {
             onNavigate("currency")
         },
-        MoreItem("Acerca de FinanZen", "Versión, privacidad, licencias", Icons.Outlined.Info, true) {
+        MoreItem("Acerca de FinanZen", "Versión, privacidad, licencias", Icons.Outlined.Info) {
             onNavigate("about")
         },
     )
 
+    val spacing = LocalSpacing.current
     Column(Modifier.fillMaxSize()) {
         MainTabHeader(title = "Más")
         LazyColumn(
             modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(start = spacing.lg, end = spacing.lg, top = spacing.sm, bottom = spacing.lg),
+            verticalArrangement = Arrangement.spacedBy(spacing.sm),
         ) {
             items(items, key = { it.title }) { item -> MoreRow(item) }
         }
@@ -87,39 +88,21 @@ fun MoreScreen(onNavigate: (route: String) -> Unit) {
 
 @Composable
 private fun MoreRow(item: MoreItem) {
-    val containerAlpha = if (item.enabled) 1.0f else 0.55f
-    FinanceCard(
-        modifier = Modifier.fillMaxWidth(),
-        onClick = item.onClick.takeIf { item.enabled },
-    ) {
+    FinanceCard(modifier = Modifier.fillMaxWidth(), onClick = item.onClick) {
         androidx.compose.foundation.layout.Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            Icon(item.icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Column(modifier = Modifier.padding(start = LocalSpacing.current.md).weight(1f)) {
+                Text(item.title, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                Text(item.subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             Icon(
-                item.icon,
+                Icons.AutoMirrored.Outlined.ArrowForward,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary.copy(alpha = containerAlpha),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Column(modifier = Modifier.padding(start = 12.dp).weight(1f)) {
-                Text(
-                    item.title,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = containerAlpha),
-                )
-                Text(
-                    if (item.enabled) item.subtitle else "${item.subtitle} (pendiente)",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            if (item.enabled) {
-                Icon(
-                    Icons.AutoMirrored.Outlined.ArrowForward,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
         }
     }
 }

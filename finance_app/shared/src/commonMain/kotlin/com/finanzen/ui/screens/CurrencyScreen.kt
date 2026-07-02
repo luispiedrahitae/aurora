@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.SectionHeader
+import com.finanzen.ui.theme.SymbolPosition
 import com.finanzen.viewmodel.SettingsViewModel
 import org.koin.compose.koinInject
 
@@ -39,6 +40,7 @@ fun CurrencyScreen(
     vm: SettingsViewModel = koinInject(),
 ) {
     val baseCurrency by vm.baseCurrency.collectAsState()
+    val symbolPos by vm.symbolPosition.collectAsState()
 
     Scaffold(
         topBar = {
@@ -73,7 +75,45 @@ fun CurrencyScreen(
                     }
                 }
             }
+
+            item { SectionHeader("Símbolo") }
+            item {
+                val sym = vm.currencies.firstOrNull { it.code == baseCurrency }?.symbol ?: "$"
+                FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(0.dp)) {
+                    Column {
+                        Text(
+                            "Dónde va el símbolo de moneda en los montos de toda la app.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
+                        )
+                        SymbolOption("Antes  (${sym}1.000)", SymbolPosition.PREFIX, symbolPos, vm::setSymbolPosition)
+                        SymbolOption("Después  (1.000 $sym)", SymbolPosition.SUFFIX, symbolPos, vm::setSymbolPosition)
+                        SymbolOption("Sin símbolo  (1.000)", SymbolPosition.NONE, symbolPos, vm::setSymbolPosition)
+                    }
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun SymbolOption(
+    label: String,
+    value: SymbolPosition,
+    selected: SymbolPosition,
+    onSelect: (SymbolPosition) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectable(selected = selected == value, onClick = { onSelect(value) })
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        RadioButton(selected = selected == value, onClick = { onSelect(value) })
+        Text(label, fontWeight = FontWeight.SemiBold)
     }
 }
 

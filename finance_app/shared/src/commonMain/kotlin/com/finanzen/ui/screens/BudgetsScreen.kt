@@ -45,6 +45,7 @@ import com.finanzen.ui.components.LabeledDropdown
 import com.finanzen.ui.components.MainTabHeader
 import com.finanzen.ui.components.categoryColor
 import com.finanzen.ui.theme.LocalFinanceColors
+import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.viewmodel.BudgetRow
 import com.finanzen.viewmodel.BudgetsViewModel
@@ -138,7 +139,7 @@ private fun BudgetRowCard(row: BudgetRow, currency: String, onClick: () -> Unit)
     val finance = LocalFinanceColors.current
     val spacing = LocalSpacing.current
     val barColor = if (over) finance.expense else MaterialTheme.colorScheme.primary
-    val curSuffix = if (currency.isNotBlank()) " $currency" else ""
+    val fmt = LocalMoneyFormat.current
 
     FinanceCard(modifier = Modifier.fillMaxWidth(), onClick = onClick) {
         Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
@@ -146,14 +147,14 @@ private fun BudgetRowCard(row: BudgetRow, currency: String, onClick: () -> Unit)
                 CategoryAvatar(icon = row.icon, color = categoryColor(row.categoryName, row.color), size = 36.dp)
                 Text(row.categoryName, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                 Text(
-                    "$pct%",
+                    if (over) "$pct% · excedido" else "$pct%",
                     fontWeight = FontWeight.SemiBold,
                     color = if (over) finance.expense else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             LinearProgressIndicator(progress = { fraction }, modifier = Modifier.fillMaxWidth(), color = barColor)
             Text(
-                "Gastado ${Money(row.spentMinor, currency).format()} de ${Money(row.limitMinor, currency).format()}$curSuffix",
+                "Gastado ${fmt.format(row.spentMinor, currency)} de ${fmt.format(row.limitMinor, currency)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = if (over) finance.expense else MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -202,6 +203,15 @@ private fun BudgetFormDialog(
                 enabled = minor != null,
             ) { Text("Guardar") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },
+        dismissButton = {
+            Row {
+                if (preselected != null) {
+                    TextButton(onClick = { onConfirm(preselected.categoryId, 0L) }) {
+                        Text("Quitar presupuesto", color = MaterialTheme.colorScheme.error)
+                    }
+                }
+                TextButton(onClick = onDismiss) { Text("Cancelar") }
+            }
+        },
     )
 }
