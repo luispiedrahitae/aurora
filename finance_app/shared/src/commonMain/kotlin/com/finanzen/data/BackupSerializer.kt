@@ -69,7 +69,7 @@ object BackupSerializer {
             db.budgetQueries.selectAll().executeAsList().forEach { db.budgetQueries.delete(it.id) }
             db.cardQueries.selectAll().executeAsList().forEach { db.cardQueries.delete(it.id) }
             db.categoryQueries.selectAll().executeAsList().forEach { db.categoryQueries.delete(it.id) }
-            db.accountQueries.selectAll().executeAsList().forEach { db.accountQueries.delete(it.id) }
+            db.accountQueries.selectAllAny().executeAsList().forEach { db.accountQueries.delete(it.id) }
             db.currencyQueries.selectAll().executeAsList().forEach { db.currencyQueries.delete(it.code) }
             db.settingQueries.selectAll().executeAsList().forEach { db.settingQueries.delete(it.key) }
 
