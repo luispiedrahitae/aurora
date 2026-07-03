@@ -1,15 +1,19 @@
 package com.finanzen.ui.components
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.UnfoldMore
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -29,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import com.finanzen.ui.theme.LocalSpacing
 
 /**
@@ -48,6 +53,9 @@ fun <T> PickerField(
     placeholder: String = "Selecciona…",
     emptyHint: String = "No hay opciones disponibles.",
     leadingContent: (@Composable (T) -> Unit)? = null,
+    searchable: Boolean = false,
+    searchPredicate: ((T, String) -> Boolean)? = null,
+    sectionOf: ((T) -> String?)? = null,
 ) {
     val spacing = LocalSpacing.current
     var open by remember { mutableStateOf(false) }
@@ -74,6 +82,7 @@ fun <T> PickerField(
     }
 
     if (open) {
+        var query by remember { mutableStateOf("") }
         ModalBottomSheet(onDismissRequest = { open = false }, sheetState = sheetState) {
             Column(
                 Modifier
@@ -87,7 +96,23 @@ fun <T> PickerField(
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(horizontal = spacing.lg, vertical = spacing.sm),
                 )
-                if (options.isEmpty()) {
+                if (searchable) {
+                    OutlinedTextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = spacing.lg, vertical = spacing.sm),
+                        placeholder = { Text("Buscar…") },
+                        leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
+                        singleLine = true,
+                        shape = MaterialTheme.shapes.small,
+                    )
+                }
+                val filtered = if (searchable && query.isNotBlank() && searchPredicate != null) {
+                    options.filter { searchPredicate(it, query) }
+                } else {
+                    options
+                }
+                if (filtered.isEmpty()) {
                     Text(
                         emptyHint,
                         style = MaterialTheme.typography.bodyMedium,
@@ -101,8 +126,20 @@ fun <T> PickerField(
                         shape = MaterialTheme.shapes.large,
                         color = MaterialTheme.colorScheme.surfaceContainerHigh,
                     ) {
-                        Column {
-                            options.forEachIndexed { index, option ->
+                        LazyColumn(modifier = Modifier.heightIn(max = 420.dp)) {
+                            itemsIndexed(filtered) { index, option ->
+                                sectionOf?.invoke(option)?.let { section ->
+                                    val previousSection = filtered.getOrNull(index - 1)?.let(sectionOf)
+                                    if (section != previousSection) {
+                                        Text(
+                                            section,
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(horizontal = spacing.lg, vertical = spacing.sm),
+                                        )
+                                    }
+                                }
                                 if (index > 0) {
                                     HorizontalDivider(
                                         modifier = Modifier.padding(start = spacing.lg),

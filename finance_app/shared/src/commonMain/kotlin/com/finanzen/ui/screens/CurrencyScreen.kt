@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.finanzen.ui.components.FinanceCard
+import com.finanzen.ui.components.PickerField
 import com.finanzen.ui.components.SectionHeader
 import com.finanzen.ui.theme.SymbolPosition
 import com.finanzen.viewmodel.SettingsViewModel
@@ -67,11 +68,23 @@ fun CurrencyScreen(
                             "Moneda única de la app. Cambiarla re-etiqueta tus montos existentes sin convertirlos.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
+                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 12.dp),
                         )
-                        vm.currencies.forEach { currency ->
-                            CurrencyOption(currency.code, currency.symbol, baseCurrency, vm::setBaseCurrency)
-                        }
+                        val frecuentes = setOf("USD", "EUR", "COP", "MXN")
+                        val orderedCurrencies = vm.currencies.sortedWith(
+                            compareBy({ it.code !in frecuentes }, { it.code }),
+                        )
+                        PickerField(
+                            label = "Moneda de la app",
+                            options = orderedCurrencies,
+                            selected = vm.currencies.firstOrNull { it.code == baseCurrency },
+                            optionLabel = { "${it.code} — ${it.name} (${it.symbol})" },
+                            onSelect = { vm.setBaseCurrency(it.code) },
+                            modifier = Modifier.padding(16.dp),
+                            searchable = true,
+                            searchPredicate = { c, q -> c.code.contains(q, ignoreCase = true) || c.name.contains(q, ignoreCase = true) },
+                            sectionOf = { if (it.code in frecuentes) "Frecuentes" else "Todas" },
+                        )
                     }
                 }
             }
@@ -114,25 +127,5 @@ private fun SymbolOption(
     ) {
         RadioButton(selected = selected == value, onClick = { onSelect(value) })
         Text(label, fontWeight = FontWeight.SemiBold)
-    }
-}
-
-@Composable
-private fun CurrencyOption(
-    code: String,
-    symbol: String,
-    selected: String,
-    onSelect: (String) -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .selectable(selected = selected == code, onClick = { onSelect(code) })
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        RadioButton(selected = selected == code, onClick = { onSelect(code) })
-        Text("$code ($symbol)", fontWeight = FontWeight.SemiBold)
     }
 }
