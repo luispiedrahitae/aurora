@@ -108,7 +108,7 @@ class Phase4ManagementTest {
     @Test
     fun computeBalancesIncluyeIngresosGastosYTransferencias() {
         val db = freshDb()
-        db.currencyQueries.upsert("USD", "$", 2, 1.0)
+        db.currencyQueries.upsert("USD", "$", 2, 1.0, "US Dollar", ".", ",")
         val accountRepo = AccountRepository(db)
         val a = accountRepo.add("A", "CASH", "USD", openingBalanceMinor = 10_000)
         val b = accountRepo.add("B", "DEBIT", "USD", openingBalanceMinor = 0)

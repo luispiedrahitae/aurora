@@ -16,7 +16,7 @@ class FinanzenDbTest {
     @Test
     fun insertaYLeeMoneda() {
         val db = freshDb()
-        db.currencyQueries.upsert("USD", "$", 2, 1.0)
+        db.currencyQueries.upsert("USD", "$", 2, 1.0, "US Dollar", ".", ",")
         val usd = db.currencyQueries.selectByCode("USD").executeAsOne()
         assertEquals("USD", usd.code)
         assertEquals(2L, usd.decimals)

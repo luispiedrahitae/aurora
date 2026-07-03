@@ -3,6 +3,7 @@ package com.finanzen.data
 import com.finanzen.db.FinanzenDb
 
 private const val KEY_SEEDED = "seeded"
+private const val KEY_CURRENCIES_EXPANDED = "currencies_expanded"
 
 /**
  * Inserta datos mínimos en la primera apertura de la DB. Idempotente: una bandera persistente marca
@@ -10,50 +11,63 @@ private const val KEY_SEEDED = "seeded"
  * re-seed con categorías/monedas duplicadas.
  */
 fun seedIfEmpty(db: FinanzenDb) {
-    if (db.settingQueries.get(KEY_SEEDED).executeAsOneOrNull() != null) return
+    if (db.settingQueries.get(KEY_SEEDED).executeAsOneOrNull() == null) {
+        // DB previa a esta bandera que ya tenía datos: márcala como sembrada y no insertes de nuevo.
+        if (db.currencyQueries.selectAll().executeAsList().isNotEmpty()) {
+            db.settingQueries.put(KEY_SEEDED, "true")
+        } else {
+            db.transaction {
+                db.settingQueries.put(KEY_SEEDED, "true")
 
-    // DB previa a esta bandera que ya tenía datos: márcala como sembrada y no insertes de nuevo.
-    if (db.currencyQueries.selectAll().executeAsList().isNotEmpty()) {
-        db.settingQueries.put(KEY_SEEDED, "true")
-        return
+                // (nombre, clave de icono, color ARGB). Las claves deben existir en categoryIcons (UI);
+                // el color es un ARGB de la paleta para que el seed inicial se vea variado.
+                val expenseSeeds = listOf(
+                    Triple("Alimentación", "restaurant", 0xFFE53935),
+                    Triple("Transporte", "car", 0xFF1E88E5),
+                    Triple("Vivienda", "home", 0xFF00897B),
+                    Triple("Salud", "health", 0xFF43A047),
+                    Triple("Ocio", "games", 0xFFF4511E),
+                )
+                expenseSeeds.forEach { (name, icon, color) ->
+                    db.categoryQueries.insert(parentId = null, name = name, icon = icon, color = color, kind = "EXPENSE")
+                }
+
+                val incomeSeeds = listOf(
+                    Triple("Salario", "salary", 0xFF3949AB),
+                    Triple("Freelance", "work", 0xFF00838F),
+                    Triple("Otros", "other", 0xFF546E7A),
+                )
+                incomeSeeds.forEach { (name, icon, color) ->
+                    db.categoryQueries.insert(parentId = null, name = name, icon = icon, color = color, kind = "INCOME")
+                }
+
+                db.accountQueries.insert(
+                    name = "Efectivo",
+                    type = "CASH",
+                    currency = "USD",
+                    openingBalanceMinor = 0,
+                    color = 0,
+                    archived = 0,
+                )
+            }
+        }
     }
+    expandCurrenciesIfNeeded(db)
+}
 
+/**
+ * Expande la tabla Currency a las ~149 monedas de [WORLD_CURRENCIES]. Bandera propia
+ * (separada de KEY_SEEDED) para que instalaciones existentes que ya sembraron las 4 monedas
+ * originales también reciban la lista completa, sin re-sembrar categorías/cuenta. INSERT OR
+ * REPLACE por code (PK) también rellena name/decimalSeparator/groupSeparator en esas 4 filas
+ * originales con los valores correctos del dataset.
+ */
+private fun expandCurrenciesIfNeeded(db: FinanzenDb) {
+    if (db.settingQueries.get(KEY_CURRENCIES_EXPANDED).executeAsOneOrNull() != null) return
     db.transaction {
-        db.settingQueries.put(KEY_SEEDED, "true")
-        db.currencyQueries.upsert("USD", "$", 2, 1.0)
-        db.currencyQueries.upsert("EUR", "€", 2, 1.0)
-        db.currencyQueries.upsert("COP", "$", 0, 1.0)
-        db.currencyQueries.upsert("MXN", "$", 2, 1.0)
-
-        // (nombre, clave de icono, color ARGB). Las claves deben existir en categoryIcons (UI);
-        // el color es un ARGB de la paleta para que el seed inicial se vea variado.
-        val expenseSeeds = listOf(
-            Triple("Alimentación", "restaurant", 0xFFE53935),
-            Triple("Transporte", "car", 0xFF1E88E5),
-            Triple("Vivienda", "home", 0xFF00897B),
-            Triple("Salud", "health", 0xFF43A047),
-            Triple("Ocio", "games", 0xFFF4511E),
-        )
-        expenseSeeds.forEach { (name, icon, color) ->
-            db.categoryQueries.insert(parentId = null, name = name, icon = icon, color = color, kind = "EXPENSE")
+        WORLD_CURRENCIES.forEach { c ->
+            db.currencyQueries.upsert(c.code, c.symbol, c.decimals.toLong(), 1.0, c.name, c.decimalSeparator, c.groupSeparator)
         }
-
-        val incomeSeeds = listOf(
-            Triple("Salario", "salary", 0xFF3949AB),
-            Triple("Freelance", "work", 0xFF00838F),
-            Triple("Otros", "other", 0xFF546E7A),
-        )
-        incomeSeeds.forEach { (name, icon, color) ->
-            db.categoryQueries.insert(parentId = null, name = name, icon = icon, color = color, kind = "INCOME")
-        }
-
-        db.accountQueries.insert(
-            name = "Efectivo",
-            type = "CASH",
-            currency = "USD",
-            openingBalanceMinor = 0,
-            color = 0,
-            archived = 0,
-        )
+        db.settingQueries.put(KEY_CURRENCIES_EXPANDED, "true")
     }
 }

@@ -41,8 +41,8 @@ class SettingsRepositoryTest {
     @Test
     fun setBaseCurrencyReEtiquetaCuentasYTransacciones() {
         val db = freshDb()
-        db.currencyQueries.upsert("USD", "$", 2, 1.0)
-        db.currencyQueries.upsert("COP", "$", 0, 1.0)
+        db.currencyQueries.upsert("USD", "$", 2, 1.0, "US Dollar", ".", ",")
+        db.currencyQueries.upsert("COP", "$", 0, 1.0, "Colombian Peso", ",", ".")
         val accountRepo = AccountRepository(db)
         val accId = accountRepo.add(name = "Efectivo", type = "CASH", currency = "USD")
         db.transactionQueries.insert(accId, null, 1000, "USD", 0, "", "EXPENSE", null, null)

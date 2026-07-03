@@ -19,7 +19,15 @@ data class BackupSnapshot(
     val settings: List<SettingDto>,
 )
 
-@Serializable data class CurrencyDto(val code: String, val symbol: String, val decimals: Long, val rateToBase: Double)
+@Serializable data class CurrencyDto(
+    val code: String,
+    val symbol: String,
+    val decimals: Long,
+    val rateToBase: Double,
+    val name: String = "",
+    val decimalSeparator: String = ",",
+    val groupSeparator: String = ".",
+)
 
 @Serializable data class AccountDto(
     val id: Long,

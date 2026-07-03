@@ -14,7 +14,7 @@ object BackupSerializer {
         version = 1,
         createdAt = createdAt,
         currencies = db.currencyQueries.selectAll().executeAsList().map {
-            CurrencyDto(it.code, it.symbol, it.decimals, it.rateToBase)
+            CurrencyDto(it.code, it.symbol, it.decimals, it.rateToBase, it.name, it.decimalSeparator, it.groupSeparator)
         },
         accounts = db.accountQueries.selectAllAny().executeAsList().map {
             AccountDto(it.id, it.name, it.type, it.currency, it.openingBalanceMinor, it.color, it.archived)
@@ -74,7 +74,9 @@ object BackupSerializer {
             db.settingQueries.selectAll().executeAsList().forEach { db.settingQueries.delete(it.key) }
 
             // Insertar en orden directo
-            snap.currencies.forEach { db.currencyQueries.upsert(it.code, it.symbol, it.decimals, it.rateToBase) }
+            snap.currencies.forEach {
+                db.currencyQueries.upsert(it.code, it.symbol, it.decimals, it.rateToBase, it.name, it.decimalSeparator, it.groupSeparator)
+            }
             snap.accounts.forEach {
                 db.accountQueries.insert(it.name, it.type, it.currency, it.openingBalanceMinor, it.color, it.archived)
             }
