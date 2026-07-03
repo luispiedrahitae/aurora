@@ -2,7 +2,10 @@ CREATE TABLE Currency (
     code        TEXT NOT NULL PRIMARY KEY,
     symbol      TEXT NOT NULL,
     decimals    INTEGER NOT NULL DEFAULT 2,
-    rateToBase  REAL NOT NULL DEFAULT 1.0
+    rateToBase  REAL NOT NULL DEFAULT 1.0,
+    name              TEXT NOT NULL DEFAULT '',
+    decimalSeparator  TEXT NOT NULL DEFAULT ',',
+    groupSeparator    TEXT NOT NULL DEFAULT '.'
 );
 
 selectAll:
@@ -12,7 +15,8 @@ selectByCode:
 SELECT * FROM Currency WHERE code = ?;
 
 upsert:
-INSERT OR REPLACE INTO Currency(code, symbol, decimals, rateToBase) VALUES (?, ?, ?, ?);
+INSERT OR REPLACE INTO Currency(code, symbol, decimals, rateToBase, name, decimalSeparator, groupSeparator)
+VALUES (?, ?, ?, ?, ?, ?, ?);
 
 delete:
 DELETE FROM Currency WHERE code = ?;
