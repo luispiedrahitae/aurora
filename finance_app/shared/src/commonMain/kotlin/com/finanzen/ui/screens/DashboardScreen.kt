@@ -42,7 +42,6 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.finanzen.domain.Money
 import com.finanzen.ui.components.AutoSizeText
 import com.finanzen.ui.components.CategoryProgressRow
 import com.finanzen.ui.components.EmptyState
