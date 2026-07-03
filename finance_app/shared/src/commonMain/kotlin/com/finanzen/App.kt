@@ -31,7 +31,7 @@ fun App() {
     }
     // Formato de moneda global (símbolo desde Currency.symbol + posición elegida) para toda la app.
     val moneyFormat = remember(symbolPos, settingsVm.currencies) {
-        MoneyFormat(symbolPos, settingsVm.currencies.associate { it.code to it.symbol })
+        MoneyFormat(symbolPos, settingsVm.currencies.associateBy { it.code })
     }
     FinanZenTheme(darkTheme = darkTheme, accent = accent, useDynamic = dynamicColor) {
         CompositionLocalProvider(LocalMoneyFormat provides moneyFormat) {

@@ -17,13 +17,18 @@ data class Money(val amountMinor: Long, val currency: String) {
         return copy(amountMinor = amountMinor - other.amountMinor)
     }
 
-    fun format(decimals: Int = 2): String {
+    fun format(decimals: Int = 2, decimalSeparator: String = ".", groupSeparator: String = ""): String {
         val sign = if (amountMinor < 0) "-" else ""
         val abs = kotlin.math.abs(amountMinor)
         val divisor = pow10(decimals)
-        val whole = abs / divisor
-        val frac = abs % divisor
-        return if (decimals == 0) "$sign$whole" else "$sign$whole.${frac.toString().padStart(decimals, '0')}"
+        val whole = (abs / divisor).toString()
+        val frac = (abs % divisor).toString().padStart(decimals, '0')
+        val groupedWhole = if (groupSeparator.isEmpty()) {
+            whole
+        } else {
+            whole.reversed().chunked(3).joinToString(groupSeparator).reversed()
+        }
+        return if (decimals == 0) "$sign$groupedWhole" else "$sign$groupedWhole$decimalSeparator$frac"
     }
 
     private fun pow10(n: Int): Long {
