@@ -142,13 +142,14 @@ private fun BalanceHeroCard(
     val expenseRed = finance.expense
     val haptic = LocalHapticFeedback.current
 
-    // El balance es el neto del mes (ingresos − gastos). Sin símbolo de moneda: el número solo,
-    // para que la cifra grande siempre quepa. Los ingresos/gastos de abajo sí llevan símbolo.
+    // El balance es el neto del mes (ingresos − gastos), con el mismo formato global (símbolo +
+    // separadores) que el resto de montos de la app. AutoSizeText se encarga de que la cifra
+    // grande siempre quepa en una línea, así que no hace falta omitir el símbolo.
     val fmt = LocalMoneyFormat.current
     val balance = monthIncome - monthExpense
     val balanceColor = if (balance >= 0) onSurface else expenseRed
     val animatedBalance by animateFloatAsState(targetValue = balance.toFloat(), animationSpec = tween(400))
-    val balanceText = if (hidden) MASK else Money(animatedBalance.toLong(), currency).format()
+    val balanceText = if (hidden) MASK else fmt.format(animatedBalance.toLong(), currency)
 
     val totalFlow = monthIncome + monthExpense
     val incomeFraction by animateFloatAsState(
