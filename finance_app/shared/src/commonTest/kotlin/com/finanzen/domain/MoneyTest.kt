@@ -44,4 +44,22 @@ class MoneyTest {
         assertFailsWith<IllegalArgumentException> { CurrencyCode("US") }
         assertFailsWith<IllegalArgumentException> { CurrencyCode("USDD") }
     }
+
+    @Test
+    fun formatConAgrupacionAnglosajona() {
+        // 1,234,567.89 — punto decimal, coma de miles (ej. USD)
+        assertEquals("1,234,567.89", Money(123456789, "USD").format(2, ".", ","))
+    }
+
+    @Test
+    fun formatConAgrupacionLatina() {
+        // 1.234.567,89 — coma decimal, punto de miles (ej. EUR/COP)
+        assertEquals("1.234.567,89", Money(123456789, "EUR").format(2, ",", "."))
+    }
+
+    @Test
+    fun formatSinDecimalesConAgrupacion() {
+        // JPY-like: sin decimales, con miles
+        assertEquals("1,234,567", Money(1234567, "JPY").format(0, ".", ","))
+    }
 }
