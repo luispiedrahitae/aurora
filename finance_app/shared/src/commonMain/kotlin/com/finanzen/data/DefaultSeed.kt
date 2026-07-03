@@ -19,6 +19,12 @@ fun seedIfEmpty(db: FinanzenDb) {
             db.transaction {
                 db.settingQueries.put(KEY_SEEDED, "true")
 
+                // Las monedas van primero: la cuenta "Efectivo" de más abajo referencia
+                // currency = "USD" por FK, así que Currency debe tener filas antes de insertar
+                // cuentas (SQLite no exige FKs por defecto, pero no hay que depender de eso).
+                upsertWorldCurrencies(db)
+                db.settingQueries.put(KEY_CURRENCIES_EXPANDED, "true")
+
                 // (nombre, clave de icono, color ARGB). Las claves deben existir en categoryIcons (UI);
                 // el color es un ARGB de la paleta para que el seed inicial se vea variado.
                 val expenseSeeds = listOf(
@@ -65,9 +71,13 @@ fun seedIfEmpty(db: FinanzenDb) {
 private fun expandCurrenciesIfNeeded(db: FinanzenDb) {
     if (db.settingQueries.get(KEY_CURRENCIES_EXPANDED).executeAsOneOrNull() != null) return
     db.transaction {
-        WORLD_CURRENCIES.forEach { c ->
-            db.currencyQueries.upsert(c.code, c.symbol, c.decimals.toLong(), 1.0, c.name, c.decimalSeparator, c.groupSeparator)
-        }
+        upsertWorldCurrencies(db)
         db.settingQueries.put(KEY_CURRENCIES_EXPANDED, "true")
+    }
+}
+
+private fun upsertWorldCurrencies(db: FinanzenDb) {
+    WORLD_CURRENCIES.forEach { c ->
+        db.currencyQueries.upsert(c.code, c.symbol, c.decimals.toLong(), 1.0, c.name, c.decimalSeparator, c.groupSeparator)
     }
 }

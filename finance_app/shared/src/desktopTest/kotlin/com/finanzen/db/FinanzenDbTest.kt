@@ -30,7 +30,9 @@ class FinanzenDbTest {
         seedIfEmpty(db)
         val n2 = db.currencyQueries.selectAll().executeAsList().size
         assertEquals(n1, n2)
-        assertTrue(n1 >= 4)
+        // El dataset WORLD_CURRENCIES tiene 149 monedas; una regresión que rompa el seed
+        // expandido silenciosamente (ej. vuelve a solo las 4 originales) debe fallar aquí.
+        assertTrue(n1 >= 149)
     }
 
     @Test
