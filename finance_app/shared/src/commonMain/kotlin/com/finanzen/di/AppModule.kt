@@ -54,7 +54,7 @@ val sharedModule: Module = module {
     single { SettingsRepository(get()) }
     single { BudgetRepository(get()) }
 
-    viewModel { DashboardViewModel(get(), get(), get()) }
+    viewModel { DashboardViewModel(get(), get(), get(), get()) }
     viewModel { TransactionsViewModel(get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModel { CategoriesViewModel(get()) }
     viewModel { BudgetsViewModel(get(), get(), get()) }

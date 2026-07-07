@@ -3,6 +3,7 @@ package com.finanzen.viewmodel
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.finanzen.data.seedIfEmpty
 import com.finanzen.db.FinanzenDb
+import com.finanzen.ui.format.monthPeriod
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
@@ -41,6 +42,7 @@ class DashboardViewModelTest {
             txs = db.transactionQueries.selectAll().executeAsList(),
             accounts = db.accountQueries.selectAll().executeAsList(),
             cats = db.categoryQueries.selectAll().executeAsList(),
+            budgets = emptyList(),
             firstOfMonth = LocalDate(today.year, today.month, 1),
         )
 
@@ -81,6 +83,7 @@ class DashboardViewModelTest {
             // selectAll() de transacciones SÍ trae la de la cuenta archivada
             txs = db.transactionQueries.selectAll().executeAsList(),
             cats = db.categoryQueries.selectAll().executeAsList(),
+            budgets = emptyList(),
             firstOfMonth = LocalDate(today.year, today.month, 1),
         )
 
@@ -115,6 +118,7 @@ class DashboardViewModelTest {
             accounts = db.accountQueries.selectAll().executeAsList(),
             txs = db.transactionQueries.selectAll().executeAsList(),
             cats = db.categoryQueries.selectAll().executeAsList(),
+            budgets = emptyList(),
             firstOfMonth = LocalDate(today.year, today.month, 1),
         )
 
@@ -147,6 +151,7 @@ class DashboardViewModelTest {
             accounts = db.accountQueries.selectAll().executeAsList(),
             txs = db.transactionQueries.selectAll().executeAsList(),
             cats = db.categoryQueries.selectAll().executeAsList(),
+            budgets = emptyList(),
             firstOfMonth = LocalDate(today.year, today.month, 1),
         )
 
@@ -155,5 +160,117 @@ class DashboardViewModelTest {
         assertEquals(8_000, data.topExpenses.first().amountMinor)
         // El desglose del mes sigue siendo solo del mes en curso.
         assertEquals(3_000, data.monthExpenseMinor)
+    }
+
+    @Test
+    fun tasaDeAhorroEsCeroSinIngresos() {
+        val db = freshDb()
+        seedIfEmpty(db)
+        val account = db.accountQueries.selectAll().executeAsList().first()
+        val expenseCat = db.categoryQueries.selectByKind("EXPENSE").executeAsList().first()
+
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        val todayEpoch = today.toEpochDays().toLong()
+
+        // Solo un gasto este mes, sin ingresos.
+        db.transactionQueries.insert(
+            account.id, expenseCat.id, 4_000, account.currency, todayEpoch, "gasto", "EXPENSE", null, null,
+        )
+
+        val data = DashboardViewModel.computeDashboard(
+            accounts = db.accountQueries.selectAll().executeAsList(),
+            txs = db.transactionQueries.selectAll().executeAsList(),
+            cats = db.categoryQueries.selectAll().executeAsList(),
+            budgets = emptyList(),
+            firstOfMonth = LocalDate(today.year, today.month, 1),
+        )
+
+        // Sin ingresos, la tasa de ahorro es 0 (no divide por cero).
+        assertEquals(0f, data.savingsRate)
+    }
+
+    @Test
+    fun tasaDeAhorroEntreCeroYUno() {
+        val db = freshDb()
+        seedIfEmpty(db)
+        val account = db.accountQueries.selectAll().executeAsList().first()
+        val expenseCat = db.categoryQueries.selectByKind("EXPENSE").executeAsList().first()
+        val incomeCat = db.categoryQueries.selectByKind("INCOME").executeAsList().first()
+
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        val todayEpoch = today.toEpochDays().toLong()
+
+        db.transactionQueries.insert(
+            account.id, incomeCat.id, 10_000, account.currency, todayEpoch, "salario", "INCOME", null, null,
+        )
+        db.transactionQueries.insert(
+            account.id, expenseCat.id, 4_000, account.currency, todayEpoch, "gasto", "EXPENSE", null, null,
+        )
+
+        val data = DashboardViewModel.computeDashboard(
+            accounts = db.accountQueries.selectAll().executeAsList(),
+            txs = db.transactionQueries.selectAll().executeAsList(),
+            cats = db.categoryQueries.selectAll().executeAsList(),
+            budgets = emptyList(),
+            firstOfMonth = LocalDate(today.year, today.month, 1),
+        )
+
+        // (10000 - 4000) / 10000 = 0.6
+        assertEquals(0.6f, data.savingsRate)
+    }
+
+    @Test
+    fun cuentaDeCreditoQuedaNegativaEnAccountBar() {
+        val db = freshDb()
+        seedIfEmpty(db)
+        val expenseCat = db.categoryQueries.selectByKind("EXPENSE").executeAsList().first()
+
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        val todayEpoch = today.toEpochDays().toLong()
+
+        // Tarjeta de crédito con saldo inicial 0 (name, type, currency, opening, color, archived).
+        db.accountQueries.insert("Tarjeta", "CREDIT", "USD", 0, 0, 0)
+        val tarjeta = db.accountQueries.selectAll().executeAsList().first { it.name == "Tarjeta" }
+        db.transactionQueries.insert(
+            tarjeta.id, expenseCat.id, 4_000, tarjeta.currency, todayEpoch, "compra", "EXPENSE", null, null,
+        )
+
+        val data = DashboardViewModel.computeDashboard(
+            accounts = db.accountQueries.selectAll().executeAsList(),
+            txs = db.transactionQueries.selectAll().executeAsList(),
+            cats = db.categoryQueries.selectAll().executeAsList(),
+            budgets = emptyList(),
+            firstOfMonth = LocalDate(today.year, today.month, 1),
+        )
+
+        // Opening 0 menos el gasto de 4000: la barra de la cuenta CREDIT queda negativa.
+        assertEquals(-4_000, data.accounts.first { it.type == "CREDIT" }.balanceMinor)
+    }
+
+    @Test
+    fun presupuestoSoloIncluyeCategoriasConLimite() {
+        val db = freshDb()
+        seedIfEmpty(db)
+        val expenseCats = db.categoryQueries.selectByKind("EXPENSE").executeAsList()
+        val budgetedCat = expenseCats.first()
+
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        val firstOfMonth = LocalDate(today.year, today.month, 1)
+        val periodMonth = monthPeriod(firstOfMonth)
+
+        // Solo una categoría de gasto tiene presupuesto (categoryId, periodMonth, limitMinor).
+        db.budgetQueries.upsert(budgetedCat.id, periodMonth, 5_000)
+
+        val data = DashboardViewModel.computeDashboard(
+            accounts = db.accountQueries.selectAll().executeAsList(),
+            txs = db.transactionQueries.selectAll().executeAsList(),
+            cats = db.categoryQueries.selectAll().executeAsList(),
+            budgets = db.budgetQueries.selectAll().executeAsList(),
+            firstOfMonth = firstOfMonth,
+        )
+
+        // Solo la categoría con límite > 0 aparece en presupuestos.
+        assertEquals(1, data.budgets.size)
+        assertEquals(budgetedCat.id, data.budgets.first().categoryId)
     }
 }
