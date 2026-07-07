@@ -78,6 +78,8 @@ data class FinanceColors(
     val expense: Color,
     val expenseContainer: Color,
     val neutral: Color,
+    val warning: Color,
+    val warningContainer: Color,
 )
 
 internal val LightFinanceColors = FinanceColors(
@@ -86,6 +88,8 @@ internal val LightFinanceColors = FinanceColors(
     expense = Color(0xFFB13E53),
     expenseContainer = Color(0xFFFADDE2),
     neutral = Color(0xFF5A6661),
+    warning = Color(0xFF8A5A00),
+    warningContainer = Color(0xFFFBEAC6),
 )
 
 internal val DarkFinanceColors = FinanceColors(
@@ -94,6 +98,8 @@ internal val DarkFinanceColors = FinanceColors(
     expense = Color(0xFFFF9DAE),
     expenseContainer = Color(0xFF512530),
     neutral = Color(0xFFA3AEA8),
+    warning = Color(0xFFF5BE4F),
+    warningContainer = Color(0xFF4A3410),
 )
 
 val LocalFinanceColors = staticCompositionLocalOf { LightFinanceColors }
