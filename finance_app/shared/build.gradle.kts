@@ -43,8 +43,6 @@ kotlin {
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.navigation.compose)
 
-            implementation(libs.koalaplot.core)
-
             implementation(libs.coil.compose)
             implementation(libs.coil.network.ktor)
         }

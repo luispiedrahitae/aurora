@@ -24,9 +24,5 @@
 # Coroutines
 -dontwarn kotlinx.coroutines.**
 
-# koalaplot (charts) — usa reflexión/genéricos; sin esto el donut puede romper ofuscado
--keep class io.github.koalaplot.** { *; }
--dontwarn io.github.koalaplot.**
-
 # kotlinx-datetime
 -dontwarn kotlinx.datetime.**

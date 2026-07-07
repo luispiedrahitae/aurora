@@ -12,6 +12,7 @@ import com.finanzen.data.TransactionRepository
 import com.finanzen.db.Account
 import com.finanzen.db.Category
 import com.finanzen.db.TransactionRow
+import com.finanzen.domain.InstallmentMath
 import com.finanzen.platform.NotificationScheduler
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -44,10 +45,15 @@ class TransactionsViewModel(
     /** Lectura directa (no depende de que el flow esté activo) para precargar el formulario de edición. */
     fun transactionById(id: Long): TransactionRow? = txRepo.byId(id)
 
+    /** Tarjeta asociada a la cuenta, si es de tipo CREDIT — para el preview de cuotas en el formulario. */
+    fun cardFor(accountId: Long) = cardRepo.byAccount(accountId)
+
     /**
      * Crea (id null) o actualiza una transacción. La moneda se toma de la cuenta elegida.
-     * Si es un gasto con tarjeta de crédito y [installments] > 1, registra un plan de cuotas y lo
-     * enlaza. `// ponytail:` captura mínima; la amortización/edición de cuotas se diseña aparte.
+     * Si es un gasto con tarjeta de crédito y [installments] > 1, [amountMinor] es el monto TOTAL
+     * de la compra: se crea un plan de cuotas (interés tomado de la tarjeta) y esta transacción
+     * queda como la cuota 1 (monto = cuota mensual, no el total); las cuotas 2..N las genera
+     * `AccountsViewModel.postDueInstallments()` automáticamente mes a mes.
      */
     fun save(
         id: Long?,
@@ -58,15 +64,15 @@ class TransactionsViewModel(
         note: String,
         dateEpochDay: Long,
         installments: Long = 1,
-        interestRate: Double? = null,
     ) {
         val account = accounts.value.firstOrNull { it.id == accountId }
             ?: accountRepo.allIncludingArchived().firstOrNull { it.id == accountId }
         val currency = account?.currency ?: "USD"
         if (id == null) {
-            val planId = maybeCreatePlan(account, kind, amountMinor, installments, interestRate, dateEpochDay, note)
-            txRepo.add(accountId, categoryId, amountMinor, currency, dateEpochDay, note, kind, planId)
-            maybeNotifyBudget(categoryId, kind, amountMinor, dateEpochDay)
+            val plan = maybeCreatePlan(account, kind, categoryId, amountMinor, installments, dateEpochDay, note)
+            val postedAmount = plan?.firstInstallmentMinor ?: amountMinor
+            txRepo.add(accountId, categoryId, postedAmount, currency, dateEpochDay, note, kind, plan?.planId)
+            maybeNotifyBudget(categoryId, kind, postedAmount, dateEpochDay)
         } else {
             txRepo.update(id, accountId, categoryId, amountMinor, currency, dateEpochDay, note, kind)
         }
@@ -92,19 +98,24 @@ class TransactionsViewModel(
         }
     }
 
+    private data class PlanCreation(val planId: Long, val firstInstallmentMinor: Long)
+
     /** Crea un plan de cuotas solo para gastos con tarjeta de crédito y más de una cuota. */
     private fun maybeCreatePlan(
         account: Account?,
         kind: String,
+        categoryId: Long?,
         amountMinor: Long,
         installments: Long,
-        interestRate: Double?,
         dateEpochDay: Long,
         note: String,
-    ): Long? {
+    ): PlanCreation? {
         if (kind != "EXPENSE" || account?.type != "CREDIT" || installments <= 1) return null
         val card = cardRepo.byAccount(account.id) ?: return null
-        return planRepo.add(card.id, amountMinor, installments, interestRate ?: 0.0, dateEpochDay, note)
+        val rate = card.interestRate ?: 0.0
+        val planId = planRepo.add(card.id, categoryId, amountMinor, installments, rate, dateEpochDay, note)
+        val firstInstallment = InstallmentMath.monthlyPaymentMinor(amountMinor, installments, rate)
+        return PlanCreation(planId, firstInstallment)
     }
 
     /** Crea o actualiza una transferencia entre dos cuentas (misma moneda; la app no maneja FX). */

@@ -12,7 +12,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.UnfoldMore
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -53,6 +52,7 @@ fun <T> PickerField(
     placeholder: String = "Selecciona…",
     emptyHint: String = "No hay opciones disponibles.",
     leadingContent: (@Composable (T) -> Unit)? = null,
+    trailingLabel: ((T) -> String?)? = null,
     searchable: Boolean = false,
     searchPredicate: ((T, String) -> Boolean)? = null,
     sectionOf: ((T) -> String?)? = null,
@@ -170,11 +170,11 @@ fun <T> PickerField(
                                             MaterialTheme.colorScheme.onSurface
                                         },
                                     )
-                                    if (isSelected) {
-                                        Icon(
-                                            Icons.Outlined.Check,
-                                            contentDescription = "Seleccionado",
-                                            tint = MaterialTheme.colorScheme.primary,
+                                    trailingLabel?.invoke(option)?.let { label ->
+                                        Text(
+                                            label,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         )
                                     }
                                 }

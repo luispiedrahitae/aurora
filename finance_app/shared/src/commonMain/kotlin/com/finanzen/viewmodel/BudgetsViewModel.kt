@@ -8,6 +8,8 @@ import com.finanzen.data.TransactionRepository
 import com.finanzen.db.Budget
 import com.finanzen.db.Category
 import com.finanzen.db.TransactionRow
+import com.finanzen.ui.format.monthPeriod
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -35,17 +37,29 @@ class BudgetsViewModel(
     txRepo: TransactionRepository,
 ) : ViewModel() {
 
+    private val _month = MutableStateFlow(
+        run {
+            val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+            LocalDate(today.year, today.month, 1)
+        },
+    )
+    val month: StateFlow<LocalDate> = _month
+
+    fun setMonth(month: LocalDate) {
+        _month.value = month
+    }
+
     val data: StateFlow<BudgetsData> =
         combine(
             budgetRepo.observeAll(),
             categoryRepo.observeAll(),
             txRepo.observeAll(),
-        ) { budgets, cats, txs ->
-            val period = currentPeriodMonth()
-            computeBudgets(budgets, cats, txs, period)
+            _month,
+        ) { budgets, cats, txs, month ->
+            computeBudgets(budgets, cats, txs, monthPeriod(month))
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BudgetsData(currentPeriodMonth(), emptyList()))
 
-    fun setLimit(categoryId: Long, limitMinor: Long) = budgetRepo.setLimit(categoryId, currentPeriodMonth(), limitMinor)
+    fun setLimit(categoryId: Long, limitMinor: Long) = budgetRepo.setLimit(categoryId, monthPeriod(_month.value), limitMinor)
 
     companion object {
         /** YYYYMM del mes en curso, p.ej. 202606. */
@@ -62,7 +76,9 @@ class BudgetsViewModel(
             txs: List<TransactionRow>,
             period: Long,
         ): BudgetsData {
-            val limitByCat = budgets.filter { it.periodMonth == period }.associate { it.categoryId to it.limitMinor }
+            // Herencia: si el mes no tiene una fila propia, se usa la más reciente anterior a él.
+            val limitByCat = budgets.groupBy { it.categoryId }
+                .mapValues { (_, rows) -> rows.filter { it.periodMonth <= period }.maxByOrNull { it.periodMonth }?.limitMinor ?: 0L }
             val spentByCat = txs.asSequence()
                 .filter { it.kind == "EXPENSE" && it.categoryId != null && monthOf(it.date) == period }
                 .groupBy { it.categoryId!! }

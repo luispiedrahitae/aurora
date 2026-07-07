@@ -26,10 +26,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.finanzen.data.CURRENCY_LOCALE_INFO
+import com.finanzen.domain.SymbolPosition
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.PickerField
 import com.finanzen.ui.components.SectionHeader
-import com.finanzen.ui.theme.SymbolPosition
 import com.finanzen.viewmodel.SettingsViewModel
 import org.koin.compose.koinInject
 
@@ -92,6 +93,9 @@ fun CurrencyScreen(
             item { SectionHeader("Símbolo") }
             item {
                 val sym = vm.currencies.firstOrNull { it.code == baseCurrency }?.symbol ?: "$"
+                // Posición real que resultaría de "Automático" para la moneda elegida (CLDR).
+                val autoPosition = CURRENCY_LOCALE_INFO[baseCurrency]?.symbolPosition ?: SymbolPosition.PREFIX
+                val autoPreview = if (autoPosition == SymbolPosition.SUFFIX) "1.000 $sym" else "${sym}1.000"
                 FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(0.dp)) {
                     Column {
                         Text(
@@ -100,6 +104,7 @@ fun CurrencyScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
                         )
+                        SymbolOption("Automático  ($autoPreview)", SymbolPosition.AUTO, symbolPos, vm::setSymbolPosition)
                         SymbolOption("Antes  (${sym}1.000)", SymbolPosition.PREFIX, symbolPos, vm::setSymbolPosition)
                         SymbolOption("Después  (1.000 $sym)", SymbolPosition.SUFFIX, symbolPos, vm::setSymbolPosition)
                         SymbolOption("Sin símbolo  (1.000)", SymbolPosition.NONE, symbolPos, vm::setSymbolPosition)

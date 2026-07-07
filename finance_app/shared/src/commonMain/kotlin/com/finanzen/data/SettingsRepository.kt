@@ -37,8 +37,8 @@ class SettingsRepository(private val db: FinanzenDb) {
 
     fun setHideAmountsEnabled(enabled: Boolean) = db.settingQueries.put(KEY_HIDE_AMOUNTS, enabled.toString())
 
-    /** Posición del símbolo de moneda en los montos: prefix (default) | suffix | none. */
-    fun symbolPosition(): String = db.settingQueries.get(KEY_SYMBOL_POS).executeAsOneOrNull() ?: "prefix"
+    /** Posición del símbolo de moneda en los montos: auto (default, según CLDR) | prefix | suffix | none. */
+    fun symbolPosition(): String = db.settingQueries.get(KEY_SYMBOL_POS).executeAsOneOrNull() ?: "auto"
 
     fun setSymbolPosition(pos: String) = db.settingQueries.put(KEY_SYMBOL_POS, pos)
 
@@ -51,14 +51,36 @@ class SettingsRepository(private val db: FinanzenDb) {
     fun baseCurrency(): String = db.settingQueries.get(KEY_CURRENCY).executeAsOneOrNull() ?: DEFAULT_CURRENCY
 
     /**
-     * Cambia la moneda base y re-etiqueta cuentas y transacciones existentes.
-     * ponytail: re-etiqueta sin convertir montos (no hay FX). Si algún día se soporta multi-moneda
-     * real, aquí iría la conversión con tasas.
+     * Cambia la moneda base y re-etiqueta cuentas, transacciones, presupuestos, cupos de tarjeta y
+     * planes de cuotas existentes, reescalando cada monto por la diferencia de decimales entre la
+     * moneda vieja y la nueva para que el número que el usuario ve se mantenga igual (40.000 en COP
+     * sigue siendo 40.000 al pasar a USD). No es conversión de moneda: `rateToBase` sigue sin usarse,
+     * esto solo corrige que cada moneda representa sus unidades mínimas con una cantidad de decimales
+     * distinta (COP=0, USD=2...). Suscripciones/gastos recurrentes tienen su propia columna `currency`
+     * independiente y quedan fuera de este re-etiquetado.
      */
-    fun setBaseCurrency(code: String) = db.transaction {
-        db.settingQueries.put(KEY_CURRENCY, code)
-        db.accountQueries.setAllCurrency(code)
-        db.transactionQueries.setAllCurrency(code)
+    fun setBaseCurrency(code: String) {
+        val oldCode = baseCurrency()
+        if (oldCode == code) return
+        val oldDecimals = db.currencyQueries.selectByCode(oldCode).executeAsOneOrNull()?.decimals?.toInt() ?: 2
+        val newDecimals = db.currencyQueries.selectByCode(code).executeAsOneOrNull()?.decimals?.toInt() ?: 2
+        val diff = newDecimals - oldDecimals
+        val mult = if (diff >= 0) pow10(diff) else 1L
+        val div = if (diff < 0) pow10(-diff) else 1L
+        db.transaction {
+            db.settingQueries.put(KEY_CURRENCY, code)
+            db.accountQueries.setAllCurrency(code, mult, div)
+            db.transactionQueries.setAllCurrency(code, mult, div)
+            db.budgetQueries.rescaleAllLimits(mult, div)
+            db.cardQueries.rescaleAllCreditLimits(mult, div)
+            db.installmentPlanQueries.rescaleAllTotals(mult, div)
+        }
+    }
+
+    private fun pow10(n: Int): Long {
+        var r = 1L
+        repeat(n) { r *= 10 }
+        return r
     }
 
     companion object {

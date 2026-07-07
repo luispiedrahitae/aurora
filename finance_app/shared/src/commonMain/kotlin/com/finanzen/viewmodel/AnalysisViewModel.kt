@@ -4,22 +4,31 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.finanzen.data.CategoryRepository
 import com.finanzen.data.TransactionRepository
+import com.finanzen.db.TransactionRow
+import com.finanzen.ui.format.monthPeriod
+import com.finanzen.ui.format.periodOfEpochDay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.datetime.Clock
+import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
 
-data class CategorySlice(val name: String, val amountMinor: Long, val pct: Float, val colorHex: Long)
+data class CategorySlice(val name: String, val amountMinor: Long, val pct: Float)
+
+/** Un mes del gráfico anual de gastos. */
+data class MonthExpense(val label: String, val expenseMinor: Long)
 
 data class AnalysisData(
     val totalIncomeMinor: Long,
     val totalExpenseMinor: Long,
-    val byCategory: List<CategorySlice>,
+    val topExpenses: List<CategorySlice>,
+    val yearlyExpenses: List<MonthExpense>,
     val currency: String,
 )
 
@@ -54,37 +63,42 @@ class AnalysisViewModel(
 
             val catNameById = cats.associate { it.id to it.name }
             val totalExp = expenses.coerceAtLeast(1L)
-            val slices = byCatId.entries
+            val topExpenses = byCatId.entries
                 .sortedByDescending { it.value }
-                .mapIndexed { idx, (catId, amount) ->
+                .map { (catId, amount) ->
                     CategorySlice(
                         name = catNameById[catId] ?: "Sin categoría",
                         amountMinor = amount,
                         pct = amount.toFloat() / totalExp.toFloat(),
-                        colorHex = palette[idx % palette.size],
                     )
                 }
-            AnalysisData(incomes, expenses, slices, currency)
+
+            val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+            val yearlyExpenses = computeYearlyExpenses(txs, LocalDate(today.year, today.month, 1))
+
+            AnalysisData(incomes, expenses, topExpenses, yearlyExpenses, currency)
         }.stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5_000),
-            AnalysisData(0, 0, emptyList(), "USD"),
+            AnalysisData(0, 0, emptyList(), emptyList(), "USD"),
         )
-
-    private fun monthPeriod(d: LocalDate): Long = (d.year * 100 + d.monthNumber).toLong()
-
-    private fun periodOfEpochDay(epochDay: Long): Long = monthPeriod(LocalDate.fromEpochDays(epochDay.toInt()))
 
     companion object {
-        private val palette: List<Long> = listOf(
-            0xFF1E6F5C,
-            0xFF4A635D,
-            0xFF8E6B33,
-            0xFFB13E53,
-            0xFF7A4988,
-            0xFF2E6E9D,
-            0xFFCB763E,
-            0xFF566246,
-        )
+        private const val YEARLY_MONTHS = 12
+
+        /** Gasto de cada uno de los últimos 12 meses relativos a [referenceMonth] (ventana fija,
+         * no depende del mes seleccionado en pantalla). */
+        internal fun computeYearlyExpenses(txs: List<TransactionRow>, referenceMonth: LocalDate): List<MonthExpense> {
+            val expenseByPeriod = txs.filter { it.kind == "EXPENSE" }
+                .groupBy { periodOfEpochDay(it.date) }
+                .mapValues { (_, list) -> list.sumOf { it.amountMinor } }
+            return (YEARLY_MONTHS - 1 downTo 0).map { back ->
+                val m = referenceMonth.plus(DatePeriod(months = -back))
+                MonthExpense(
+                    label = "${m.monthNumber}/${m.year % 100}",
+                    expenseMinor = expenseByPeriod[monthPeriod(m)] ?: 0L,
+                )
+            }
+        }
     }
 }

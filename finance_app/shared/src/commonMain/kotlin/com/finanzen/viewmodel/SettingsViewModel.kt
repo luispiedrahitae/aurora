@@ -4,9 +4,9 @@ import androidx.lifecycle.ViewModel
 import com.finanzen.data.CurrencyRepository
 import com.finanzen.data.SettingsRepository
 import com.finanzen.db.Currency
+import com.finanzen.domain.SymbolPosition
 import com.finanzen.ui.theme.AccentPreset
 import com.finanzen.ui.theme.MoneyFormat
-import com.finanzen.ui.theme.SymbolPosition
 import com.finanzen.ui.theme.dynamicColorSupported
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

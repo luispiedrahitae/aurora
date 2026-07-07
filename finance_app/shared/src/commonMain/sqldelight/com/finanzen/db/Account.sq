@@ -22,6 +22,9 @@ update:
 UPDATE Account SET name = ?, type = ?, currency = ?, openingBalanceMinor = ?, color = ?, archived = ?
 WHERE id = ?;
 
+updateBasics:
+UPDATE Account SET name = ?, openingBalanceMinor = ? WHERE id = ?;
+
 archive:
 UPDATE Account SET archived = 1 WHERE id = ?;
 
@@ -35,7 +38,7 @@ unarchive:
 UPDATE Account SET archived = 0 WHERE id = ?;
 
 setAllCurrency:
-UPDATE Account SET currency = ?;
+UPDATE Account SET currency = ?, openingBalanceMinor = (openingBalanceMinor * ?) / ?;
 
 delete:
 DELETE FROM Account WHERE id = ?;

@@ -1,7 +1,9 @@
 package com.finanzen.db
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import com.finanzen.data.SettingsRepository
 import com.finanzen.data.seedIfEmpty
+import java.util.Locale
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -45,6 +47,33 @@ class FinanzenDbTest {
         seedIfEmpty(db)
         assertEquals(cats, db.categoryQueries.selectAll().executeAsList().size)
         assertTrue(db.accountQueries.selectAll().executeAsList().isEmpty())
+    }
+
+    @Test
+    fun seedPrimerArranqueUsaMonedaDelLocaleDelSistema() {
+        val original = Locale.getDefault()
+        try {
+            Locale.setDefault(Locale("es", "CO"))
+            val db = freshDb()
+            seedIfEmpty(db)
+            assertEquals("COP", db.settingQueries.get(SettingsRepository.KEY_CURRENCY).executeAsOne())
+            assertEquals("COP", db.accountQueries.selectAll().executeAsList().single().currency)
+        } finally {
+            Locale.setDefault(original)
+        }
+    }
+
+    @Test
+    fun seedPrimerArranqueSinPaisConocidoUsaUsd() {
+        val original = Locale.getDefault()
+        try {
+            Locale.setDefault(Locale("", "")) // sin país -> COUNTRY_TO_CURRENCY no tiene match
+            val db = freshDb()
+            seedIfEmpty(db)
+            assertEquals(SettingsRepository.DEFAULT_CURRENCY, db.settingQueries.get(SettingsRepository.KEY_CURRENCY).executeAsOne())
+        } finally {
+            Locale.setDefault(original)
+        }
     }
 
     @Test

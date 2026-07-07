@@ -28,5 +28,11 @@ update:
 UPDATE Card SET accountId = ?, last4 = ?, network = ?, creditLimitMinor = ?, cutoffDay = ?, dueDay = ?, interestRate = ?
 WHERE id = ?;
 
+updateCreditTerms:
+UPDATE Card SET creditLimitMinor = ?, cutoffDay = ?, dueDay = ?, interestRate = ? WHERE id = ?;
+
 delete:
 DELETE FROM Card WHERE id = ?;
+
+rescaleAllCreditLimits:
+UPDATE Card SET creditLimitMinor = (creditLimitMinor * ?) / ? WHERE creditLimitMinor IS NOT NULL;

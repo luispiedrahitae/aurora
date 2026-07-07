@@ -22,3 +22,6 @@ INSERT OR REPLACE INTO Budget(categoryId, periodMonth, limitMinor) VALUES (?, ?,
 
 delete:
 DELETE FROM Budget WHERE id = ?;
+
+rescaleAllLimits:
+UPDATE Budget SET limitMinor = (limitMinor * ?) / ?;

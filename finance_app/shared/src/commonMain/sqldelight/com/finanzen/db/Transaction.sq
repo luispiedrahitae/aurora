@@ -50,7 +50,10 @@ SET accountId = ?, categoryId = ?, amountMinor = ?, currency = ?, date = ?, note
 WHERE id = ?;
 
 setAllCurrency:
-UPDATE TransactionRow SET currency = ?;
+UPDATE TransactionRow SET currency = ?, amountMinor = (amountMinor * ?) / ?;
 
 delete:
 DELETE FROM TransactionRow WHERE id = ?;
+
+countByInstallmentPlan:
+SELECT COUNT(*) FROM TransactionRow WHERE installmentPlanId = ?;

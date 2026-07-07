@@ -8,13 +8,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.Delete
@@ -22,6 +25,7 @@ import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SwapHoriz
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -59,8 +63,12 @@ import com.finanzen.ui.components.MainTabHeader
 import com.finanzen.ui.components.MoneyText
 import com.finanzen.ui.components.MonthSelector
 import com.finanzen.ui.components.categoryColor
-import com.finanzen.ui.format.formatDiaMes
+import com.finanzen.ui.components.kindLabel
+import com.finanzen.ui.format.diaSemana
 import com.finanzen.ui.format.formatMesAnio
+import com.finanzen.ui.format.monthPeriod
+import com.finanzen.ui.format.periodOfEpochDay
+import com.finanzen.ui.theme.LocalDateLocale
 import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.viewmodel.TransactionsViewModel
@@ -73,24 +81,17 @@ import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
 import org.koin.compose.viewmodel.koinViewModel
 
-private fun monthPeriod(d: LocalDate): Long = (d.year * 100 + d.monthNumber).toLong()
+private fun dayIncome(rows: List<TransactionRow>): Long = rows.filter { it.kind == "INCOME" }.sumOf { it.amountMinor }
 
-private fun periodOfEpochDay(epochDay: Long): Long = monthPeriod(LocalDate.fromEpochDays(epochDay.toInt()))
+private fun dayExpense(rows: List<TransactionRow>): Long = rows.filter { it.kind == "EXPENSE" }.sumOf { it.amountMinor }
 
-/** Balance del día = ingresos − gastos (las transferencias no cuentan). */
-private fun dayBalance(rows: List<TransactionRow>): Long = rows.sumOf {
-    when (it.kind) {
-        "INCOME" -> it.amountMinor
-        "EXPENSE" -> -it.amountMinor
-        else -> 0L
-    }
-}
-
-private fun kindLabel(kind: String): String = when (kind) {
-    "INCOME" -> "Ingreso"
-    "TRANSFER" -> "Transferencia"
-    else -> "Gasto"
-}
+// Tarjeta de día armada con 3 piezas (cabecera, filas, resumen) que comparten el mismo
+// fondo (surfaceContainer) pero solo redondean sus bordes externos, para que juntas se
+// vean como una sola tarjeta redondeada en vez de una lista plana.
+private val CardRadius = 28.dp // mismo radio que MaterialTheme.shapes.large
+private val DayCardTopShape = RoundedCornerShape(topStart = CardRadius, topEnd = CardRadius)
+private val DayCardBottomShape = RoundedCornerShape(bottomStart = CardRadius, bottomEnd = CardRadius)
+private val DayCardFullShape = RoundedCornerShape(CardRadius)
 
 @Composable
 fun TransactionsScreen(
@@ -101,6 +102,7 @@ fun TransactionsScreen(
     val categories by vm.categories.collectAsState()
     val accounts by vm.allAccounts.collectAsState()
     val spacing = LocalSpacing.current
+    val dateLocale = LocalDateLocale.current
     var query by remember { mutableStateOf("") }
     val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
     var month by remember { mutableStateOf(LocalDate(today.year, today.month, 1)) }
@@ -152,7 +154,7 @@ fun TransactionsScreen(
             MainTabHeader(title = "Movimientos")
             Column(Modifier.fillMaxSize().padding(horizontal = spacing.lg)) {
                 MonthSelector(
-                    label = formatMesAnio(month),
+                    label = formatMesAnio(month, dateLocale),
                     onPrev = { month = month.plus(DatePeriod(months = -1)) },
                     onNext = { month = month.plus(DatePeriod(months = 1)) },
                 )
@@ -185,10 +187,14 @@ fun TransactionsScreen(
                         groups.forEach { (day, dayRows) ->
                             // Con búsqueda activa se muestran expandidos para ver los resultados.
                             val expanded = searching || (expandedDays[day] != false)
+                            val d = LocalDate.fromEpochDays(day.toInt())
                             item(key = "h_$day") {
                                 DayHeader(
-                                    label = formatDiaMes(day),
-                                    balanceMinor = dayBalance(dayRows),
+                                    dayNumber = d.dayOfMonth.toString().padStart(2, '0'),
+                                    weekday = diaSemana(day),
+                                    count = dayRows.size,
+                                    incomeMinor = dayIncome(dayRows),
+                                    expenseMinor = dayExpense(dayRows),
                                     currency = dayRows.first().currency,
                                     expanded = expanded,
                                     onToggle = { expandedDays[day] = !(expandedDays[day] != false) },
@@ -206,7 +212,16 @@ fun TransactionsScreen(
                                         modifier = Modifier.animateItem(),
                                     )
                                 }
+                                item(key = "f_$day") {
+                                    DaySummaryFooter(
+                                        incomeMinor = dayIncome(dayRows),
+                                        expenseMinor = dayExpense(dayRows),
+                                        currency = dayRows.first().currency,
+                                        modifier = Modifier.animateItem(),
+                                    )
+                                }
                             }
+                            item(key = "sp_$day") { Spacer(Modifier.height(spacing.sm)) }
                         }
                     }
                 }
@@ -215,11 +230,14 @@ fun TransactionsScreen(
     }
 }
 
-/** Cabecera de día (pestaña del acordeón): fecha + balance del día + chevron. */
+/** Cabecera de la tarjeta de día: número de día + nombre del día + cantidad de movimientos. */
 @Composable
 private fun DayHeader(
-    label: String,
-    balanceMinor: Long,
+    dayNumber: String,
+    weekday: String,
+    count: Int,
+    incomeMinor: Long,
+    expenseMinor: Long,
     currency: String,
     expanded: Boolean,
     onToggle: () -> Unit,
@@ -227,26 +245,94 @@ private fun DayHeader(
 ) {
     val spacing = LocalSpacing.current
     Row(
-        modifier = modifier.fillMaxWidth().clickable(onClick = onToggle).padding(vertical = spacing.sm),
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(if (expanded) DayCardTopShape else DayCardFullShape)
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .clickable(onClick = onToggle)
+            .padding(horizontal = spacing.lg, vertical = spacing.md),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(spacing.sm),
+        horizontalArrangement = Arrangement.spacedBy(spacing.md),
     ) {
+        Text(
+            dayNumber,
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Column(Modifier.weight(1f)) {
+            Text(
+                weekday.replaceFirstChar { it.uppercase() },
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Text(
+                if (count == 1) "1 movimiento" else "$count movimientos",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (!expanded) {
+            Column(horizontalAlignment = Alignment.End) {
+                MoneyText(
+                    amountMinor = incomeMinor,
+                    currency = currency,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    signed = true,
+                )
+                MoneyText(
+                    amountMinor = -expenseMinor,
+                    currency = currency,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    signed = true,
+                )
+            }
+        }
         Icon(
             if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
             contentDescription = if (expanded) "Contraer" else "Expandir",
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Text(
-            label,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1f),
-        )
+    }
+}
+
+/** Resumen del día (Ingreso/Gasto), visible solo cuando la tarjeta está expandida. */
+@Composable
+private fun DaySummaryFooter(
+    incomeMinor: Long,
+    expenseMinor: Long,
+    currency: String,
+    modifier: Modifier = Modifier,
+) {
+    val spacing = LocalSpacing.current
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(DayCardBottomShape)
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .padding(horizontal = spacing.lg, vertical = spacing.md),
+    ) {
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        Spacer(Modifier.height(spacing.sm))
+        SummaryRow("Ingreso", incomeMinor, currency)
+        SummaryRow("Gasto", -expenseMinor, currency)
+    }
+}
+
+@Composable
+private fun SummaryRow(label: String, amountMinor: Long, currency: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         MoneyText(
-            amountMinor = balanceMinor,
+            amountMinor = amountMinor,
             currency = currency,
-            style = MaterialTheme.typography.labelLarge,
+            style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
             signed = true,
         )
@@ -287,7 +373,6 @@ private fun TransactionItem(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .clip(MaterialTheme.shapes.medium)
                     .background(MaterialTheme.colorScheme.errorContainer)
                     .padding(horizontal = spacing.lg),
                 contentAlignment = Alignment.CenterEnd,
@@ -299,10 +384,9 @@ private fun TransactionItem(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(MaterialTheme.shapes.medium)
-                .background(MaterialTheme.colorScheme.background)
+                .background(MaterialTheme.colorScheme.surfaceContainer)
                 .clickable(onClick = onClick)
-                .padding(vertical = spacing.md),
+                .padding(horizontal = spacing.lg, vertical = spacing.md),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(spacing.md),
         ) {

@@ -32,7 +32,7 @@ object BackupSerializer {
             )
         },
         installmentPlans = db.installmentPlanQueries.selectAll().executeAsList().map {
-            InstallmentPlanDto(it.id, it.cardId, it.totalAmountMinor, it.installments, it.interestRate, it.startDate, it.description)
+            InstallmentPlanDto(it.id, it.cardId, it.categoryId, it.totalAmountMinor, it.installments, it.interestRate, it.startDate, it.description, it.settled)
         },
         subscriptions = db.subscriptionQueries.selectAll().executeAsList().map {
             SubscriptionDto(
@@ -87,7 +87,7 @@ object BackupSerializer {
                 db.cardQueries.insert(it.accountId, it.last4, it.network, it.creditLimitMinor, it.cutoffDay, it.dueDay, it.interestRate)
             }
             snap.installmentPlans.forEach {
-                db.installmentPlanQueries.insert(it.cardId, it.totalAmountMinor, it.installments, it.interestRate, it.startDate, it.description)
+                db.installmentPlanQueries.insert(it.cardId, it.categoryId, it.totalAmountMinor, it.installments, it.interestRate, it.startDate, it.description, it.settled)
             }
             snap.transactions.forEach {
                 db.transactionQueries.insert(

@@ -11,18 +11,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.PieChart
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -35,20 +35,24 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.finanzen.domain.Money
 import com.finanzen.ui.components.CategoryAvatar
 import com.finanzen.ui.components.EmptyState
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.LabeledDropdown
 import com.finanzen.ui.components.MainTabHeader
+import com.finanzen.ui.components.MoneyField
+import com.finanzen.ui.components.MonthSelector
 import com.finanzen.ui.components.categoryColor
+import com.finanzen.ui.format.formatMesAnio
+import com.finanzen.ui.theme.LocalDateLocale
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.viewmodel.BudgetRow
 import com.finanzen.viewmodel.BudgetsViewModel
+import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.plus
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -63,15 +67,23 @@ fun BudgetsScreen(
     vm: BudgetsViewModel = koinViewModel(),
 ) {
     val data by vm.data.collectAsState()
+    val month by vm.month.collectAsState()
+    val dateLocale = LocalDateLocale.current
     val spacing = LocalSpacing.current
     val budgeted = data.rows.filter { it.limitMinor > 0 }
+    val unbudgeted = data.rows.filter { it.limitMinor <= 0 }
     var editing by remember { mutableStateOf<BudgetRow?>(null) }
     var showAdd by remember { mutableStateOf(false) }
+    var showInfo by remember { mutableStateOf(false) }
 
     if (showAdd || editing != null) {
         BudgetFormDialog(
-            categories = data.rows,
+            // Al crear, solo categorías sin presupuesto todavía — para cambiar una ya asignada hay que
+            // editarla (tocar su fila), no re-crearla desde acá.
+            categories = if (editing != null) data.rows else unbudgeted,
             preselected = editing,
+            currency = data.currency,
+            monthLabel = formatMesAnio(month, dateLocale),
             onDismiss = {
                 showAdd = false
                 editing = null
@@ -84,11 +96,26 @@ fun BudgetsScreen(
         )
     }
 
+    if (showInfo) {
+        AlertDialog(
+            onDismissRequest = { showInfo = false },
+            title = { Text("¿Cómo funcionan los presupuestos mensuales?") },
+            text = {
+                Text(
+                    "Cada categoría mantiene el mismo límite mes a mes. Si no cambias el presupuesto de " +
+                        "un mes, se usa el del mes anterior más reciente. Si lo editas, el cambio solo " +
+                        "aplica desde ese mes en adelante — los meses ya guardados no se alteran.",
+                )
+            },
+            confirmButton = { TextButton(onClick = { showInfo = false }) { Text("Entendido") } },
+        )
+    }
+
     Scaffold(
         // El tope lo aporta MainTabHeader; el Scaffold se queda solo por el FAB.
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
-            if (data.rows.isNotEmpty()) {
+            if (unbudgeted.isNotEmpty()) {
                 ExtendedFloatingActionButton(
                     onClick = { showAdd = true },
                     icon = { Icon(Icons.Outlined.Add, null) },
@@ -98,7 +125,24 @@ fun BudgetsScreen(
         },
     ) { inner ->
         Column(Modifier.fillMaxSize().padding(inner)) {
-            MainTabHeader(title = "Presupuesto")
+            MainTabHeader(
+                title = "Presupuesto",
+                action = {
+                    IconButton(onClick = { showInfo = true }) {
+                        Icon(
+                            Icons.Outlined.HelpOutline,
+                            contentDescription = "Cómo funcionan los presupuestos mensuales",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                },
+            )
+            MonthSelector(
+                label = formatMesAnio(month, dateLocale),
+                onPrev = { vm.setMonth(month.plus(DatePeriod(months = -1))) },
+                onNext = { vm.setMonth(month.plus(DatePeriod(months = 1))) },
+                modifier = Modifier.padding(horizontal = spacing.lg),
+            )
             when {
                 data.rows.isEmpty() ->
                     EmptyMessage("Sin presupuestos", "Crea categorías de gasto para asignarles presupuesto.")
@@ -147,12 +191,17 @@ private fun BudgetRowCard(row: BudgetRow, currency: String, onClick: () -> Unit)
                 CategoryAvatar(icon = row.icon, color = categoryColor(row.categoryName, row.color), size = 36.dp)
                 Text(row.categoryName, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                 Text(
-                    if (over) "$pct% · excedido" else "$pct%",
+                    "$pct%",
                     fontWeight = FontWeight.SemiBold,
                     color = if (over) finance.expense else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            LinearProgressIndicator(progress = { fraction }, modifier = Modifier.fillMaxWidth(), color = barColor)
+            LinearProgressIndicator(
+                progress = { fraction },
+                modifier = Modifier.fillMaxWidth(),
+                color = barColor,
+                drawStopIndicator = {},
+            )
             Text(
                 "Gastado ${fmt.format(row.spentMinor, currency)} de ${fmt.format(row.limitMinor, currency)}",
                 style = MaterialTheme.typography.bodySmall,
@@ -167,17 +216,25 @@ private fun BudgetRowCard(row: BudgetRow, currency: String, onClick: () -> Unit)
 private fun BudgetFormDialog(
     categories: List<BudgetRow>,
     preselected: BudgetRow?,
+    currency: String,
+    monthLabel: String,
     onDismiss: () -> Unit,
     onConfirm: (categoryId: Long, limitMinor: Long) -> Unit,
 ) {
     var selected by remember { mutableStateOf(preselected ?: categories.first()) }
-    var limitText by remember {
-        mutableStateOf(if (preselected != null && preselected.limitMinor > 0) Money(preselected.limitMinor, "").format() else "")
-    }
-    val minor = Money.parseToMinor(limitText)
+    var limitMinor by remember { mutableStateOf(preselected?.limitMinor ?: 0L) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (preselected != null) "Editar presupuesto" else "Nuevo presupuesto") },
+        title = {
+            Column {
+                Text(if (preselected != null) "Editar presupuesto" else "Nuevo presupuesto")
+                Text(
+                    monthLabel,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 LabeledDropdown(
@@ -187,20 +244,19 @@ private fun BudgetFormDialog(
                     optionLabel = { it.categoryName },
                     onSelect = { selected = it },
                 )
-                OutlinedTextField(
-                    value = limitText,
-                    onValueChange = { limitText = it },
-                    label = { Text("Límite del mes") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                MoneyField(
+                    amountMinor = limitMinor,
+                    onAmountChange = { limitMinor = it },
+                    currencyCode = currency,
+                    label = "Límite del mes",
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
         },
         confirmButton = {
             Button(
-                onClick = { onConfirm(selected.categoryId, minor ?: 0L) },
-                enabled = minor != null,
+                onClick = { onConfirm(selected.categoryId, limitMinor) },
+                enabled = limitMinor > 0,
             ) { Text("Guardar") }
         },
         dismissButton = {

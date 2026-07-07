@@ -1,6 +1,7 @@
 package com.finanzen.data
 
 import com.finanzen.db.FinanzenDb
+import com.finanzen.platform.systemCountryCode
 
 private const val KEY_SEEDED = "seeded"
 private const val KEY_CURRENCIES_EXPANDED = "currencies_expanded"
@@ -19,11 +20,16 @@ fun seedIfEmpty(db: FinanzenDb) {
             db.transaction {
                 db.settingQueries.put(KEY_SEEDED, "true")
 
-                // Las monedas van primero: la cuenta "Efectivo" de más abajo referencia
-                // currency = "USD" por FK, así que Currency debe tener filas antes de insertar
-                // cuentas (SQLite no exige FKs por defecto, pero no hay que depender de eso).
+                // Las monedas van primero: la cuenta "Efectivo" de más abajo referencia esta moneda
+                // por FK, así que Currency debe tener filas antes de insertar cuentas (SQLite no
+                // exige FKs por defecto, pero no hay que depender de eso).
                 upsertWorldCurrencies(db)
                 db.settingQueries.put(KEY_CURRENCIES_EXPANDED, "true")
+
+                // Moneda inicial según el país del locale del sistema (sin pedir permisos: el
+                // locale del SO es información pública). Sin match conocido, USD como antes.
+                val initialCurrency = COUNTRY_TO_CURRENCY[systemCountryCode()] ?: SettingsRepository.DEFAULT_CURRENCY
+                db.settingQueries.put(SettingsRepository.KEY_CURRENCY, initialCurrency)
 
                 // (nombre, clave de icono, color ARGB). Las claves deben existir en categoryIcons (UI);
                 // el color es un ARGB de la paleta para que el seed inicial se vea variado.
@@ -50,7 +56,7 @@ fun seedIfEmpty(db: FinanzenDb) {
                 db.accountQueries.insert(
                     name = "Efectivo",
                     type = "CASH",
-                    currency = "USD",
+                    currency = initialCurrency,
                     openingBalanceMinor = 0,
                     color = 0,
                     archived = 0,

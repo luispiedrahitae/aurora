@@ -14,10 +14,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.ArrowDownward
 import androidx.compose.material.icons.outlined.ArrowUpward
 import androidx.compose.material.icons.outlined.PieChart
@@ -34,46 +33,44 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.finanzen.ui.components.AutoSizeText
-import com.finanzen.ui.components.CategoryProgressRow
 import com.finanzen.ui.components.EmptyState
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.MainTabHeader
 import com.finanzen.ui.components.SectionHeader
+import com.finanzen.ui.components.TopExpensesList
 import com.finanzen.ui.format.formatMesAnio
+import com.finanzen.ui.theme.LocalDateLocale
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.ui.theme.PillShape
-import com.finanzen.viewmodel.CategorySlice
 import com.finanzen.viewmodel.DashboardViewModel
-import com.finanzen.viewmodel.MonthNet
 import com.finanzen.viewmodel.SettingsViewModel
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
-import kotlin.math.absoluteValue
 
 @Composable
 fun DashboardScreen(
     vm: DashboardViewModel = koinViewModel(),
     settingsVm: SettingsViewModel = koinInject(),
+    onOpenAnalysis: () -> Unit = {},
 ) {
     val data by vm.data.collectAsState()
     val hideAmounts by settingsVm.hideAmounts.collectAsState()
     val spacing = LocalSpacing.current
-    val monthLabel = remember {
-        formatMesAnio(Clock.System.todayIn(TimeZone.currentSystemDefault()))
+    val dateLocale = LocalDateLocale.current
+    val monthLabel = remember(dateLocale) {
+        formatMesAnio(Clock.System.todayIn(TimeZone.currentSystemDefault()), dateLocale)
     }
 
     Column(Modifier.fillMaxSize()) {
@@ -86,6 +83,7 @@ fun DashboardScreen(
         ) {
             item {
                 BalanceHeroCard(
+                    totalBalance = data.totalBalanceMinor,
                     monthIncome = data.monthIncomeMinor,
                     monthExpense = data.monthExpenseMinor,
                     currency = data.currency,
@@ -94,28 +92,20 @@ fun DashboardScreen(
                 )
             }
 
-            item { SectionHeader("Flujo de los últimos 6 meses") }
-            item { CashflowCard(data.cashflow, data.currency) }
+            item { AnalysisShortcutCard(onClick = onOpenAnalysis) }
 
-            item { SectionHeader("Top categorías del mes") }
-            if (data.topCategories.isEmpty()) {
+            item { SectionHeader("Top gastos") }
+            if (data.topExpenses.isEmpty()) {
                 item {
                     EmptyState(
                         icon = Icons.Outlined.PieChart,
-                        title = "Sin gastos este mes",
+                        title = "Sin gastos registrados",
                         subtitle = "Añade movimientos desde la pestaña Movimientos.",
                         modifier = Modifier.padding(spacing.xl),
                     )
                 }
             } else {
-                // Una sola tarjeta con todas las filas dentro (en vez de una tarjeta por categoría).
-                item {
-                    FinanceCard {
-                        Column(verticalArrangement = Arrangement.spacedBy(spacing.lg)) {
-                            data.topCategories.forEach { slice -> CategoryRow(slice, data.currency) }
-                        }
-                    }
-                }
+                item { TopExpensesList(data.topExpenses, data.currency) }
             }
         }
     }
@@ -125,6 +115,7 @@ private const val MASK = "******"
 
 @Composable
 private fun BalanceHeroCard(
+    totalBalance: Long,
     monthIncome: Long,
     monthExpense: Long,
     currency: String,
@@ -141,13 +132,12 @@ private fun BalanceHeroCard(
     val expenseRed = finance.expense
     val haptic = LocalHapticFeedback.current
 
-    // El balance es el neto del mes (ingresos − gastos), con el mismo formato global (símbolo +
-    // separadores) que el resto de montos de la app. AutoSizeText se encarga de que la cifra
-    // grande siempre quepa en una línea, así que no hace falta omitir el símbolo.
+    // El balance general es histórico (saldos iniciales + ingresos − gastos de todo el
+    // histórico), con el mismo formato global (símbolo + separadores) que el resto de montos de
+    // la app. AutoSizeText se encarga de que la cifra grande siempre quepa en una línea.
     val fmt = LocalMoneyFormat.current
-    val balance = monthIncome - monthExpense
-    val balanceColor = if (balance >= 0) onSurface else expenseRed
-    val animatedBalance by animateFloatAsState(targetValue = balance.toFloat(), animationSpec = tween(400))
+    val balanceColor = if (totalBalance >= 0) onSurface else expenseRed
+    val animatedBalance by animateFloatAsState(targetValue = totalBalance.toFloat(), animationSpec = tween(400))
     val balanceText = if (hidden) MASK else fmt.format(animatedBalance.toLong(), currency)
 
     val totalFlow = monthIncome + monthExpense
@@ -164,7 +154,7 @@ private fun BalanceHeroCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("Balance", style = MaterialTheme.typography.labelLarge, color = onSurfaceVar)
+                    Text("Balance general", style = MaterialTheme.typography.labelLarge, color = onSurfaceVar)
                     IconButton(onClick = {
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         onToggleHidden()
@@ -243,61 +233,21 @@ private fun FlowItem(
 }
 
 @Composable
-private fun CashflowCard(cashflow: List<MonthNet>, currency: String) {
-    val maxAbs = (cashflow.maxOfOrNull { it.netMinor.absoluteValue } ?: 0L).coerceAtLeast(1L)
-    FinanceCard {
+private fun AnalysisShortcutCard(onClick: () -> Unit) {
+    val spacing = LocalSpacing.current
+    FinanceCard(onClick = onClick) {
         Row(
-            modifier = Modifier.fillMaxWidth().height(140.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.Bottom,
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            cashflow.forEach { month ->
-                CashflowBar(month, maxAbs, currency, Modifier.weight(1f))
-            }
+            Text("Ver detalle mensual", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
+            Icon(
+                Icons.AutoMirrored.Outlined.ArrowForward,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(spacing.lg),
+            )
         }
     }
-}
-
-@Composable
-private fun CashflowBar(month: MonthNet, maxAbs: Long, currency: String, modifier: Modifier) {
-    val finance = LocalFinanceColors.current
-    val fmt = LocalMoneyFormat.current
-    val targetFraction = (month.netMinor.absoluteValue.toFloat() / maxAbs.toFloat()).coerceIn(0f, 1f)
-    val fraction by animateFloatAsState(targetValue = targetFraction, animationSpec = tween(400))
-    val barColor = if (month.netMinor >= 0) finance.income else finance.expense
-    val gradient = Brush.verticalGradient(listOf(barColor.copy(alpha = 0.85f), barColor))
-    Column(
-        modifier = modifier.fillMaxHeight(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Bottom,
-    ) {
-        // Etiqueta de valor con signo: un mes negativo no depende solo del color para leerse como tal.
-        Text(
-            fmt.format(month.netMinor, currency, signed = true, decimals = 0),
-            style = MaterialTheme.typography.labelSmall,
-            color = barColor,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Box(
-            modifier = Modifier
-                .padding(top = 2.dp, bottom = 6.dp)
-                .width(28.dp)
-                .fillMaxHeight(fraction.coerceAtLeast(0.02f))
-                .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp))
-                .background(gradient),
-        )
-        Text(month.label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-@Composable
-private fun CategoryRow(slice: CategorySlice, currency: String) {
-    CategoryProgressRow(
-        name = slice.name,
-        amountMinor = slice.amountMinor,
-        currency = currency,
-        pct = slice.pct,
-        color = Color(slice.colorHex),
-    )
 }

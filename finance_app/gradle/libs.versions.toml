@@ -9,7 +9,6 @@ datetime = "0.6.1"
 koin = "4.0.0"
 lifecycle = "2.8.4"
 nav = "2.8.0-alpha10"
-koalaplot = "0.9.0"
 coil = "3.0.4"
 work = "2.10.0"
 biometric = "1.2.0-alpha05"
@@ -42,8 +41,6 @@ androidx-navigation-compose  = { module = "org.jetbrains.androidx.navigation:nav
 androidx-activity-compose    = { module = "androidx.activity:activity-compose", version.ref = "activity" }
 androidx-work-runtime        = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
 androidx-biometric           = { module = "androidx.biometric:biometric-ktx", version.ref = "biometric" }
-
-koalaplot-core = { module = "io.github.koalaplot:koalaplot-core", version.ref = "koalaplot" }
 
 coil-compose      = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 coil-network-ktor = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil" }

@@ -169,7 +169,9 @@ private fun AppNavHost(navController: NavHostController, modifier: Modifier = Mo
         popEnterTransition = { fadeIn(tween(220)) },
         popExitTransition = { fadeOut(tween(180)) },
     ) {
-        composable(TopDestination.Dashboard.route) { DashboardScreen() }
+        composable(TopDestination.Dashboard.route) {
+            DashboardScreen(onOpenAnalysis = { navController.navigate("analysis") })
+        }
         composable(TopDestination.Transactions.route) {
             TransactionsScreen(onEdit = { id -> navController.navigate("tx_form/$id") })
         }

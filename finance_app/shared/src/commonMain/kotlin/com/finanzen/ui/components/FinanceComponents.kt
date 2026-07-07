@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AccountBalance
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.ArrowDownward
 import androidx.compose.material.icons.outlined.ArrowUpward
@@ -628,8 +629,25 @@ fun CategoryAvatar(icon: String, color: Color, modifier: Modifier = Modifier, si
 fun accountTypeIcon(type: String): ImageVector = when (type) {
     "CASH" -> Icons.Outlined.Payments
     "SAVINGS" -> Icons.Outlined.Savings
-    "DEBIT", "CREDIT" -> Icons.Outlined.CreditCard
+    "DEBIT" -> Icons.Outlined.AccountBalance
+    "CREDIT" -> Icons.Outlined.CreditCard
     else -> Icons.Outlined.AccountBalanceWallet
+}
+
+/** Etiqueta en español por tipo de cuenta (efectivo/débito/ahorros/crédito). */
+fun accountTypeLabel(type: String): String = when (type) {
+    "CASH" -> "Efectivo"
+    "DEBIT" -> "Débito"
+    "SAVINGS" -> "Ahorros"
+    "CREDIT" -> "Crédito"
+    else -> type
+}
+
+/** Etiqueta en español por tipo de movimiento (ingreso/gasto/transferencia). */
+fun kindLabel(kind: String): String = when (kind) {
+    "INCOME" -> "Ingreso"
+    "TRANSFER" -> "Transferencia"
+    else -> "Gasto"
 }
 
 /**

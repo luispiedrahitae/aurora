@@ -38,6 +38,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.finanzen.data.CurrencyLocaleInfo
 import com.finanzen.db.Category
 import com.finanzen.db.TransactionRow
 import com.finanzen.ui.components.CategoryAvatar
@@ -47,6 +48,7 @@ import com.finanzen.ui.components.MonthSelector
 import com.finanzen.ui.components.categoryColor
 import com.finanzen.ui.format.formatFechaLarga
 import com.finanzen.ui.format.formatMesAnio
+import com.finanzen.ui.theme.LocalDateLocale
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.viewmodel.TransactionsViewModel
@@ -74,6 +76,7 @@ fun CalendarScreen(
 ) {
     val rows by vm.transactions.collectAsState()
     val categories by vm.categories.collectAsState()
+    val dateLocale = LocalDateLocale.current
     val categoriesById = remember(categories) { categories.associateBy { it.id } }
     val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
     var month by remember { mutableStateOf(LocalDate(today.year, today.month, 1)) }
@@ -113,7 +116,7 @@ fun CalendarScreen(
         ) {
             item {
                 MonthSelector(
-                    label = formatMesAnio(month),
+                    label = formatMesAnio(month, dateLocale),
                     onPrev = { month = month.plus(DatePeriod(months = -1)) },
                     onNext = { month = month.plus(DatePeriod(months = 1)) },
                 )
@@ -146,7 +149,7 @@ fun CalendarScreen(
 
             item {
                 Text(
-                    dayHeading(selected),
+                    dayHeading(selected, dateLocale),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -298,4 +301,4 @@ private fun kindLabelCal(kind: String): String = when (kind) {
     else -> "Gasto"
 }
 
-private fun dayHeading(date: LocalDate): String = formatFechaLarga(date)
+private fun dayHeading(date: LocalDate, locale: CurrencyLocaleInfo): String = formatFechaLarga(date, locale)

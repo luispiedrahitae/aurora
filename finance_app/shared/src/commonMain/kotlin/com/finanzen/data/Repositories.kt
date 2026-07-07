@@ -92,6 +92,8 @@ class TransactionRepository(private val db: FinanzenDb) {
     fun all(): List<TransactionRow> = db.transactionQueries.selectAll().executeAsList()
 
     fun delete(id: Long) = db.transactionQueries.delete(id)
+
+    fun countForPlan(planId: Long): Long = db.transactionQueries.countByInstallmentPlan(planId).executeAsOne()
 }
 
 class AccountRepository(private val db: FinanzenDb) {
@@ -114,6 +116,7 @@ class AccountRepository(private val db: FinanzenDb) {
 
     fun archive(id: Long) = db.accountQueries.archive(id)
     fun unarchive(id: Long) = db.accountQueries.unarchive(id)
+    fun updateBasics(id: Long, name: String, openingBalanceMinor: Long) = db.accountQueries.updateBasics(name, openingBalanceMinor, id)
 }
 
 class CardRepository(private val db: FinanzenDb) {
@@ -134,24 +137,31 @@ class CardRepository(private val db: FinanzenDb) {
     fun byAccount(accountId: Long): Card? = db.cardQueries.selectByAccount(accountId).executeAsList().firstOrNull()
 
     fun delete(id: Long) = db.cardQueries.delete(id)
+
+    fun updateCreditTerms(id: Long, creditLimitMinor: Long?, cutoffDay: Long?, dueDay: Long?, interestRate: Double?) = db.cardQueries.updateCreditTerms(creditLimitMinor, cutoffDay, dueDay, interestRate, id)
 }
 
 class InstallmentPlanRepository(private val db: FinanzenDb) {
     fun observeAll(): Flow<List<InstallmentPlan>> = db.installmentPlanQueries.selectAll().asFlow().mapToList(Dispatchers.Default)
 
+    fun activeByCard(cardId: Long): List<InstallmentPlan> = db.installmentPlanQueries.selectActiveByCard(cardId).executeAsList()
+
     fun add(
         cardId: Long,
+        categoryId: Long?,
         totalAmountMinor: Long,
         installments: Long,
         interestRate: Double,
         startDateEpochDay: Long,
         description: String,
     ): Long = db.transactionWithResult {
-        db.installmentPlanQueries.insert(cardId, totalAmountMinor, installments, interestRate, startDateEpochDay, description)
+        db.installmentPlanQueries.insert(cardId, categoryId, totalAmountMinor, installments, interestRate, startDateEpochDay, description, settled = 0)
         db.installmentPlanQueries.lastInsertRowId().executeAsOne()
     }
 
     fun delete(id: Long) = db.installmentPlanQueries.delete(id)
+
+    fun settleAllForCard(cardId: Long) = db.installmentPlanQueries.settleAllByCard(cardId)
 }
 
 class SubscriptionRepository(private val db: FinanzenDb) {
@@ -227,8 +237,11 @@ class BudgetRepository(private val db: FinanzenDb) {
 
     fun setLimit(categoryId: Long, periodMonth: Long, limitMinor: Long) = db.budgetQueries.upsert(categoryId = categoryId, periodMonth = periodMonth, limitMinor = limitMinor)
 
-    /** Límite de una categoría en un periodo (0 si no tiene presupuesto). */
-    fun limitFor(categoryId: Long, periodMonth: Long): Long = db.budgetQueries.selectByPeriod(periodMonth).executeAsList().firstOrNull { it.categoryId == categoryId }?.limitMinor ?: 0L
+    /** Límite efectivo de una categoría en un periodo (0 si nunca tuvo presupuesto). Hereda del mes
+     * anterior más reciente si el periodo pedido no tiene una fila propia. */
+    fun limitFor(categoryId: Long, periodMonth: Long): Long = db.budgetQueries.selectAll().executeAsList()
+        .filter { it.categoryId == categoryId && it.periodMonth <= periodMonth }
+        .maxByOrNull { it.periodMonth }?.limitMinor ?: 0L
 
     fun delete(id: Long) = db.budgetQueries.delete(id)
 }

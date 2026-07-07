@@ -75,11 +75,13 @@ data class BackupSnapshot(
 @Serializable data class InstallmentPlanDto(
     val id: Long,
     val cardId: Long,
+    val categoryId: Long?,
     val totalAmountMinor: Long,
     val installments: Long,
     val interestRate: Double,
     val startDate: Long,
     val description: String,
+    val settled: Long,
 )
 
 @Serializable data class SubscriptionDto(

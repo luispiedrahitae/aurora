@@ -1,6 +1,7 @@
 package com.finanzen.ui.theme
 
 import com.finanzen.db.Currency
+import com.finanzen.domain.SymbolPosition
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -50,5 +51,27 @@ class MoneyFormatTest {
     fun signedAgregaSignoPositivoFueraDelSimbolo() {
         val fmt = MoneyFormat(SymbolPosition.PREFIX, mapOf("USD" to usd))
         assertEquals("+\$12.34", fmt.format(1234, "USD", signed = true))
+    }
+
+    @Test
+    fun autoResuelvePrefijoParaUSD() {
+        // USD es PREFIX según CURRENCY_LOCALE_INFO (convención en-US): sin elegir nada manualmente,
+        // AUTO debe dar el mismo resultado que forzar PREFIX a mano.
+        val fmt = MoneyFormat(SymbolPosition.AUTO, mapOf("USD" to usd))
+        assertEquals("\$1,234.56", fmt.format(123456, "USD"))
+    }
+
+    @Test
+    fun autoResuelveSufijoParaEUR() {
+        // EUR es SUFFIX según CURRENCY_LOCALE_INFO (convención de-DE): AUTO detecta esto sin que el
+        // usuario haya tocado el selector de posición.
+        val fmt = MoneyFormat(SymbolPosition.AUTO, mapOf("EUR" to eur))
+        assertEquals("1.234,56 €", fmt.format(123456, "EUR"))
+    }
+
+    @Test
+    fun autoConMonedaSinDatosCldrUsaFallbackPrefijo() {
+        val fmt = MoneyFormat(SymbolPosition.AUTO, mapOf("USD" to usd))
+        assertEquals(SymbolPosition.PREFIX, fmt.resolvePosition("XYZ"))
     }
 }

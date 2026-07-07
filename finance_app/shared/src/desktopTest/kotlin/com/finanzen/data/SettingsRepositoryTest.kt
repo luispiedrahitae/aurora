@@ -56,4 +56,71 @@ class SettingsRepositoryTest {
         assertEquals("COP", accountRepo.all().single().currency)
         assertEquals("COP", db.transactionQueries.selectAll().executeAsList().single().currency)
     }
+
+    @Test
+    fun setBaseCurrencyReescalaMontosDeMenosAMasDecimales() {
+        // COP (0 decimales) -> USD (2 decimales): todo se multiplica por 100 para que el número que
+        // el usuario ve se mantenga igual (40.000 sigue siendo 40.000, ahora en USD).
+        val db = freshDb()
+        db.currencyQueries.upsert("COP", "$", 0, 1.0, "Colombian Peso", ",", ".")
+        db.currencyQueries.upsert("USD", "$", 2, 1.0, "US Dollar", ".", ",")
+        db.settingQueries.put(SettingsRepository.KEY_CURRENCY, "COP")
+
+        val accountRepo = AccountRepository(db)
+        val accId = accountRepo.add(name = "Efectivo", type = "CREDIT", currency = "COP", openingBalanceMinor = 40000)
+        db.transactionQueries.insert(accId, null, 5000, "COP", 0, "", "EXPENSE", null, null)
+        db.categoryQueries.insert(parentId = null, name = "Gastos", icon = "", color = 0, kind = "EXPENSE")
+        val categoryId = db.categoryQueries.selectAll().executeAsList().single().id
+        db.budgetQueries.upsert(categoryId = categoryId, periodMonth = 202607, limitMinor = 100000)
+        db.cardQueries.insert(accId, "", "OTRA", 200000, null, null, null)
+        val cardId = db.cardQueries.selectByAccount(accId).executeAsList().single().id
+        db.installmentPlanQueries.insert(cardId, null, 300000, 3, 0.0, 0, "", 0)
+
+        SettingsRepository(db).setBaseCurrency("USD")
+
+        assertEquals(4000000, accountRepo.all().single().openingBalanceMinor)
+        assertEquals(500000, db.transactionQueries.selectAll().executeAsList().single().amountMinor)
+        assertEquals(10000000, db.budgetQueries.selectAll().executeAsList().single().limitMinor)
+        assertEquals(20000000, db.cardQueries.selectById(cardId).executeAsOne().creditLimitMinor)
+        assertEquals(30000000, db.installmentPlanQueries.selectAll().executeAsList().single().totalAmountMinor)
+    }
+
+    @Test
+    fun setBaseCurrencyReescalaMontosDeMasAMenosDecimales() {
+        // USD (2 decimales) -> COP (0 decimales): se divide entre 100 (trunca residuo de centavos).
+        val db = freshDb()
+        db.currencyQueries.upsert("USD", "$", 2, 1.0, "US Dollar", ".", ",")
+        db.currencyQueries.upsert("COP", "$", 0, 1.0, "Colombian Peso", ",", ".")
+        db.settingQueries.put(SettingsRepository.KEY_CURRENCY, "USD")
+
+        val accountRepo = AccountRepository(db)
+        accountRepo.add(name = "Efectivo", type = "CASH", currency = "USD", openingBalanceMinor = 100000)
+
+        SettingsRepository(db).setBaseCurrency("COP")
+
+        assertEquals(1000, accountRepo.all().single().openingBalanceMinor)
+    }
+
+    @Test
+    fun setBaseCurrencyConLaMismaMonedaNoAlteraNada() {
+        val db = freshDb()
+        db.currencyQueries.upsert("USD", "$", 2, 1.0, "US Dollar", ".", ",")
+        db.settingQueries.put(SettingsRepository.KEY_CURRENCY, "USD")
+        val accountRepo = AccountRepository(db)
+        accountRepo.add(name = "Efectivo", type = "CASH", currency = "USD", openingBalanceMinor = 12345)
+
+        SettingsRepository(db).setBaseCurrency("USD")
+
+        assertEquals(12345, accountRepo.all().single().openingBalanceMinor)
+    }
+
+    @Test
+    fun symbolPositionDefaultEsAuto() {
+        val repo = SettingsRepository(freshDb())
+        // sin valor guardado → "auto" (CLDR por moneda), ya no "prefix" fijo.
+        assertEquals("auto", repo.symbolPosition())
+
+        repo.setSymbolPosition("suffix")
+        assertEquals("suffix", repo.symbolPosition())
+    }
 }

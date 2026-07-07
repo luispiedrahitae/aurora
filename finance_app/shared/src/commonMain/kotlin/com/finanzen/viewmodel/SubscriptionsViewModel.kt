@@ -7,7 +7,6 @@ import com.finanzen.data.SettingsRepository
 import com.finanzen.data.SubscriptionRepository
 import com.finanzen.data.TransactionRepository
 import com.finanzen.db.Subscription
-import com.finanzen.domain.Money
 import com.finanzen.platform.NotificationScheduler
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -29,6 +28,8 @@ class SubscriptionsViewModel(
 
     val subscriptions: StateFlow<List<Subscription>> =
         subsRepo.observeActive().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val baseCurrency: String get() = settingsRepo.baseCurrency()
 
     init {
         // ponytail: catch-up al abrir Suscripciones; subir a app-start si se requiere puntualidad estricta.
@@ -72,9 +73,6 @@ class SubscriptionsViewModel(
             atEpochDay = nextCharge - remindDaysBefore,
         )
     }
-
-    /** Convierte "12.50" → 1250 (centavos). null si el texto no es numérico válido. */
-    fun parseAmountToMinor(text: String, decimals: Int = 2): Long? = Money.parseToMinor(text, decimals)
 
     fun deleteSubscription(id: Long) {
         subsRepo.delete(id)

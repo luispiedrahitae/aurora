@@ -46,6 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.finanzen.ui.components.FinanceCard
+import com.finanzen.ui.components.MoneyField
 import com.finanzen.ui.components.MoneyText
 import com.finanzen.ui.components.SectionHeader
 import com.finanzen.viewmodel.SubscriptionsViewModel
@@ -71,7 +72,7 @@ fun SubscriptionsScreen(
 
     if (showForm) {
         SubscriptionFormDialog(
-            parseAmount = vm::parseAmountToMinor,
+            currencyCode = vm.baseCurrency,
             onDismiss = { showForm = false },
             onConfirm = { name, amountMinor, frequency, interval ->
                 vm.addSubscription(name, amountMinor, frequency, interval)
@@ -129,21 +130,20 @@ fun SubscriptionsScreen(
  */
 @Composable
 private fun SubscriptionFormDialog(
-    parseAmount: (String) -> Long?,
+    currencyCode: String,
     onDismiss: () -> Unit,
     onConfirm: (name: String, amountMinor: Long, frequency: String, interval: Long) -> Unit,
 ) {
     var name by remember { mutableStateOf("") }
-    var amount by remember { mutableStateOf("") }
+    var amountMinor by remember { mutableStateOf(0L) }
     var monthly by remember { mutableStateOf(true) } // true = Día del mes, false = Cada X días
     var dayOfMonth by remember { mutableStateOf("1") }
     var everyDays by remember { mutableStateOf("30") }
 
-    val amountMinor = parseAmount(amount)
     val dayValid = dayOfMonth.toIntOrNull()?.let { it in 1..31 } == true
     val everyValid = everyDays.toLongOrNull()?.let { it >= 1 } == true
     val recurValid = if (monthly) dayValid else everyValid
-    val valid = name.isNotBlank() && amountMinor != null && amountMinor > 0 && recurValid
+    val valid = name.isNotBlank() && amountMinor > 0 && recurValid
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -157,12 +157,11 @@ private fun SubscriptionFormDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                OutlinedTextField(
-                    value = amount,
-                    onValueChange = { amount = it },
-                    label = { Text("Monto") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                MoneyField(
+                    amountMinor = amountMinor,
+                    onAmountChange = { amountMinor = it },
+                    currencyCode = currencyCode,
+                    label = "Monto",
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Text("Recurrencia", style = MaterialTheme.typography.labelLarge)
@@ -208,7 +207,7 @@ private fun SubscriptionFormDialog(
                 onClick = {
                     val frequency = if (monthly) "MONTHLY" else "DAILY"
                     val interval = if (monthly) dayOfMonth.toLong() else everyDays.toLong()
-                    onConfirm(name.trim(), amountMinor!!, frequency, interval)
+                    onConfirm(name.trim(), amountMinor, frequency, interval)
                 },
                 enabled = valid,
             ) { Text("Guardar") }

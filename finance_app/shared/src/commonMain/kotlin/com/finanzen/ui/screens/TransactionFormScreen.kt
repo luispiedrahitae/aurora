@@ -40,12 +40,16 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.finanzen.domain.Money
+import com.finanzen.domain.InstallmentMath
 import com.finanzen.ui.components.CategoryAvatar
+import com.finanzen.ui.components.MoneyField
 import com.finanzen.ui.components.PickerField
+import com.finanzen.ui.components.accountTypeLabel
 import com.finanzen.ui.components.categoryColor
 import com.finanzen.ui.format.formatFechaCorta
+import com.finanzen.ui.theme.LocalDateLocale
 import com.finanzen.ui.theme.LocalFinanceColors
+import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.viewmodel.TransactionsViewModel
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
@@ -65,20 +69,21 @@ fun TransactionFormScreen(
     val accounts by vm.accounts.collectAsState()
     val allAccounts by vm.allAccounts.collectAsState()
     val categories by vm.categories.collectAsState()
+    val dateLocale = LocalDateLocale.current
 
     val existing = remember(transactionId) { transactionId?.let(vm::transactionById) }
     var kind by remember { mutableStateOf(existing?.kind ?: initialKind ?: "EXPENSE") }
     var accountId by remember { mutableStateOf(existing?.accountId) }
     var toAccountId by remember { mutableStateOf(existing?.transferAccountId) }
     var categoryId by remember { mutableStateOf(existing?.categoryId) }
-    var amount by remember { mutableStateOf(existing?.let { Money(it.amountMinor, it.currency).format() } ?: "") }
+    var amountMinor by remember { mutableStateOf(existing?.amountMinor ?: 0L) }
     var note by remember { mutableStateOf(existing?.note ?: "") }
     var error by remember { mutableStateOf<String?>(null) }
     var dateEpochDay by remember {
         mutableStateOf(existing?.date ?: Clock.System.todayIn(TimeZone.currentSystemDefault()).toEpochDays().toLong())
     }
     var showDatePicker by remember { mutableStateOf(false) }
-    var interestText by remember { mutableStateOf("") }
+    var cuotasText by remember { mutableStateOf("") }
 
     val isTransfer = kind == "TRANSFER"
     val selectedAccount = accounts.firstOrNull { it.id == accountId }
@@ -152,12 +157,11 @@ fun TransactionFormScreen(
                 ) { Text("Transferencia") }
             }
 
-            OutlinedTextField(
-                value = amount,
-                onValueChange = { amount = it },
-                label = { Text("Monto") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            MoneyField(
+                amountMinor = amountMinor,
+                onAmountChange = { amountMinor = it },
+                currencyCode = selectedAccount?.currency ?: "",
+                label = "Monto",
                 modifier = Modifier.fillMaxWidth(),
             )
 
@@ -166,6 +170,7 @@ fun TransactionFormScreen(
                 options = accounts,
                 selected = selectedAccount,
                 optionLabel = { "${it.name} (${it.currency})" },
+                trailingLabel = { accountTypeLabel(it.type) },
                 onSelect = { accountId = it.id },
                 placeholder = "Selecciona cuenta",
                 emptyHint = "Crea una cuenta primero (pestaña Cuentas).",
@@ -177,6 +182,7 @@ fun TransactionFormScreen(
                     options = destOptions,
                     selected = selectedDest,
                     optionLabel = { "${it.name} (${it.currency})" },
+                    trailingLabel = { accountTypeLabel(it.type) },
                     onSelect = { toAccountId = it.id },
                     placeholder = "Selecciona destino",
                     emptyHint = "Necesitas al menos dos cuentas para transferir.",
@@ -194,16 +200,29 @@ fun TransactionFormScreen(
                 )
             }
 
-            // Interés: solo para gastos con tarjeta de crédito. ponytail: las cuotas se gestionan aparte.
+            // Cuotas: solo para gastos con tarjeta de crédito. El interés se toma de la tarjeta,
+            // no se pide aquí — Card.interestRate ya lo tiene guardado.
             if (!isTransfer && kind == "EXPENSE" && selectedAccount?.type == "CREDIT") {
+                val installments = cuotasText.toLongOrNull()?.coerceAtLeast(1) ?: 1
                 OutlinedTextField(
-                    value = interestText,
-                    onValueChange = { interestText = it },
-                    label = { Text("Tasa de interés % (opcional)") },
+                    value = cuotasText,
+                    onValueChange = { cuotasText = it },
+                    label = { Text("Cuotas") },
                     singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
                 )
+                if (installments > 1 && amountMinor > 0) {
+                    val rate = vm.cardFor(selectedAccount.id)?.interestRate ?: 0.0
+                    val monthly = InstallmentMath.monthlyPaymentMinor(amountMinor, installments, rate)
+                    Text(
+                        "Se registrará la cuota 1 (${LocalMoneyFormat.current.format(monthly, selectedAccount.currency)}) " +
+                            "este mes. Las próximas ${installments - 1} cuotas se agregan automáticamente cada mes " +
+                            "hasta completar el plan, con el interés de tu tarjeta.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
 
             OutlinedTextField(
@@ -217,7 +236,7 @@ fun TransactionFormScreen(
             OutlinedButton(onClick = { showDatePicker = true }, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Outlined.CalendarMonth, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text(formatFechaCorta(dateEpochDay))
+                Text(formatFechaCorta(dateEpochDay, dateLocale))
             }
 
             error?.let { Text(it, color = finance.expense, style = MaterialTheme.typography.bodySmall) }
@@ -225,13 +244,13 @@ fun TransactionFormScreen(
             Button(
                 onClick = {
                     val account = selectedAccount
-                    val minor = Money.parseToMinor(amount)
+                    val minor = amountMinor
                     if (isTransfer) {
                         val dest = selectedDest
                         when {
                             account == null || dest == null -> error = "Elige cuenta origen y destino."
                             account.id == dest.id -> error = "Origen y destino deben ser distintos."
-                            minor == null || minor <= 0 -> error = "Monto inválido."
+                            minor <= 0 -> error = "Monto inválido."
                             else -> {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 vm.saveTransfer(existing?.id, account.id, dest.id, minor, note, dateEpochDay)
@@ -241,7 +260,7 @@ fun TransactionFormScreen(
                     } else {
                         when {
                             account == null -> error = "Crea una cuenta primero (pestaña Cuentas)."
-                            minor == null || minor <= 0 -> error = "Monto inválido."
+                            minor <= 0 -> error = "Monto inválido."
                             else -> {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 vm.save(
@@ -252,8 +271,7 @@ fun TransactionFormScreen(
                                     kind = kind,
                                     note = note,
                                     dateEpochDay = dateEpochDay,
-                                    installments = 1,
-                                    interestRate = interestText.toDoubleOrNull(),
+                                    installments = cuotasText.toLongOrNull()?.coerceAtLeast(1) ?: 1,
                                 )
                                 onBack()
                             }

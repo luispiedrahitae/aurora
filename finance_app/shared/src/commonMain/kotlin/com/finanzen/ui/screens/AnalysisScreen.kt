@@ -1,7 +1,6 @@
 package com.finanzen.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -26,12 +25,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.finanzen.ui.components.CategoryPieChart
 import com.finanzen.ui.components.EmptyState
+import com.finanzen.ui.components.ExpenseBarChart
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.MonthSelector
 import com.finanzen.ui.components.SectionHeader
+import com.finanzen.ui.components.TopExpensesList
 import com.finanzen.ui.format.formatMesAnio
+import com.finanzen.ui.theme.LocalDateLocale
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.viewmodel.AnalysisViewModel
@@ -44,6 +45,7 @@ import org.koin.compose.viewmodel.koinViewModel
 fun AnalysisScreen(onBack: () -> Unit, vm: AnalysisViewModel = koinViewModel()) {
     val data by vm.data.collectAsState()
     val month by vm.month.collectAsState()
+    val dateLocale = LocalDateLocale.current
 
     Scaffold(
         topBar = {
@@ -62,9 +64,12 @@ fun AnalysisScreen(onBack: () -> Unit, vm: AnalysisViewModel = koinViewModel()) 
             contentPadding = PaddingValues(12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            item { SectionHeader("Gastos por mes") }
+            item { ExpenseBarChart(data.yearlyExpenses, data.currency) }
+
             item {
                 MonthSelector(
-                    label = formatMesAnio(month),
+                    label = formatMesAnio(month, dateLocale),
                     onPrev = { vm.setMonth(month.plus(DatePeriod(months = -1))) },
                     onNext = { vm.setMonth(month.plus(DatePeriod(months = 1))) },
                 )
@@ -72,9 +77,9 @@ fun AnalysisScreen(onBack: () -> Unit, vm: AnalysisViewModel = koinViewModel()) 
 
             item { TotalsCard(income = data.totalIncomeMinor, expense = data.totalExpenseMinor, currency = data.currency) }
 
-            item { SectionHeader("Gasto por categoría") }
+            item { SectionHeader("Top gastos") }
 
-            if (data.byCategory.isEmpty()) {
+            if (data.topExpenses.isEmpty()) {
                 item {
                     EmptyState(
                         icon = Icons.Outlined.PieChart,
@@ -84,13 +89,7 @@ fun AnalysisScreen(onBack: () -> Unit, vm: AnalysisViewModel = koinViewModel()) 
                     )
                 }
             } else {
-                item {
-                    FinanceCard(modifier = Modifier.fillMaxWidth()) {
-                        Box {
-                            CategoryPieChart(data.byCategory, currency = data.currency)
-                        }
-                    }
-                }
+                item { TopExpensesList(data.topExpenses, data.currency) }
             }
         }
     }
