@@ -5,10 +5,8 @@ import com.finanzen.data.seedIfEmpty
 import com.finanzen.db.FinanzenDb
 import com.finanzen.ui.format.monthPeriod
 import kotlinx.datetime.Clock
-import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.minus
 import kotlinx.datetime.todayIn
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -50,8 +48,6 @@ class DashboardViewModelTest {
         assertEquals(7_000, data.totalBalanceMinor)
         assertEquals(10_000, data.monthIncomeMinor)
         assertEquals(3_000, data.monthExpenseMinor)
-        assertEquals(1, data.topExpenses.size)
-        assertEquals(3_000, data.topExpenses.first().amountMinor)
     }
 
     @Test
@@ -127,39 +123,6 @@ class DashboardViewModelTest {
         assertEquals(-2_000, data.totalBalanceMinor)
         // Los pills de mes SÍ incluyen todas las cuentas, también CREDIT.
         assertEquals(6_000, data.monthExpenseMinor)
-    }
-
-    @Test
-    fun topGastosEsHistoricoNoSoloDelMes() {
-        val db = freshDb()
-        seedIfEmpty(db)
-        val account = db.accountQueries.selectAll().executeAsList().first()
-        val expenseCat = db.categoryQueries.selectByKind("EXPENSE").executeAsList().first()
-
-        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
-        val pastMonth = today.minus(DatePeriod(months = 2))
-
-        // gasto de un mes anterior y otro del mes actual, misma categoría
-        db.transactionQueries.insert(
-            account.id, expenseCat.id, 5_000, account.currency, pastMonth.toEpochDays().toLong(), "gasto viejo", "EXPENSE", null, null,
-        )
-        db.transactionQueries.insert(
-            account.id, expenseCat.id, 3_000, account.currency, today.toEpochDays().toLong(), "gasto reciente", "EXPENSE", null, null,
-        )
-
-        val data = DashboardViewModel.computeDashboard(
-            accounts = db.accountQueries.selectAll().executeAsList(),
-            txs = db.transactionQueries.selectAll().executeAsList(),
-            cats = db.categoryQueries.selectAll().executeAsList(),
-            budgets = emptyList(),
-            firstOfMonth = LocalDate(today.year, today.month, 1),
-        )
-
-        // Top gastos es histórico: suma ambos, aunque solo uno sea del mes en curso.
-        assertEquals(1, data.topExpenses.size)
-        assertEquals(8_000, data.topExpenses.first().amountMinor)
-        // El desglose del mes sigue siendo solo del mes en curso.
-        assertEquals(3_000, data.monthExpenseMinor)
     }
 
     @Test

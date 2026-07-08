@@ -26,7 +26,6 @@ data class DashboardData(
     val monthIncomeMinor: Long,
     val monthExpenseMinor: Long,
     val currency: String,
-    val topExpenses: List<CategorySlice>,
     val netMinor: Long,
     val savingsRate: Float,
     val accounts: List<AccountBar>,
@@ -39,9 +38,9 @@ data class AccountBar(val name: String, val type: String, val balanceMinor: Long
 
 /**
  * Pantalla de inicio: balance general (saldos iniciales + ingresos − gastos de todo el
- * histórico), ingreso/gasto del mes en curso, y top 5 categorías de gasto de todo el histórico.
- * Reusa `CategorySlice` de [AnalysisViewModel]. El cálculo vive en [computeDashboard] (testeable);
- * nada se calcula en la UI.
+ * histórico), ingreso/gasto/neto/tasa de ahorro del mes en curso, saldos por cuenta, rosca de
+ * gasto del mes y presupuesto vs gastado. Reusa `CategorySlice` de [AnalysisViewModel]. El cálculo
+ * vive en [computeDashboard] (testeable); nada se calcula en la UI.
  */
 class DashboardViewModel(
     txRepo: TransactionRepository,
@@ -74,12 +73,11 @@ class DashboardViewModel(
         }.stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5_000),
-            DashboardData(0, 0, 0, DEFAULT_CURRENCY, emptyList(), 0L, 0f, emptyList(), emptyList(), emptyList()),
+            DashboardData(0, 0, 0, DEFAULT_CURRENCY, 0L, 0f, emptyList(), emptyList(), emptyList()),
         )
 
     companion object {
         private const val DEFAULT_CURRENCY = "USD"
-        private const val TOP_CATEGORIES = 5
         internal val NET_WORTH_TYPES = setOf("CASH", "DEBIT", "SAVINGS")
 
         private fun monthKey(year: Int, monthNumber: Int): Int = year * 100 + monthNumber
@@ -106,20 +104,6 @@ class DashboardViewModel(
             val monthExpense = monthTx.filter { it.kind == "EXPENSE" }.sumOf { it.amountMinor }
 
             val catNameById = cats.associate { it.id to it.name }
-            val totalAllExp = allExpense.coerceAtLeast(1L)
-            val topExpenses = txs.filter { it.kind == "EXPENSE" }
-                .groupBy { it.categoryId }
-                .mapValues { (_, list) -> list.sumOf { it.amountMinor } }
-                .entries
-                .sortedByDescending { it.value }
-                .take(TOP_CATEGORIES)
-                .map { (catId, amount) ->
-                    CategorySlice(
-                        name = catNameById[catId] ?: "Sin categoría",
-                        amountMinor = amount,
-                        pct = amount.toFloat() / totalAllExp.toFloat(),
-                    )
-                }
 
             val netMinor = monthIncome - monthExpense
             val savingsRate = if (monthIncome == 0L) {
@@ -151,7 +135,7 @@ class DashboardViewModel(
                 .rows.filter { it.limitMinor > 0 }
 
             return DashboardData(
-                totalBalance, monthIncome, monthExpense, currency, topExpenses,
+                totalBalance, monthIncome, monthExpense, currency,
                 netMinor, savingsRate, accountBars, donut, budgetRows,
             )
         }
