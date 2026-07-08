@@ -24,9 +24,6 @@ import kotlinx.datetime.todayIn
 
 data class CategorySlice(val name: String, val amountMinor: Long, val pct: Float)
 
-/** Un mes del gráfico anual de gastos. */
-data class MonthExpense(val label: String, val expenseMinor: Long)
-
 /** Un mes del gráfico de flujo: ingreso y gasto en paralelo. */
 data class MonthPoint(val label: String, val incomeMinor: Long, val expenseMinor: Long)
 
@@ -40,7 +37,6 @@ data class AnalysisData(
     val totalIncomeMinor: Long,
     val totalExpenseMinor: Long,
     val topExpenses: List<CategorySlice>,
-    val yearlyExpenses: List<MonthExpense>,
     val currency: String,
     val cashflow: List<MonthPoint>,
     val netWorth: List<MonthNetWorth>,
@@ -89,22 +85,18 @@ class AnalysisViewModel(
                     )
                 }
 
-            val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
-            val yearlyExpenses = computeYearlyExpenses(txs, LocalDate(today.year, today.month, 1))
-
             val cashflow = computeCashflow(txs, month)
             val netWorth = computeNetWorth(accounts, txs, month)
             val frequent = computeFrequentExpenses(txs, cats, period)
 
-            AnalysisData(incomes, expenses, topExpenses, yearlyExpenses, currency, cashflow, netWorth, frequent)
+            AnalysisData(incomes, expenses, topExpenses, currency, cashflow, netWorth, frequent)
         }.stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5_000),
-            AnalysisData(0, 0, emptyList(), emptyList(), "USD", emptyList(), emptyList(), emptyList()),
+            AnalysisData(0, 0, emptyList(), "USD", emptyList(), emptyList(), emptyList()),
         )
 
     companion object {
-        private const val YEARLY_MONTHS = 12
         private const val CASHFLOW_MONTHS = 6
         private const val FREQUENT_TOP = 5
 
@@ -155,21 +147,6 @@ class AnalysisViewModel(
                 }
                 .sortedByDescending { it.count }
                 .take(topN)
-        }
-
-        /** Gasto de cada uno de los últimos 12 meses relativos a [referenceMonth] (ventana fija,
-         * no depende del mes seleccionado en pantalla). */
-        internal fun computeYearlyExpenses(txs: List<TransactionRow>, referenceMonth: LocalDate): List<MonthExpense> {
-            val expenseByPeriod = txs.filter { it.kind == "EXPENSE" }
-                .groupBy { periodOfEpochDay(it.date) }
-                .mapValues { (_, list) -> list.sumOf { it.amountMinor } }
-            return (YEARLY_MONTHS - 1 downTo 0).map { back ->
-                val m = referenceMonth.plus(DatePeriod(months = -back))
-                MonthExpense(
-                    label = "${m.monthNumber}/${m.year % 100}",
-                    expenseMinor = expenseByPeriod[monthPeriod(m)] ?: 0L,
-                )
-            }
         }
     }
 }

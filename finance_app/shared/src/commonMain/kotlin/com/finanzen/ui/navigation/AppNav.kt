@@ -63,8 +63,11 @@ fun AppNav() {
     val currentRoute = backStack?.destination?.route
 
     val showNav = TopDestination.entries.any { it.route == currentRoute }
-    // El FAB desplegable solo crea movimientos/suscripciones; vive solo en Movimientos (no en Dashboard).
-    val showFab = currentRoute == TopDestination.Transactions.route
+    // El FAB desplegable crea movimientos/suscripciones; omnipresente en las 3 pantallas de consulta:
+    // Movimientos, Resumen (Dashboard) y Análisis.
+    val showFab = currentRoute == TopDestination.Transactions.route ||
+        currentRoute == TopDestination.Dashboard.route ||
+        currentRoute == "analysis"
 
     val onSelect: (TopDestination) -> Unit = { dest ->
         if (currentRoute != dest.route) {

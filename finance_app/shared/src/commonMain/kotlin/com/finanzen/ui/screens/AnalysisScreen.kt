@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.PieChart
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -25,16 +24,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.finanzen.ui.components.EmptyState
-import com.finanzen.ui.components.ExpenseBarChart
 import com.finanzen.ui.components.FinanceCard
+import com.finanzen.ui.components.IncomeExpenseLineChart
 import com.finanzen.ui.components.MonthSelector
+import com.finanzen.ui.components.NetWorthAreaChart
 import com.finanzen.ui.components.SectionHeader
-import com.finanzen.ui.components.TopExpensesList
+import com.finanzen.ui.components.TopFrequentExpensesList
 import com.finanzen.ui.format.formatMesAnio
 import com.finanzen.ui.theme.LocalDateLocale
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
+import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.viewmodel.AnalysisViewModel
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.plus
@@ -45,6 +45,7 @@ import org.koin.compose.viewmodel.koinViewModel
 fun AnalysisScreen(onBack: () -> Unit, vm: AnalysisViewModel = koinViewModel()) {
     val data by vm.data.collectAsState()
     val month by vm.month.collectAsState()
+    val spacing = LocalSpacing.current
     val dateLocale = LocalDateLocale.current
 
     Scaffold(
@@ -59,37 +60,30 @@ fun AnalysisScreen(onBack: () -> Unit, vm: AnalysisViewModel = koinViewModel()) 
             )
         },
     ) { inner ->
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(inner),
-            contentPadding = PaddingValues(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            item { SectionHeader("Gastos por mes") }
-            item { ExpenseBarChart(data.yearlyExpenses, data.currency) }
+        Column(Modifier.fillMaxSize().padding(inner)) {
+            // MonthSelector fijo fuera del LazyColumn (mismo patrón que DashboardScreen): no scrollea.
+            MonthSelector(
+                label = formatMesAnio(month, dateLocale),
+                onPrev = { vm.setMonth(month.plus(DatePeriod(months = -1))) },
+                onNext = { vm.setMonth(month.plus(DatePeriod(months = 1))) },
+                modifier = Modifier.padding(horizontal = spacing.lg),
+            )
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                // bottom extra para que el FAB central no tape la última tarjeta.
+                contentPadding = PaddingValues(start = spacing.lg, end = spacing.lg, top = spacing.sm, bottom = 96.dp),
+                verticalArrangement = Arrangement.spacedBy(spacing.lg),
+            ) {
+                item { TotalsCard(income = data.totalIncomeMinor, expense = data.totalExpenseMinor, currency = data.currency) }
 
-            item {
-                MonthSelector(
-                    label = formatMesAnio(month, dateLocale),
-                    onPrev = { vm.setMonth(month.plus(DatePeriod(months = -1))) },
-                    onNext = { vm.setMonth(month.plus(DatePeriod(months = 1))) },
-                )
-            }
+                item { SectionHeader("Ingresos vs gastos") }
+                item { IncomeExpenseLineChart(data.cashflow, data.currency) }
 
-            item { TotalsCard(income = data.totalIncomeMinor, expense = data.totalExpenseMinor, currency = data.currency) }
+                item { SectionHeader("Patrimonio neto") }
+                item { NetWorthAreaChart(data.netWorth, data.currency) }
 
-            item { SectionHeader("Top gastos") }
-
-            if (data.topExpenses.isEmpty()) {
-                item {
-                    EmptyState(
-                        icon = Icons.Outlined.PieChart,
-                        title = "Sin gastos categorizados",
-                        subtitle = "Añade movimientos desde la pestaña Movimientos.",
-                        modifier = Modifier.padding(32.dp),
-                    )
-                }
-            } else {
-                item { TopExpensesList(data.topExpenses, data.currency) }
+                item { SectionHeader("Gastos más frecuentes") }
+                item { TopFrequentExpensesList(data.frequent, data.currency) }
             }
         }
     }
