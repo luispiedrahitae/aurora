@@ -36,7 +36,6 @@ data class FrequentExpense(val name: String, val count: Int, val amountMinor: Lo
 data class AnalysisData(
     val totalIncomeMinor: Long,
     val totalExpenseMinor: Long,
-    val topExpenses: List<CategorySlice>,
     val currency: String,
     val cashflow: List<MonthPoint>,
     val netWorth: List<MonthNetWorth>,
@@ -69,31 +68,15 @@ class AnalysisViewModel(
             val expenses = periodTxs.filter { it.kind == "EXPENSE" }.sumOf { it.amountMinor }
             val currency = periodTxs.firstOrNull()?.currency ?: txs.firstOrNull()?.currency ?: "USD"
 
-            val byCatId = periodTxs.filter { it.kind == "EXPENSE" }
-                .groupBy { it.categoryId }
-                .mapValues { (_, list) -> list.sumOf { it.amountMinor } }
-
-            val catNameById = cats.associate { it.id to it.name }
-            val totalExp = expenses.coerceAtLeast(1L)
-            val topExpenses = byCatId.entries
-                .sortedByDescending { it.value }
-                .map { (catId, amount) ->
-                    CategorySlice(
-                        name = catNameById[catId] ?: "Sin categoría",
-                        amountMinor = amount,
-                        pct = amount.toFloat() / totalExp.toFloat(),
-                    )
-                }
-
             val cashflow = computeCashflow(txs, month)
             val netWorth = computeNetWorth(accounts, txs, month)
             val frequent = computeFrequentExpenses(txs, cats, period)
 
-            AnalysisData(incomes, expenses, topExpenses, currency, cashflow, netWorth, frequent)
+            AnalysisData(incomes, expenses, currency, cashflow, netWorth, frequent)
         }.stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5_000),
-            AnalysisData(0, 0, emptyList(), "USD", emptyList(), emptyList(), emptyList()),
+            AnalysisData(0, 0, "USD", emptyList(), emptyList(), emptyList()),
         )
 
     companion object {
