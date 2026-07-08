@@ -80,7 +80,7 @@ class DashboardViewModel(
     companion object {
         private const val DEFAULT_CURRENCY = "USD"
         private const val TOP_CATEGORIES = 5
-        private val NET_WORTH_TYPES = setOf("CASH", "DEBIT", "SAVINGS")
+        internal val NET_WORTH_TYPES = setOf("CASH", "DEBIT", "SAVINGS")
 
         private fun monthKey(year: Int, monthNumber: Int): Int = year * 100 + monthNumber
         private fun monthKeyOf(epochDay: Long): Int = LocalDate.fromEpochDays(epochDay.toInt()).let { monthKey(it.year, it.monthNumber) }
