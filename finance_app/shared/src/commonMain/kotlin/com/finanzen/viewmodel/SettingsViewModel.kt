@@ -51,6 +51,9 @@ class SettingsViewModel(
     private val mutableRemindDays = MutableStateFlow(repo.reminderDaysBefore())
     val remindDaysBefore: StateFlow<Long> = mutableRemindDays.asStateFlow()
 
+    private val mutableSavingsGoal = MutableStateFlow(repo.savingsGoalPct())
+    val savingsGoalPct: StateFlow<Long> = mutableSavingsGoal.asStateFlow()
+
     private val mutableHideAmounts = MutableStateFlow(repo.hideAmountsEnabled())
     val hideAmounts: StateFlow<Boolean> = mutableHideAmounts.asStateFlow()
 
@@ -85,6 +88,11 @@ class SettingsViewModel(
     fun setRemindDaysBefore(days: Long) {
         repo.setReminderDaysBefore(days)
         mutableRemindDays.value = days
+    }
+
+    fun setSavingsGoalPct(pct: Long) {
+        repo.setSavingsGoalPct(pct)
+        mutableSavingsGoal.value = pct
     }
 
     fun setHideAmounts(enabled: Boolean) {

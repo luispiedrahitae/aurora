@@ -57,10 +57,6 @@ class DashboardViewModel(
     )
     val month: StateFlow<LocalDate> = _month
 
-    fun setMonth(month: LocalDate) {
-        _month.value = month
-    }
-
     val data: StateFlow<DashboardData> =
         combine(
             txRepo.observeAll(),

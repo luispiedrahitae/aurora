@@ -3,15 +3,27 @@ package com.finanzen.ui.components
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Remove
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -30,20 +42,26 @@ import kotlin.math.sin
 
 /**
  * Medidor semicircular de la tasa de ahorro. Arco de fondo (surfaceVariant) + arco de valor
- * (verde ingreso) con barrido proporcional, más una marca radial fija en la meta del 20%.
- * El porcentaje exacto va en el centro como número grande, así el color nunca es la única señal.
+ * (verde ingreso) con barrido proporcional, más una marca radial fija en [goalPct]. El porcentaje
+ * exacto va en el centro como número grande, así el color nunca es la única señal. Tocar la
+ * tarjeta abre un diálogo para editar la meta.
  */
 @Composable
-fun SavingsRateGauge(savingsRate: Float, modifier: Modifier = Modifier) {
+fun SavingsRateGauge(savingsRate: Float, goalPct: Long, onGoalChange: (Long) -> Unit, modifier: Modifier = Modifier) {
     val finance = LocalFinanceColors.current
     val trackColor = MaterialTheme.colorScheme.surfaceVariant
     val markerColor = MaterialTheme.colorScheme.onSurface
     val target = savingsRate.coerceIn(0f, 1f)
     val animated by animateFloatAsState(targetValue = target, animationSpec = tween(600))
     val pctInt = (target * 100).toInt()
+    val goalFraction = (goalPct / 100f).coerceIn(0f, 1f)
+    var showGoalDialog by remember { mutableStateOf(false) }
 
     FinanceCard(
-        modifier = modifier.semantics { contentDescription = "Tasa de ahorro: $pctInt por ciento. Meta 20 por ciento." },
+        modifier = modifier.semantics {
+            contentDescription = "Tasa de ahorro: $pctInt por ciento. Meta $goalPct por ciento. Toca para editar la meta."
+        },
+        onClick = { showGoalDialog = true },
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -75,8 +93,8 @@ fun SavingsRateGauge(savingsRate: Float, modifier: Modifier = Modifier) {
                         size = arcSize,
                         style = Stroke(width = strokeW, cap = StrokeCap.Round),
                     )
-                    // Marca de la meta fija (20%): tick radial que cruza el arco de lado a lado.
-                    val goalRad = ((180f + 0.2f * 180f) * PI / 180f).toFloat()
+                    // Marca de la meta (editable): tick radial que cruza el arco de lado a lado.
+                    val goalRad = ((180f + goalFraction * 180f) * PI / 180f).toFloat()
                     val cosA = cos(goalRad)
                     val sinA = sin(goalRad)
                     val inner = r - strokeW / 2f - 2f
@@ -90,7 +108,7 @@ fun SavingsRateGauge(savingsRate: Float, modifier: Modifier = Modifier) {
                 }
                 AutoSizeText(
                     text = "$pctInt%",
-                    modifier = Modifier.fillMaxWidth(0.5f).padding(bottom = 2.dp),
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp),
                     color = finance.income,
                     fontWeight = FontWeight.Bold,
                 )
@@ -102,10 +120,44 @@ fun SavingsRateGauge(savingsRate: Float, modifier: Modifier = Modifier) {
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
-                "Meta 20%",
+                "Meta $goalPct%",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
+
+    if (showGoalDialog) {
+        SavingsGoalDialog(goalPct = goalPct, onChange = onGoalChange, onDismiss = { showGoalDialog = false })
+    }
+}
+
+/** Editor de la meta de ahorro: pasos de 5 puntos porcentuales, persiste en cada toque. */
+@Composable
+private fun SavingsGoalDialog(goalPct: Long, onChange: (Long) -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Meta de ahorro") },
+        text = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = { onChange((goalPct - 5).coerceAtLeast(0)) }, enabled = goalPct > 0) {
+                    Icon(Icons.Outlined.Remove, contentDescription = "Reducir meta")
+                }
+                Text(
+                    "$goalPct%",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(horizontal = 24.dp),
+                )
+                IconButton(onClick = { onChange((goalPct + 5).coerceAtMost(100)) }, enabled = goalPct < 100) {
+                    Icon(Icons.Outlined.Add, contentDescription = "Aumentar meta")
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Listo") } },
+    )
 }

@@ -8,11 +8,10 @@ import kotlinx.datetime.Clock
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 class AnalysisViewModelTest {
     private fun freshDb(): FinanzenDb {
@@ -22,7 +21,7 @@ class AnalysisViewModelTest {
     }
 
     @Test
-    fun computeCashflowCubreSeisMesesConIngresoYGasto() {
+    fun computeCashflowCubreTodosLosDiasDelMesConIngresoYGastoPorDia() {
         val db = freshDb()
         seedIfEmpty(db)
         val account = db.accountQueries.selectAll().executeAsList().first()
@@ -31,19 +30,20 @@ class AnalysisViewModelTest {
 
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
         val referenceMonth = LocalDate(today.year, today.month, 1)
+        val expectedDays = referenceMonth.plus(DatePeriod(months = 1)).toEpochDays() - referenceMonth.toEpochDays()
 
-        // ingreso y gasto en el mes de referencia
+        // día 1 del mes: ingreso y gasto
         db.transactionQueries.insert(
-            account.id, incomeCat.id, 5_000, account.currency, referenceMonth.toEpochDays().toLong(), "ingreso del mes", "INCOME", null, null,
+            account.id, incomeCat.id, 5_000, account.currency, referenceMonth.toEpochDays().toLong(), "ingreso día 1", "INCOME", null, null,
         )
         db.transactionQueries.insert(
-            account.id, expenseCat.id, 2_000, account.currency, referenceMonth.toEpochDays().toLong(), "gasto del mes", "EXPENSE", null, null,
+            account.id, expenseCat.id, 2_000, account.currency, referenceMonth.toEpochDays().toLong(), "gasto día 1", "EXPENSE", null, null,
         )
 
-        // ingreso 2 meses atrás (dentro de la ventana de 6 meses)
-        val twoMonthsAgo = referenceMonth.minus(DatePeriod(months = 2))
+        // día 15 del mes: otro ingreso, para distinguir por día (no por mes)
+        val day15 = referenceMonth.plus(DatePeriod(days = 14))
         db.transactionQueries.insert(
-            account.id, incomeCat.id, 3_000, account.currency, twoMonthsAgo.toEpochDays().toLong(), "ingreso viejo", "INCOME", null, null,
+            account.id, incomeCat.id, 3_000, account.currency, day15.toEpochDays().toLong(), "ingreso día 15", "INCOME", null, null,
         )
 
         val cashflow = AnalysisViewModel.computeCashflow(
@@ -51,15 +51,15 @@ class AnalysisViewModelTest {
             referenceMonth = referenceMonth,
         )
 
-        assertEquals(6, cashflow.size)
-        assertEquals(5_000, cashflow.last().incomeMinor)
-        assertEquals(2_000, cashflow.last().expenseMinor)
-        // 2 meses atrás == penúltima-2 = índice size-3
-        assertEquals(3_000, cashflow[cashflow.size - 3].incomeMinor)
+        assertEquals(expectedDays, cashflow.size)
+        assertEquals(5_000, cashflow.first().incomeMinor)
+        assertEquals(2_000, cashflow.first().expenseMinor)
+        assertEquals(3_000, cashflow[14].incomeMinor)
+        assertEquals(0, cashflow[14].expenseMinor)
     }
 
     @Test
-    fun computeNetWorthAcumulaYExcluyeCredito() {
+    fun computeNetWorthAcumulaPorDiaYExcluyeCredito() {
         val db = freshDb()
         // cuentas controladas (sin seedIfEmpty para no arrastrar saldos iniciales ajenos)
         db.accountQueries.insert("Efectivo", "CASH", "USD", 10_000, 0, 0)
@@ -74,13 +74,14 @@ class AnalysisViewModelTest {
 
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
         val referenceMonth = LocalDate(today.year, today.month, 1)
+        val day10 = referenceMonth.plus(DatePeriod(days = 9))
 
         db.transactionQueries.insert(
-            cash.id, incomeCat.id, 5_000, "USD", referenceMonth.toEpochDays().toLong(), "sueldo", "INCOME", null, null,
+            cash.id, incomeCat.id, 5_000, "USD", day10.toEpochDays().toLong(), "sueldo", "INCOME", null, null,
         )
         // gasto en tarjeta de crédito: NO debe reducir el patrimonio neto
         db.transactionQueries.insert(
-            credit.id, expenseCat.id, 9_000, "USD", referenceMonth.toEpochDays().toLong(), "compra a credito", "EXPENSE", null, null,
+            credit.id, expenseCat.id, 9_000, "USD", day10.toEpochDays().toLong(), "compra a credito", "EXPENSE", null, null,
         )
 
         val netWorth = AnalysisViewModel.computeNetWorth(
@@ -89,11 +90,11 @@ class AnalysisViewModelTest {
             referenceMonth = referenceMonth,
         )
 
-        assertEquals(6, netWorth.size)
-        // 10_000 (saldo inicial CASH) + 5_000 (ingreso), sin restar el gasto de crédito
+        // antes del día 10: solo el saldo inicial de CASH
+        assertEquals(10_000, netWorth[0].netWorthMinor)
+        // desde el día 10 en adelante: + 5_000 (ingreso), sin restar el gasto de crédito
+        assertEquals(15_000, netWorth[9].netWorthMinor)
         assertEquals(15_000, netWorth.last().netWorthMinor)
-        // un mes anterior (antes del ingreso) tiene patrimonio menor que el mes de referencia
-        assertTrue(netWorth.first().netWorthMinor < netWorth.last().netWorthMinor)
     }
 
     @Test

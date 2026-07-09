@@ -123,4 +123,13 @@ class SettingsRepositoryTest {
         repo.setSymbolPosition("suffix")
         assertEquals("suffix", repo.symbolPosition())
     }
+
+    @Test
+    fun savingsGoalPctDefaultEs20YPersisteElCambio() {
+        val repo = SettingsRepository(freshDb())
+        assertEquals(20L, repo.savingsGoalPct())
+
+        repo.setSavingsGoalPct(35L)
+        assertEquals(35L, repo.savingsGoalPct())
+    }
 }

@@ -20,11 +20,11 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -32,6 +32,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.finanzen.ui.components.AutoSizeText
 import com.finanzen.ui.components.SpeedDialAction
 import com.finanzen.ui.components.SpeedDialFab
 import com.finanzen.ui.screens.AboutScreen
@@ -63,11 +64,9 @@ fun AppNav() {
     val currentRoute = backStack?.destination?.route
 
     val showNav = TopDestination.entries.any { it.route == currentRoute }
-    // El FAB desplegable crea movimientos/suscripciones; omnipresente en las 3 pantallas de consulta:
-    // Movimientos, Resumen (Dashboard) y Análisis.
-    val showFab = currentRoute == TopDestination.Transactions.route ||
-        currentRoute == TopDestination.Dashboard.route ||
-        currentRoute == "analysis"
+    // El FAB desplegable crea movimientos/suscripciones; solo en Movimientos, para no competir con
+    // las acciones propias de Resumen y Análisis.
+    val showFab = currentRoute == TopDestination.Transactions.route
 
     val onSelect: (TopDestination) -> Unit = { dest ->
         if (currentRoute != dest.route) {
@@ -110,11 +109,11 @@ fun AppNav() {
                             onClick = { onSelect(dest) },
                             icon = { Icon(if (selected) dest.selectedIcon else dest.icon, contentDescription = dest.label) },
                             label = {
-                                Text(
-                                    dest.label,
+                                AutoSizeText(
+                                    text = dest.label,
                                     style = MaterialTheme.typography.labelSmall,
-                                    maxLines = 1,
-                                    softWrap = false,
+                                    maxFontSize = MaterialTheme.typography.labelSmall.fontSize,
+                                    minFontSize = 8.sp,
                                 )
                             },
                         )
@@ -137,11 +136,11 @@ fun AppNav() {
                                     onClick = { onSelect(dest) },
                                     icon = { Icon(if (selected) dest.selectedIcon else dest.icon, contentDescription = dest.label) },
                                     label = {
-                                        Text(
-                                            dest.label,
+                                        AutoSizeText(
+                                            text = dest.label,
                                             style = MaterialTheme.typography.labelSmall,
-                                            maxLines = 1,
-                                            softWrap = false,
+                                            maxFontSize = MaterialTheme.typography.labelSmall.fontSize,
+                                            minFontSize = 8.sp,
                                         )
                                     },
                                 )
@@ -173,7 +172,7 @@ private fun AppNavHost(navController: NavHostController, modifier: Modifier = Mo
         popExitTransition = { fadeOut(tween(180)) },
     ) {
         composable(TopDestination.Dashboard.route) {
-            DashboardScreen(onOpenAnalysis = { navController.navigate("analysis") })
+            DashboardScreen()
         }
         composable(TopDestination.Transactions.route) {
             TransactionsScreen(onEdit = { id -> navController.navigate("tx_form/$id") })

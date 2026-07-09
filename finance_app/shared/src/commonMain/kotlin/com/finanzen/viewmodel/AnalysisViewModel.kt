@@ -8,6 +8,7 @@ import com.finanzen.data.TransactionRepository
 import com.finanzen.db.Account
 import com.finanzen.db.Category
 import com.finanzen.db.TransactionRow
+import com.finanzen.ui.format.formatDiaMes
 import com.finanzen.ui.format.monthPeriod
 import com.finanzen.ui.format.periodOfEpochDay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -24,11 +25,11 @@ import kotlinx.datetime.todayIn
 
 data class CategorySlice(val name: String, val amountMinor: Long, val pct: Float)
 
-/** Un mes del gráfico de flujo: ingreso y gasto en paralelo. */
-data class MonthPoint(val label: String, val incomeMinor: Long, val expenseMinor: Long)
+/** Un día del gráfico de flujo (mes seleccionado): ingreso y gasto en paralelo. */
+data class DayPoint(val label: String, val incomeMinor: Long, val expenseMinor: Long)
 
-/** Patrimonio neto acumulado al cierre de un mes. */
-data class MonthNetWorth(val label: String, val netWorthMinor: Long)
+/** Patrimonio neto acumulado al cierre de un día del mes seleccionado. */
+data class DayNetWorth(val label: String, val netWorthMinor: Long)
 
 /** Categoría de gasto ordenada por frecuencia (gasto hormiga). */
 data class FrequentExpense(val name: String, val count: Int, val amountMinor: Long)
@@ -37,8 +38,8 @@ data class AnalysisData(
     val totalIncomeMinor: Long,
     val totalExpenseMinor: Long,
     val currency: String,
-    val cashflow: List<MonthPoint>,
-    val netWorth: List<MonthNetWorth>,
+    val cashflow: List<DayPoint>,
+    val netWorth: List<DayNetWorth>,
     val frequent: List<FrequentExpense>,
 )
 
@@ -80,37 +81,41 @@ class AnalysisViewModel(
         )
 
     companion object {
-        private const val CASHFLOW_MONTHS = 6
         private const val FREQUENT_TOP = 5
 
-        /** Ingreso y gasto de cada uno de los últimos [months] meses relativos a [referenceMonth]. */
-        internal fun computeCashflow(txs: List<TransactionRow>, referenceMonth: LocalDate, months: Int = CASHFLOW_MONTHS): List<MonthPoint> {
-            val byPeriod = txs.groupBy { periodOfEpochDay(it.date) }
-            return (months - 1 downTo 0).map { back ->
-                val m = referenceMonth.plus(DatePeriod(months = -back))
-                val monthTxs = byPeriod[monthPeriod(m)].orEmpty()
-                MonthPoint(
-                    label = "${m.monthNumber}/${m.year % 100}",
-                    incomeMinor = monthTxs.filter { it.kind == "INCOME" }.sumOf { it.amountMinor },
-                    expenseMinor = monthTxs.filter { it.kind == "EXPENSE" }.sumOf { it.amountMinor },
+        private fun daysInMonth(firstOfMonth: LocalDate): Int = firstOfMonth.plus(DatePeriod(months = 1)).toEpochDays() - firstOfMonth.toEpochDays()
+
+        /** Ingreso y gasto de cada día del mes de [referenceMonth] (equivalente táctil de "hover": cada
+         * día es un punto tocable, no hay hover real en Android/iOS). */
+        internal fun computeCashflow(txs: List<TransactionRow>, referenceMonth: LocalDate): List<DayPoint> {
+            val periodTxs = txs.filter { periodOfEpochDay(it.date) == monthPeriod(referenceMonth) }
+            val byDay = periodTxs.groupBy { it.date }
+            val firstEpochDay = referenceMonth.toEpochDays()
+            return (0 until daysInMonth(referenceMonth)).map { offset ->
+                val epochDay = (firstEpochDay + offset).toLong()
+                val dayTxs = byDay[epochDay].orEmpty()
+                DayPoint(
+                    label = formatDiaMes(epochDay),
+                    incomeMinor = dayTxs.filter { it.kind == "INCOME" }.sumOf { it.amountMinor },
+                    expenseMinor = dayTxs.filter { it.kind == "EXPENSE" }.sumOf { it.amountMinor },
                 )
             }
         }
 
-        /** Patrimonio neto acumulado al cierre de cada uno de los últimos [months] meses: saldo inicial
-         * de las cuentas de patrimonio + (ingresos − gastos) de esas cuentas hasta el fin de cada mes. */
-        internal fun computeNetWorth(accounts: List<Account>, txs: List<TransactionRow>, referenceMonth: LocalDate, months: Int = CASHFLOW_MONTHS): List<MonthNetWorth> {
+        /** Patrimonio neto acumulado al cierre de cada día del mes de [referenceMonth]: saldo inicial
+         * de las cuentas de patrimonio + (ingresos − gastos) de esas cuentas hasta ese día, inclusive. */
+        internal fun computeNetWorth(accounts: List<Account>, txs: List<TransactionRow>, referenceMonth: LocalDate): List<DayNetWorth> {
             val countedAccountIds = accounts.filter { it.type in DashboardViewModel.NET_WORTH_TYPES }.map { it.id }.toSet()
             val opening = accounts.filter { it.type in DashboardViewModel.NET_WORTH_TYPES }.sumOf { it.openingBalanceMinor }
             val countedTxs = txs.filter { it.accountId in countedAccountIds }
-            return (months - 1 downTo 0).map { back ->
-                val m = referenceMonth.plus(DatePeriod(months = -back))
-                val cutoff = monthPeriod(m)
-                val upTo = countedTxs.filter { periodOfEpochDay(it.date) <= cutoff }
+            val firstEpochDay = referenceMonth.toEpochDays()
+            return (0 until daysInMonth(referenceMonth)).map { offset ->
+                val epochDay = (firstEpochDay + offset).toLong()
+                val upTo = countedTxs.filter { it.date <= epochDay }
                 val income = upTo.filter { it.kind == "INCOME" }.sumOf { it.amountMinor }
                 val expense = upTo.filter { it.kind == "EXPENSE" }.sumOf { it.amountMinor }
-                MonthNetWorth(
-                    label = "${m.monthNumber}/${m.year % 100}",
+                DayNetWorth(
+                    label = formatDiaMes(epochDay),
                     netWorthMinor = opening + income - expense,
                 )
             }

@@ -44,11 +44,6 @@ fun TopFrequentExpensesList(items: List<FrequentExpense>, currency: String, modi
 
     FinanceCard(modifier = modifier.semantics { contentDescription = "Gastos más frecuentes" }) {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text(
-                "Barra: frecuencia relativa · ×N: número de veces",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
             items.forEach { item ->
                 val fraction = item.count.toFloat() / maxCount.toFloat()
                 val animated by animateFloatAsState(targetValue = fraction.coerceIn(0f, 1f), animationSpec = tween(400))

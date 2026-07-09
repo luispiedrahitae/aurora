@@ -47,6 +47,11 @@ class SettingsRepository(private val db: FinanzenDb) {
 
     fun setReminderDaysBefore(days: Long) = db.settingQueries.put(KEY_NOTIFY_REMIND_DAYS, days.toString())
 
+    /** Meta de la tasa de ahorro mostrada en el gauge del Resumen, en porcentaje (0-100). Default 20. */
+    fun savingsGoalPct(): Long = db.settingQueries.get(KEY_SAVINGS_GOAL_PCT).executeAsOneOrNull()?.toLongOrNull() ?: 20
+
+    fun setSavingsGoalPct(pct: Long) = db.settingQueries.put(KEY_SAVINGS_GOAL_PCT, pct.toString())
+
     /** Moneda única de la app. La app no maneja FX; todos los montos se asumen en esta moneda. */
     fun baseCurrency(): String = db.settingQueries.get(KEY_CURRENCY).executeAsOneOrNull() ?: DEFAULT_CURRENCY
 
@@ -96,6 +101,7 @@ class SettingsRepository(private val db: FinanzenDb) {
         const val KEY_NOTIFY_CARDS = "notif.cards"
         const val KEY_NOTIFY_BUDGET = "notif.budget"
         const val KEY_NOTIFY_REMIND_DAYS = "notif.remind_days"
+        const val KEY_SAVINGS_GOAL_PCT = "ui.savings_goal_pct"
         const val KEY_HIDE_AMOUNTS = "ui.hide_amounts"
         const val KEY_SYMBOL_POS = "ui.symbol_pos"
     }

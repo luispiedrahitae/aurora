@@ -12,9 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.PieChart
-import androidx.compose.material.icons.outlined.Savings
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Icon
@@ -33,23 +31,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.finanzen.ui.components.AccountBalanceBars
 import com.finanzen.ui.components.AutoSizeText
-import com.finanzen.ui.components.BudgetVsActualList
 import com.finanzen.ui.components.CategoryDonutChart
 import com.finanzen.ui.components.EmptyState
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.MainTabHeader
-import com.finanzen.ui.components.MonthSelector
 import com.finanzen.ui.components.SavingsRateGauge
 import com.finanzen.ui.components.SectionHeader
-import com.finanzen.ui.format.formatMesAnio
-import com.finanzen.ui.theme.LocalDateLocale
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.viewmodel.DashboardViewModel
 import com.finanzen.viewmodel.SettingsViewModel
-import kotlinx.datetime.DatePeriod
-import kotlinx.datetime.plus
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -57,23 +49,14 @@ import org.koin.compose.viewmodel.koinViewModel
 fun DashboardScreen(
     vm: DashboardViewModel = koinViewModel(),
     settingsVm: SettingsViewModel = koinInject(),
-    onOpenAnalysis: () -> Unit = {},
 ) {
     val data by vm.data.collectAsState()
-    val month by vm.month.collectAsState()
     val hideAmounts by settingsVm.hideAmounts.collectAsState()
+    val savingsGoalPct by settingsVm.savingsGoalPct.collectAsState()
     val spacing = LocalSpacing.current
-    val dateLocale = LocalDateLocale.current
 
     Column(Modifier.fillMaxSize()) {
         MainTabHeader(title = "Resumen")
-        // MonthSelector fijo fuera del LazyColumn (patrón de BudgetsScreen): no scrollea con el contenido.
-        MonthSelector(
-            label = formatMesAnio(month, dateLocale),
-            onPrev = { vm.setMonth(month.plus(DatePeriod(months = -1))) },
-            onNext = { vm.setMonth(month.plus(DatePeriod(months = 1))) },
-            modifier = Modifier.padding(horizontal = spacing.lg),
-        )
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             // bottom extra para que el FAB central no tape la última tarjeta.
@@ -93,13 +76,18 @@ fun DashboardScreen(
                 KpiRow(
                     income = data.monthIncomeMinor,
                     expense = data.monthExpenseMinor,
-                    net = data.netMinor,
                     currency = data.currency,
                     hidden = hideAmounts,
                 )
             }
 
-            item { SavingsRateGauge(data.savingsRate) }
+            item {
+                SavingsRateGauge(
+                    savingsRate = data.savingsRate,
+                    goalPct = savingsGoalPct,
+                    onGoalChange = settingsVm::setSavingsGoalPct,
+                )
+            }
 
             item { SectionHeader("Saldos por cuenta") }
             item { AccountBalanceBars(data.accounts, data.currency) }
@@ -117,22 +105,6 @@ fun DashboardScreen(
             } else {
                 item { CategoryDonutChart(data.donut, data.currency) }
             }
-
-            item { SectionHeader("Presupuesto") }
-            if (data.budgets.isEmpty()) {
-                item {
-                    EmptyState(
-                        icon = Icons.Outlined.Savings,
-                        title = "Sin presupuestos",
-                        subtitle = "Asigna presupuestos desde la pestaña Presupuesto.",
-                        modifier = Modifier.padding(spacing.xl),
-                    )
-                }
-            } else {
-                item { BudgetVsActualList(data.budgets, data.currency) }
-            }
-
-            item { AnalysisShortcutCard(onClick = onOpenAnalysis) }
         }
     }
 }
@@ -195,14 +167,13 @@ private fun BalanceHeroCard(
 }
 
 /**
- * Fila de KPIs del mes en curso: ingresos, gastos y balance neto. Sustituye la barra de proporción
- * que antes vivía en el hero. Cada tarjeta respeta el modo "ocultar montos" con la misma máscara.
+ * Fila de KPIs del mes en curso: ingresos y gastos. Sustituye la barra de proporción que antes
+ * vivía en el hero. Cada tarjeta respeta el modo "ocultar montos" con la misma máscara.
  */
 @Composable
 private fun KpiRow(
     income: Long,
     expense: Long,
-    net: Long,
     currency: String,
     hidden: Boolean,
     modifier: Modifier = Modifier,
@@ -212,14 +183,6 @@ private fun KpiRow(
     Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
         KpiCard("Ingresos", income, currency, finance.income, hidden, Modifier.weight(1f))
         KpiCard("Gastos", expense, currency, finance.expense, hidden, Modifier.weight(1f))
-        KpiCard(
-            "Balance neto",
-            net,
-            currency,
-            if (net >= 0) finance.income else finance.expense,
-            hidden,
-            Modifier.weight(1f),
-        )
     }
 }
 
@@ -243,26 +206,6 @@ private fun KpiCard(
                 fontWeight = FontWeight.SemiBold,
                 color = accent,
                 maxLines = 1,
-            )
-        }
-    }
-}
-
-@Composable
-private fun AnalysisShortcutCard(onClick: () -> Unit) {
-    val spacing = LocalSpacing.current
-    FinanceCard(onClick = onClick) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text("Ver detalle mensual", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
-            Icon(
-                Icons.AutoMirrored.Outlined.ArrowForward,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(spacing.lg),
             )
         }
     }

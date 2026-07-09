@@ -36,16 +36,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
-import com.finanzen.viewmodel.MonthPoint
+import com.finanzen.viewmodel.DayPoint
 
 /**
- * Dos líneas (ingresos en verde, gastos en rojo) sobre un eje de meses compartido. Tocar la
- * columna de un mes lo selecciona y muestra sus valores exactos arriba (mismo mecanismo de
- * "tap para seleccionar" de ExpenseBarChart; no hay hover en táctil). El mes más reciente empieza
+ * Dos líneas (ingresos en verde, gastos en rojo) sobre un eje de días del mes seleccionado. Tocar
+ * la columna de un día lo selecciona y muestra sus valores exactos arriba (mismo mecanismo de
+ * "tap para seleccionar" de ExpenseBarChart; no hay hover en táctil). El día más reciente empieza
  * seleccionado. Leyenda con etiquetas de texto para que el color no sea la única señal.
  */
 @Composable
-fun IncomeExpenseLineChart(points: List<MonthPoint>, currency: String, modifier: Modifier = Modifier) {
+fun IncomeExpenseLineChart(points: List<DayPoint>, currency: String, modifier: Modifier = Modifier) {
     if (points.isEmpty()) return
     val finance = LocalFinanceColors.current
     val fmt = LocalMoneyFormat.current
@@ -55,7 +55,7 @@ fun IncomeExpenseLineChart(points: List<MonthPoint>, currency: String, modifier:
     val sel = points[selectedIndex]
     val markerLineColor = MaterialTheme.colorScheme.outlineVariant
 
-    FinanceCard(modifier = modifier.semantics { contentDescription = "Ingresos y gastos por mes" }) {
+    FinanceCard(modifier = modifier.semantics { contentDescription = "Ingresos y gastos por día" }) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             // Encabezado: valores exactos del mes seleccionado.
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -135,11 +135,12 @@ fun IncomeExpenseLineChart(points: List<MonthPoint>, currency: String, modifier:
                     }
                 }
             }
-            // Eje de meses.
+            // Eje de días: con hasta 31 puntos solo se rotula cada ~5 días (y el seleccionado) para
+            // no amontonar texto, pero cada día sigue siendo su propia columna/objetivo táctil.
             Row(Modifier.fillMaxWidth()) {
                 points.forEachIndexed { i, p ->
                     Text(
-                        p.label,
+                        if (i % 5 == 0 || i == selectedIndex) p.label else "",
                         modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.labelSmall,
                         color = if (i == selectedIndex) {

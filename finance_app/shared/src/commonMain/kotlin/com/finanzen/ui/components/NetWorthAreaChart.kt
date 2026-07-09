@@ -1,7 +1,6 @@
 package com.finanzen.ui.components
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,8 +10,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,9 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -35,16 +30,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
-import com.finanzen.viewmodel.MonthNetWorth
+import com.finanzen.viewmodel.DayNetWorth
 
 /**
- * Área rellena bajo la línea de patrimonio neto. Un único color para toda la serie según la
- * tendencia global (verde si el último punto >= el primero, rojo si cayó). El valor del punto
- * seleccionado va como titular arriba; por defecto es el más reciente y tocar otra columna lo
- * cambia (mismo mecanismo que ExpenseBarChart / IncomeExpenseLineChart).
+ * Área rellena bajo la línea de patrimonio neto, un punto por día del mes seleccionado. Un único
+ * color para toda la serie según la tendencia global (verde si el último punto >= el primero, rojo
+ * si cayó). El valor del punto seleccionado va como titular arriba; por defecto es el más reciente
+ * y tocar otra columna lo cambia (mismo mecanismo que ExpenseBarChart / IncomeExpenseLineChart).
  */
 @Composable
-fun NetWorthAreaChart(points: List<MonthNetWorth>, currency: String, modifier: Modifier = Modifier) {
+fun NetWorthAreaChart(points: List<DayNetWorth>, currency: String, modifier: Modifier = Modifier) {
     if (points.isEmpty()) return
     val finance = LocalFinanceColors.current
     val fmt = LocalMoneyFormat.current
@@ -72,16 +67,7 @@ fun NetWorthAreaChart(points: List<MonthNetWorth>, currency: String, modifier: M
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            // Leyenda (serie única).
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Box(Modifier.size(12.dp).clip(CircleShape).background(lineColor))
-                Text(
-                    if (rising) "Patrimonio neto (al alza)" else "Patrimonio neto (a la baja)",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            // Área del gráfico con overlay táctil por mes.
+            // Área del gráfico con overlay táctil por día.
             Box(Modifier.fillMaxWidth().height(160.dp)) {
                 Canvas(Modifier.fillMaxSize()) {
                     val padTop = 12f
@@ -136,11 +122,11 @@ fun NetWorthAreaChart(points: List<MonthNetWorth>, currency: String, modifier: M
                     }
                 }
             }
-            // Eje de meses.
+            // Eje de días: con hasta 31 puntos solo se rotula cada ~5 días (y el seleccionado).
             Row(Modifier.fillMaxWidth()) {
                 points.forEachIndexed { i, p ->
                     Text(
-                        p.label,
+                        if (i % 5 == 0 || i == selectedIndex) p.label else "",
                         modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.labelSmall,
                         color = if (i == selectedIndex) {

@@ -20,6 +20,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -96,8 +97,14 @@ private fun TotalsCard(income: Long, expense: Long, currency: String) {
     val net = income - expense
     val netColor = if (net >= 0) finance.income else finance.expense
 
+    val spentPct = if (income == 0L) "—" else "${(expense * 100 / income.coerceAtLeast(1))}%"
+
     FinanceCard(modifier = Modifier.fillMaxWidth()) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             Text("Balance del periodo", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
                 fmt.format(net, currency),
@@ -108,14 +115,14 @@ private fun TotalsCard(income: Long, expense: Long, currency: String) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 StatColumn(label = "Ingresos", amount = income, currency = currency, color = finance.income)
                 StatColumn(label = "Gastos", amount = expense, currency = currency, color = finance.expense)
-                StatColumn(
-                    label = "Gastado de lo ingresado",
-                    amount = null,
-                    currency = currency,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    overrideText = if (income == 0L) "—" else "${(expense * 100 / income.coerceAtLeast(1))}%",
-                )
             }
+            StatColumn(
+                label = "Gastado de lo ingresado",
+                amount = null,
+                currency = currency,
+                color = MaterialTheme.colorScheme.onSurface,
+                overrideText = spentPct,
+            )
         }
     }
 }
