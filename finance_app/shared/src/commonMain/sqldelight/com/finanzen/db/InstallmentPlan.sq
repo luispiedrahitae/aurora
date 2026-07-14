@@ -39,6 +39,9 @@ WHERE id = ?;
 delete:
 DELETE FROM InstallmentPlan WHERE id = ?;
 
+deleteByCard:
+DELETE FROM InstallmentPlan WHERE cardId = ?;
+
 rescaleAllTotals:
 UPDATE InstallmentPlan SET totalAmountMinor = (totalAmountMinor * ?) / ?;
 

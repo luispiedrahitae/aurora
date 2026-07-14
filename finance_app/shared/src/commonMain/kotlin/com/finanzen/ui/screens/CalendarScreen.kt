@@ -45,7 +45,6 @@ import com.finanzen.ui.components.CategoryAvatar
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.KindAvatar
 import com.finanzen.ui.components.MonthSelector
-import com.finanzen.ui.components.categoryColor
 import com.finanzen.ui.format.formatFechaLarga
 import com.finanzen.ui.format.formatMesAnio
 import com.finanzen.ui.theme.LocalDateLocale
@@ -251,7 +250,7 @@ private fun DayTxRow(row: TransactionRow, category: Category?, onClick: () -> Un
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         if (category != null) {
-            CategoryAvatar(icon = category.icon, color = categoryColor(category.name, category.color))
+            CategoryAvatar(icon = category.icon)
         } else {
             KindAvatar(kind = row.kind)
         }

@@ -9,6 +9,7 @@ import com.finanzen.db.Category
 import com.finanzen.db.Currency
 import com.finanzen.db.FinanzenDb
 import com.finanzen.db.InstallmentPlan
+import com.finanzen.db.Investment
 import com.finanzen.db.RecurringExpense
 import com.finanzen.db.Subscription
 import com.finanzen.db.TransactionRow
@@ -27,6 +28,8 @@ class TransactionRepository(private val db: FinanzenDb) {
         note: String,
         kind: String,
         installmentPlanId: Long? = null,
+        investmentId: Long? = null,
+        subscriptionId: Long? = null,
     ) = db.transactionQueries.insert(
         accountId = accountId,
         categoryId = categoryId,
@@ -37,6 +40,8 @@ class TransactionRepository(private val db: FinanzenDb) {
         kind = kind,
         transferAccountId = null,
         installmentPlanId = installmentPlanId,
+        investmentId = investmentId,
+        subscriptionId = subscriptionId,
     )
 
     fun update(
@@ -58,6 +63,8 @@ class TransactionRepository(private val db: FinanzenDb) {
         kind = kind,
         transferAccountId = null,
         installmentPlanId = null,
+        investmentId = null,
+        subscriptionId = null,
         id = id,
     )
 
@@ -72,6 +79,8 @@ class TransactionRepository(private val db: FinanzenDb) {
         kind = "TRANSFER",
         transferAccountId = toAccountId,
         installmentPlanId = null,
+        investmentId = null,
+        subscriptionId = null,
     )
 
     fun updateTransfer(id: Long, fromAccountId: Long, toAccountId: Long, amountMinor: Long, currency: String, epochDay: Long, note: String) = db.transactionQueries.update(
@@ -84,6 +93,8 @@ class TransactionRepository(private val db: FinanzenDb) {
         kind = "TRANSFER",
         transferAccountId = toAccountId,
         installmentPlanId = null,
+        investmentId = null,
+        subscriptionId = null,
         id = id,
     )
 
@@ -93,7 +104,13 @@ class TransactionRepository(private val db: FinanzenDb) {
 
     fun delete(id: Long) = db.transactionQueries.delete(id)
 
+    fun deleteByAccount(accountId: Long) = db.transactionQueries.deleteByAccount(accountId)
+
     fun countForPlan(planId: Long): Long = db.transactionQueries.countByInstallmentPlan(planId).executeAsOne()
+
+    fun contributionsForInvestment(investmentId: Long): List<TransactionRow> = db.transactionQueries.selectByInvestment(investmentId).executeAsList()
+
+    fun contributionsForSubscription(subscriptionId: Long): List<TransactionRow> = db.transactionQueries.selectBySubscription(subscriptionId).executeAsList()
 }
 
 class AccountRepository(private val db: FinanzenDb) {
@@ -161,6 +178,8 @@ class InstallmentPlanRepository(private val db: FinanzenDb) {
 
     fun delete(id: Long) = db.installmentPlanQueries.delete(id)
 
+    fun deleteByCard(cardId: Long) = db.installmentPlanQueries.deleteByCard(cardId)
+
     fun settleAllForCard(cardId: Long) = db.installmentPlanQueries.settleAllByCard(cardId)
 }
 
@@ -187,9 +206,46 @@ class SubscriptionRepository(private val db: FinanzenDb) {
 
     fun activeNow(): List<Subscription> = db.subscriptionQueries.selectActive().executeAsList()
 
+    fun byId(id: Long): Subscription? = db.subscriptionQueries.selectById(id).executeAsOneOrNull()
+
     fun updateNextCharge(id: Long, nextChargeDateEpochDay: Long) = db.subscriptionQueries.updateNextCharge(nextChargeDateEpochDay, id)
 
     fun delete(id: Long) = db.subscriptionQueries.delete(id)
+}
+
+class InvestmentRepository(private val db: FinanzenDb) {
+    fun observeOpen(): Flow<List<Investment>> = db.investmentQueries.selectOpen().asFlow().mapToList(Dispatchers.Default)
+
+    fun observeClosed(): Flow<List<Investment>> = db.investmentQueries.selectClosed().asFlow().mapToList(Dispatchers.Default)
+
+    fun add(
+        name: String,
+        amountMinor: Long,
+        currency: String,
+        accountId: Long?,
+        categoryId: Long?,
+        periodic: Boolean,
+        frequency: String?,
+        intervalCount: Long?,
+        nextContributionDate: Long?,
+        startDate: Long,
+    ): Long = db.transactionWithResult {
+        db.investmentQueries.insert(
+            name, amountMinor, currency, accountId, categoryId,
+            if (periodic) 1L else 0L, frequency, intervalCount, nextContributionDate, startDate,
+        )
+        db.investmentQueries.lastInsertRowId().executeAsOne()
+    }
+
+    fun openNow(): List<Investment> = db.investmentQueries.selectOpen().executeAsList()
+
+    fun byId(id: Long): Investment? = db.investmentQueries.selectById(id).executeAsOneOrNull()
+
+    fun updateNextContribution(id: Long, next: Long) = db.investmentQueries.updateNextContribution(next, id)
+
+    fun close(id: Long, withdrawnAmountMinor: Long, closedDate: Long, yieldMinor: Long) = db.investmentQueries.close(withdrawnAmountMinor, closedDate, yieldMinor, id)
+
+    fun delete(id: Long) = db.investmentQueries.delete(id)
 }
 
 class RecurringExpenseRepository(private val db: FinanzenDb) {
@@ -223,6 +279,12 @@ class CategoryRepository(private val db: FinanzenDb) {
 
     fun add(name: String, kind: String, parentId: Long?, icon: String = "", color: Long = 0) = db.categoryQueries.insert(parentId = parentId, name = name, icon = icon, color = color, kind = kind)
 
+    /** Igual que [add] pero devuelve el id nuevo — usado para auto-seleccionar una subcategoría recién creada. */
+    fun addAndGetId(name: String, kind: String, parentId: Long?, icon: String = "", color: Long = 0): Long {
+        db.categoryQueries.insert(parentId = parentId, name = name, icon = icon, color = color, kind = kind)
+        return db.categoryQueries.lastInsertRowId().executeAsOne()
+    }
+
     fun update(id: Long, name: String, kind: String, parentId: Long?, icon: String = "", color: Long = 0) = db.categoryQueries.update(parentId = parentId, name = name, icon = icon, color = color, kind = kind, id = id)
 
     fun delete(id: Long) = db.categoryQueries.delete(id)
@@ -244,4 +306,6 @@ class BudgetRepository(private val db: FinanzenDb) {
         .maxByOrNull { it.periodMonth }?.limitMinor ?: 0L
 
     fun delete(id: Long) = db.budgetQueries.delete(id)
+
+    fun deleteByCategory(categoryId: Long) = db.budgetQueries.deleteByCategory(categoryId)
 }

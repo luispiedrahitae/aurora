@@ -147,11 +147,17 @@ class AccountsViewModel(
     }
 
     /**
-     * Borra la cuenta y su tarjeta de respaldo (si es de crédito). Borramos la tarjeta a mano en vez
-     * de depender de ON DELETE CASCADE porque el enforcement de FKs no está garantizado en SQLite.
+     * Borra la cuenta, sus transacciones, y su tarjeta de respaldo con los planes de cuotas asociados
+     * (si es de crédito) — el diálogo de confirmación promete borrar "movimientos y planes de cuotas
+     * asociados", así que la cascada se hace a mano en vez de depender de ON DELETE CASCADE porque el
+     * enforcement de FKs no está garantizado en SQLite.
      */
     fun delete(id: Long) {
-        cardRepo.byAccount(id)?.let { cardRepo.delete(it.id) }
+        txRepo.deleteByAccount(id)
+        cardRepo.byAccount(id)?.let { card ->
+            planRepo.deleteByCard(card.id)
+            cardRepo.delete(card.id)
+        }
         accountRepo.delete(id)
     }
 

@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -80,14 +79,14 @@ fun TopFrequentExpensesList(items: List<FrequentExpense>, currency: String, modi
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(8.dp)
-                            .clip(RoundedCornerShape(50))
+                            .clip(PillShape)
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                     ) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth(animated.coerceAtLeast(0.02f))
                                 .height(8.dp)
-                                .clip(RoundedCornerShape(50))
+                                .clip(PillShape)
                                 .background(finance.neutral),
                         )
                     }

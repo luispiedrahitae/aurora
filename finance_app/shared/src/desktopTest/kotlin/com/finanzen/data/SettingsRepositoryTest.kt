@@ -15,13 +15,13 @@ class SettingsRepositoryTest {
     }
 
     @Test
-    fun defaultEsSystemYPersisteElCambio() {
+    fun defaultEsDarkYPersisteElCambio() {
         val repo = SettingsRepository(freshDb())
-        // sin valor guardado → default
-        assertEquals(SettingsRepository.THEME_SYSTEM, repo.themeMode())
-
-        repo.setThemeMode(SettingsRepository.THEME_DARK)
+        // sin valor guardado → oscuro OLED por defecto (ver DESIGN.md, "Dark Mode principal")
         assertEquals(SettingsRepository.THEME_DARK, repo.themeMode())
+
+        repo.setThemeMode(SettingsRepository.THEME_SYSTEM)
+        assertEquals(SettingsRepository.THEME_SYSTEM, repo.themeMode())
     }
 
     @Test
@@ -45,7 +45,7 @@ class SettingsRepositoryTest {
         db.currencyQueries.upsert("COP", "$", 0, 1.0, "Colombian Peso", ",", ".")
         val accountRepo = AccountRepository(db)
         val accId = accountRepo.add(name = "Efectivo", type = "CASH", currency = "USD")
-        db.transactionQueries.insert(accId, null, 1000, "USD", 0, "", "EXPENSE", null, null)
+        db.transactionQueries.insert(accId, null, 1000, "USD", 0, "", "EXPENSE", null, null, null, null)
 
         val repo = SettingsRepository(db)
         assertEquals(SettingsRepository.DEFAULT_CURRENCY, repo.baseCurrency())
@@ -68,7 +68,7 @@ class SettingsRepositoryTest {
 
         val accountRepo = AccountRepository(db)
         val accId = accountRepo.add(name = "Efectivo", type = "CREDIT", currency = "COP", openingBalanceMinor = 40000)
-        db.transactionQueries.insert(accId, null, 5000, "COP", 0, "", "EXPENSE", null, null)
+        db.transactionQueries.insert(accId, null, 5000, "COP", 0, "", "EXPENSE", null, null, null, null)
         db.categoryQueries.insert(parentId = null, name = "Gastos", icon = "", color = 0, kind = "EXPENSE")
         val categoryId = db.categoryQueries.selectAll().executeAsList().single().id
         db.budgetQueries.upsert(categoryId = categoryId, periodMonth = 202607, limitMinor = 100000)
@@ -99,6 +99,27 @@ class SettingsRepositoryTest {
         SettingsRepository(db).setBaseCurrency("COP")
 
         assertEquals(1000, accountRepo.all().single().openingBalanceMinor)
+    }
+
+    @Test
+    fun setBaseCurrencyNoTocaCuentaQueYaEstabaEnOtraMoneda() {
+        // FIX (hallazgo crítico #2): setAllCurrency ahora filtra por WHERE currency = oldCode, así que
+        // setBaseCurrency() solo re-etiqueta cuentas/transacciones que estaban en la moneda base
+        // ANTERIOR. Una cuenta ya en otra moneda (alcanzable con una cuenta restaurada de un backup
+        // multi-moneda) queda intacta.
+        val db = freshDb()
+        db.currencyQueries.upsert("USD", "$", 2, 1.0, "US Dollar", ".", ",")
+        db.currencyQueries.upsert("EUR", "€", 2, 1.0, "Euro", ",", ".")
+        db.currencyQueries.upsert("COP", "$", 0, 1.0, "Colombian Peso", ",", ".")
+        val accountRepo = AccountRepository(db)
+        accountRepo.add(name = "Base USD", type = "CASH", currency = "USD") // ya en la moneda base
+        accountRepo.add(name = "Ahorro EUR", type = "SAVINGS", currency = "EUR") // moneda ajena a la base
+
+        SettingsRepository(db).setBaseCurrency("COP")
+
+        // La cuenta EUR no se toca; solo la que estaba en la moneda base anterior (USD) pasa a COP.
+        assertEquals("EUR", accountRepo.all().first { it.name == "Ahorro EUR" }.currency)
+        assertEquals("COP", accountRepo.all().first { it.name == "Base USD" }.currency)
     }
 
     @Test

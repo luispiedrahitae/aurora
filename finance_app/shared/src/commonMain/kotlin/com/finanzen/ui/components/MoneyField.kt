@@ -49,5 +49,11 @@ fun MoneyField(
     )
 }
 
-/** Extrae solo dígitos y los interpreta como `amountMinor` directo (sin separadores). */
-internal fun digitsToMinor(text: String): Long = text.filter(Char::isDigit).toLongOrNull() ?: 0L
+/**
+ * Extrae solo dígitos y los interpreta como `amountMinor` directo (sin separadores). Se recortan a
+ * [MAX_DIGITS] (cubre montos de billones en la subunidad mínima) para que un desborde de Long no
+ * resetee el campo a 0 en silencio — más allá de eso ningún monto real tiene sentido.
+ */
+internal fun digitsToMinor(text: String): Long = text.filter(Char::isDigit).take(MAX_DIGITS).toLongOrNull() ?: 0L
+
+private const val MAX_DIGITS = 15

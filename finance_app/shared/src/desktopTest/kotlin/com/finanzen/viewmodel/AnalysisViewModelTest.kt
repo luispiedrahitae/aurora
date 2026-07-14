@@ -34,16 +34,16 @@ class AnalysisViewModelTest {
 
         // día 1 del mes: ingreso y gasto
         db.transactionQueries.insert(
-            account.id, incomeCat.id, 5_000, account.currency, referenceMonth.toEpochDays().toLong(), "ingreso día 1", "INCOME", null, null,
+            account.id, incomeCat.id, 5_000, account.currency, referenceMonth.toEpochDays().toLong(), "ingreso día 1", "INCOME", null, null, null, null,
         )
         db.transactionQueries.insert(
-            account.id, expenseCat.id, 2_000, account.currency, referenceMonth.toEpochDays().toLong(), "gasto día 1", "EXPENSE", null, null,
+            account.id, expenseCat.id, 2_000, account.currency, referenceMonth.toEpochDays().toLong(), "gasto día 1", "EXPENSE", null, null, null, null,
         )
 
         // día 15 del mes: otro ingreso, para distinguir por día (no por mes)
         val day15 = referenceMonth.plus(DatePeriod(days = 14))
         db.transactionQueries.insert(
-            account.id, incomeCat.id, 3_000, account.currency, day15.toEpochDays().toLong(), "ingreso día 15", "INCOME", null, null,
+            account.id, incomeCat.id, 3_000, account.currency, day15.toEpochDays().toLong(), "ingreso día 15", "INCOME", null, null, null, null,
         )
 
         val cashflow = AnalysisViewModel.computeCashflow(
@@ -56,45 +56,6 @@ class AnalysisViewModelTest {
         assertEquals(2_000, cashflow.first().expenseMinor)
         assertEquals(3_000, cashflow[14].incomeMinor)
         assertEquals(0, cashflow[14].expenseMinor)
-    }
-
-    @Test
-    fun computeNetWorthAcumulaPorDiaYExcluyeCredito() {
-        val db = freshDb()
-        // cuentas controladas (sin seedIfEmpty para no arrastrar saldos iniciales ajenos)
-        db.accountQueries.insert("Efectivo", "CASH", "USD", 10_000, 0, 0)
-        db.accountQueries.insert("Tarjeta", "CREDIT", "USD", 0, 0, 0)
-        val accounts = db.accountQueries.selectAll().executeAsList()
-        val cash = accounts.first { it.type == "CASH" }
-        val credit = accounts.first { it.type == "CREDIT" }
-        db.categoryQueries.insert(null, "Sueldo", "", 0, "INCOME")
-        db.categoryQueries.insert(null, "Compras", "", 0, "EXPENSE")
-        val incomeCat = db.categoryQueries.selectByKind("INCOME").executeAsList().first()
-        val expenseCat = db.categoryQueries.selectByKind("EXPENSE").executeAsList().first()
-
-        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
-        val referenceMonth = LocalDate(today.year, today.month, 1)
-        val day10 = referenceMonth.plus(DatePeriod(days = 9))
-
-        db.transactionQueries.insert(
-            cash.id, incomeCat.id, 5_000, "USD", day10.toEpochDays().toLong(), "sueldo", "INCOME", null, null,
-        )
-        // gasto en tarjeta de crédito: NO debe reducir el patrimonio neto
-        db.transactionQueries.insert(
-            credit.id, expenseCat.id, 9_000, "USD", day10.toEpochDays().toLong(), "compra a credito", "EXPENSE", null, null,
-        )
-
-        val netWorth = AnalysisViewModel.computeNetWorth(
-            accounts = accounts,
-            txs = db.transactionQueries.selectAll().executeAsList(),
-            referenceMonth = referenceMonth,
-        )
-
-        // antes del día 10: solo el saldo inicial de CASH
-        assertEquals(10_000, netWorth[0].netWorthMinor)
-        // desde el día 10 en adelante: + 5_000 (ingreso), sin restar el gasto de crédito
-        assertEquals(15_000, netWorth[9].netWorthMinor)
-        assertEquals(15_000, netWorth.last().netWorthMinor)
     }
 
     @Test
@@ -114,12 +75,12 @@ class AnalysisViewModelTest {
         // categoría A: 3 gastos de 100 (conteo alto, monto bajo)
         repeat(3) {
             db.transactionQueries.insert(
-                account.id, catA.id, 100, "USD", referenceMonth.toEpochDays().toLong(), "cafe", "EXPENSE", null, null,
+                account.id, catA.id, 100, "USD", referenceMonth.toEpochDays().toLong(), "cafe", "EXPENSE", null, null, null, null,
             )
         }
         // categoría B: 1 gasto de 10_000 (conteo bajo, monto alto)
         db.transactionQueries.insert(
-            account.id, catB.id, 10_000, "USD", referenceMonth.toEpochDays().toLong(), "tv", "EXPENSE", null, null,
+            account.id, catB.id, 10_000, "USD", referenceMonth.toEpochDays().toLong(), "tv", "EXPENSE", null, null, null, null,
         )
 
         val frequent = AnalysisViewModel.computeFrequentExpenses(
@@ -132,5 +93,102 @@ class AnalysisViewModelTest {
         assertEquals("Café", frequent.first().name)
         assertEquals(3, frequent.first().count)
         assertEquals(300, frequent.first().amountMinor)
+    }
+
+    @Test
+    fun costoMensualDeSuscripcionesSumaEquivalenteDeCadaUna() {
+        val db = freshDb()
+        // MONTHLY: cobra 5_000 tal cual (interval = día 15 del mes, no multiplica).
+        db.subscriptionQueries.insert("Streaming", 5_000, "USD", null, null, "MONTHLY", 15, 0, 3, 1)
+        // DAILY cada 7 días: 700 x 30.437 / 7 = 3043.7... -> 3_044.
+        db.subscriptionQueries.insert("Café diario", 700, "USD", null, null, "DAILY", 7, 0, 0, 1)
+
+        val subscriptions = db.subscriptionQueries.selectAll().executeAsList()
+
+        assertEquals(8_044, AnalysisViewModel.computeSubscriptionMonthlyCost(subscriptions))
+    }
+
+    // ---- Edge cases QA (ver reporte de hallazgos) ----
+
+    @Test
+    fun computeFrequentExpensesTruncaEnTopN() {
+        val db = freshDb()
+        db.accountQueries.insert("Efectivo", "CASH", "USD", 0, 0, 0)
+        val account = db.accountQueries.selectAll().executeAsList().first()
+
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        val referenceMonth = LocalDate(today.year, today.month, 1)
+        val period = monthPeriod(referenceMonth)
+
+        // 6 categorías con conteos distintos y decrecientes: 6,5,4,3,2,1.
+        val counts = listOf(6, 5, 4, 3, 2, 1)
+        counts.forEachIndexed { i, count ->
+            db.categoryQueries.insert(null, "Cat$i", "", 0, "EXPENSE")
+            val cat = db.categoryQueries.selectAll().executeAsList().last()
+            repeat(count) {
+                db.transactionQueries.insert(
+                    account.id, cat.id, 100, "USD", referenceMonth.toEpochDays().toLong(), "gasto", "EXPENSE", null, null, null, null,
+                )
+            }
+        }
+
+        val frequent = AnalysisViewModel.computeFrequentExpenses(
+            txs = db.transactionQueries.selectAll().executeAsList(),
+            cats = db.categoryQueries.selectAll().executeAsList(),
+            period = period,
+        )
+
+        // topN=5 por defecto: la categoría de menor conteo (Cat5, count=1) queda fuera.
+        assertEquals(5, frequent.size)
+        assertEquals(true, frequent.none { it.name == "Cat5" })
+        assertEquals("Cat0", frequent.first().name)
+    }
+
+    @Test
+    fun computeFrequentExpensesConListaVaciaDevuelveVacio() {
+        val frequent = AnalysisViewModel.computeFrequentExpenses(txs = emptyList(), cats = emptyList(), period = 202607)
+        assertEquals(emptyList(), frequent)
+    }
+
+    @Test
+    fun computeFrequentExpensesEnEmpateOrdenaPorInsercionMasReciente() {
+        val db = freshDb()
+        db.accountQueries.insert("Efectivo", "CASH", "USD", 0, 0, 0)
+        val account = db.accountQueries.selectAll().executeAsList().first()
+        db.categoryQueries.insert(null, "Primera", "", 0, "EXPENSE")
+        db.categoryQueries.insert(null, "Segunda", "", 0, "EXPENSE")
+        val cats = db.categoryQueries.selectAll().executeAsList()
+        val primera = cats.first { it.name == "Primera" }
+        val segunda = cats.first { it.name == "Segunda" }
+
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        val referenceMonth = LocalDate(today.year, today.month, 1)
+        // Ambas categorías con el mismo conteo (2): no hay criterio de desempate explícito en
+        // computeFrequentExpenses. El orden real lo decide TransactionRow.selectAll(), que ordena
+        // `date DESC, id DESC` (Transaction.sq) — con la misma fecha, gana el id más alto, es decir
+        // la transacción insertada MÁS RECIENTE. Como "Segunda" se insertó después, aparece primero.
+        repeat(2) {
+            db.transactionQueries.insert(
+                account.id, primera.id, 100, "USD", referenceMonth.toEpochDays().toLong(), "a", "EXPENSE", null, null, null, null,
+            )
+        }
+        repeat(2) {
+            db.transactionQueries.insert(
+                account.id, segunda.id, 100, "USD", referenceMonth.toEpochDays().toLong(), "b", "EXPENSE", null, null, null, null,
+            )
+        }
+
+        val frequent = AnalysisViewModel.computeFrequentExpenses(
+            txs = db.transactionQueries.selectAll().executeAsList(),
+            cats = cats,
+            period = monthPeriod(referenceMonth),
+        )
+
+        assertEquals(listOf("Segunda", "Primera"), frequent.map { it.name })
+    }
+
+    @Test
+    fun computeSubscriptionMonthlyCostConListaVaciaEsCero() {
+        assertEquals(0L, AnalysisViewModel.computeSubscriptionMonthlyCost(emptyList()))
     }
 }

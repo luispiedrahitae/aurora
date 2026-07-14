@@ -25,6 +25,7 @@ import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.SwapHoriz
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -37,6 +38,7 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -49,6 +51,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -62,13 +65,13 @@ import com.finanzen.ui.components.KindAvatar
 import com.finanzen.ui.components.MainTabHeader
 import com.finanzen.ui.components.MoneyText
 import com.finanzen.ui.components.MonthSelector
-import com.finanzen.ui.components.categoryColor
 import com.finanzen.ui.components.kindLabel
 import com.finanzen.ui.format.diaSemana
 import com.finanzen.ui.format.formatMesAnio
 import com.finanzen.ui.format.monthPeriod
 import com.finanzen.ui.format.periodOfEpochDay
 import com.finanzen.ui.theme.LocalDateLocale
+import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.viewmodel.TransactionsViewModel
@@ -88,7 +91,7 @@ private fun dayExpense(rows: List<TransactionRow>): Long = rows.filter { it.kind
 // Tarjeta de día armada con 3 piezas (cabecera, filas, resumen) que comparten el mismo
 // fondo (surfaceContainer) pero solo redondean sus bordes externos, para que juntas se
 // vean como una sola tarjeta redondeada en vez de una lista plana.
-private val CardRadius = 28.dp // mismo radio que MaterialTheme.shapes.large
+private val CardRadius = 16.dp // mismo radio que MaterialTheme.shapes.medium
 private val DayCardTopShape = RoundedCornerShape(topStart = CardRadius, topEnd = CardRadius)
 private val DayCardBottomShape = RoundedCornerShape(bottomStart = CardRadius, bottomEnd = CardRadius)
 private val DayCardFullShape = RoundedCornerShape(CardRadius)
@@ -110,6 +113,7 @@ fun TransactionsScreen(
     // sirve para colapsar días concretos en meses densos.
     val expandedDays = remember { mutableStateMapOf<Long, Boolean>() }
     var pendingDeleteIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
+    var blockedDelete by remember { mutableStateOf<TransactionsViewModel.DeleteBlock?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
@@ -208,7 +212,16 @@ fun TransactionsScreen(
                                         category = row.categoryId?.let { categoriesById[it] },
                                         account = accountsById[row.accountId],
                                         onClick = { onEdit(row.id) },
-                                        onDelete = { requestDelete(row.id) },
+                                        onSwipeToDelete = {
+                                            val block = vm.deleteBlockReason(row.id)
+                                            if (block != null) {
+                                                blockedDelete = block
+                                                false
+                                            } else {
+                                                requestDelete(row.id)
+                                                true
+                                            }
+                                        },
                                         modifier = Modifier.animateItem(),
                                     )
                                 }
@@ -228,6 +241,24 @@ fun TransactionsScreen(
             }
         }
     }
+
+    blockedDelete?.let { block ->
+        AlertDialog(
+            onDismissRequest = { blockedDelete = null },
+            title = { Text("No se puede eliminar") },
+            text = {
+                Text(
+                    when (block) {
+                        is TransactionsViewModel.DeleteBlock.Subscription ->
+                            "\"${block.name}\" es una suscripción periódica. Elimínala desde la pantalla de Suscripciones — una vez eliminada, podrás borrar este movimiento aquí."
+                        is TransactionsViewModel.DeleteBlock.Investment ->
+                            "\"${block.name}\" es una inversión periódica. Gestiónala desde la pantalla de Inversiones."
+                    },
+                )
+            },
+            confirmButton = { TextButton(onClick = { blockedDelete = null }) { Text("Entendido") } },
+        )
+    }
 }
 
 /** Cabecera de la tarjeta de día: número de día + nombre del día + cantidad de movimientos. */
@@ -244,6 +275,7 @@ private fun DayHeader(
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalSpacing.current
+    val finance = LocalFinanceColors.current
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -281,6 +313,7 @@ private fun DayHeader(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     signed = true,
+                    colorOverride = finance.income,
                 )
                 MoneyText(
                     amountMinor = -expenseMinor,
@@ -288,6 +321,7 @@ private fun DayHeader(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     signed = true,
+                    colorOverride = finance.expense,
                 )
             }
         }
@@ -308,6 +342,7 @@ private fun DaySummaryFooter(
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalSpacing.current
+    val finance = LocalFinanceColors.current
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -317,13 +352,13 @@ private fun DaySummaryFooter(
     ) {
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         Spacer(Modifier.height(spacing.sm))
-        SummaryRow("Ingreso", incomeMinor, currency)
-        SummaryRow("Gasto", -expenseMinor, currency)
+        SummaryRow("Ingreso", incomeMinor, currency, colorOverride = finance.income)
+        SummaryRow("Gasto", -expenseMinor, currency, colorOverride = finance.expense)
     }
 }
 
 @Composable
-private fun SummaryRow(label: String, amountMinor: Long, currency: String) {
+private fun SummaryRow(label: String, amountMinor: Long, currency: String, colorOverride: Color) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -335,6 +370,7 @@ private fun SummaryRow(label: String, amountMinor: Long, currency: String) {
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
             signed = true,
+            colorOverride = colorOverride,
         )
     }
 }
@@ -346,19 +382,19 @@ private fun TransactionItem(
     category: Category?,
     account: Account?,
     onClick: () -> Unit,
-    onDelete: () -> Unit,
+    onSwipeToDelete: () -> Boolean,
     modifier: Modifier = Modifier,
 ) {
     val isTransfer = row.kind == "TRANSFER"
     val isIncome = row.kind == "INCOME"
     val signedAmount = if (isIncome) row.amountMinor else -row.amountMinor
     val spacing = LocalSpacing.current
+    val finance = LocalFinanceColors.current
 
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = {
             if (it == SwipeToDismissBoxValue.EndToStart) {
-                onDelete()
-                true
+                onSwipeToDelete()
             } else {
                 false
             }
@@ -391,7 +427,7 @@ private fun TransactionItem(
             horizontalArrangement = Arrangement.spacedBy(spacing.md),
         ) {
             if (category != null) {
-                CategoryAvatar(icon = category.icon, color = categoryColor(category.name, category.color))
+                CategoryAvatar(icon = category.icon)
             } else {
                 KindAvatar(kind = row.kind)
             }
@@ -431,6 +467,7 @@ private fun TransactionItem(
                         currency = row.currency,
                         style = MaterialTheme.typography.titleMedium,
                         signed = true,
+                        colorOverride = if (isIncome) finance.income else finance.expense,
                     )
                 }
                 if (account != null) {

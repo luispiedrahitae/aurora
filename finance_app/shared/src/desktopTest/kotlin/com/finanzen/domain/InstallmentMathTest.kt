@@ -58,4 +58,43 @@ class InstallmentMathTest {
         val expected = InstallmentMath.monthlyPaymentMinor(120_000, 12, 0.0) * 11
         assertEquals(expected, InstallmentMath.remainingCommitmentMinor(120_000, 12, 0.0, 0, 0, settled = false))
     }
+
+    // ---- Edge cases QA (ver reporte de hallazgos) ----
+
+    @Test
+    fun installmentDueDateAcotaFinDeMesCortoNoBisiesto() {
+        // Compra el 31 de enero de 2026 (NO bisiesto): la cuota 1 se acota a 28 feb, no 29.
+        // (installmentDueDateAcotaFinDeMesCorto ya cubre el caso bisiesto 2024; este cubre el no-bisiesto).
+        val start = LocalDate(2026, 1, 31).toEpochDays().toLong()
+        val due1 = InstallmentMath.installmentDueDate(start, 1)
+        assertEquals(LocalDate(2026, 2, 28), LocalDate.fromEpochDays(due1.toInt()))
+    }
+
+    @Test
+    fun installmentDueDateConIndiceNegativoRetrocedeMeses() {
+        // index negativo no está documentado como caso de uso, pero no revienta: retrocede meses
+        // igual que avanza. 31 ene 2024, index=-1 -> diciembre 2023 (31 días, sin recorte).
+        val start = LocalDate(2024, 1, 31).toEpochDays().toLong()
+        val due = InstallmentMath.installmentDueDate(start, -1)
+        assertEquals(LocalDate(2023, 12, 31), LocalDate.fromEpochDays(due.toInt()))
+    }
+
+    @Test
+    fun remainingCommitmentAMitadDePlazo() {
+        // 12 cuotas de 10_000 sin interés; a los 5 meses transcurridos (6 ya facturadas), quedan 6.
+        val start = LocalDate(2026, 1, 1).toEpochDays().toLong()
+        val today = LocalDate(2026, 6, 1).toEpochDays().toLong()
+        val expected = InstallmentMath.monthlyPaymentMinor(120_000, 12, 0.0) * 6
+        assertEquals(expected, InstallmentMath.remainingCommitmentMinor(120_000, 12, 0.0, start, today, settled = false))
+    }
+
+    @Test
+    fun monthlyPaymentNoDivisibleExactoPierdeCentavos_documentaBug() {
+        // BUG conocido (marcado // ponytail: en InstallmentMath.kt): la división entera de un total no
+        // divisible exacto entre las cuotas pierde el residuo. 100_000 / 3 = 33_333 * 3 = 99_999, un
+        // centavo menos que el principal original. No hay ajuste de "última cuota" todavía.
+        val monthly = InstallmentMath.monthlyPaymentMinor(100_000, 3, 0.0)
+        assertEquals(33_333, monthly)
+        assertEquals(99_999, InstallmentMath.totalWithInterestMinor(100_000, 3, 0.0))
+    }
 }

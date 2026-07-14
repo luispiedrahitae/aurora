@@ -30,21 +30,26 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
-import com.finanzen.viewmodel.DayNetWorth
+import com.finanzen.viewmodel.MonthNetWorth
 
 /**
- * Área rellena bajo la línea de patrimonio neto, un punto por día del mes seleccionado. Un único
+ * Área rellena bajo la línea de patrimonio neto, un punto por mes del año seleccionado. Un único
  * color para toda la serie según la tendencia global (verde si el último punto >= el primero, rojo
  * si cayó). El valor del punto seleccionado va como titular arriba; por defecto es el más reciente
- * y tocar otra columna lo cambia (mismo mecanismo que ExpenseBarChart / IncomeExpenseLineChart).
+ * y tocar otra columna lo cambia (mismo mecanismo que MonthlyBarChart / IncomeExpenseBarChart).
  */
 @Composable
-fun NetWorthAreaChart(points: List<DayNetWorth>, currency: String, modifier: Modifier = Modifier) {
+fun NetWorthAreaChart(points: List<MonthNetWorth>, currency: String, modifier: Modifier = Modifier) {
     if (points.isEmpty()) return
     val finance = LocalFinanceColors.current
     val fmt = LocalMoneyFormat.current
     var selectedIndex by remember(points) { mutableStateOf(points.lastIndex) }
-    val maxValue = points.maxOf { it.netWorthMinor }.coerceAtLeast(1L)
+    // El rango incluye 0 siempre (coerceAtLeast/coerceAtMost) para poder dibujar la línea base y para
+    // que un patrimonio negativo no quede indistinguible de un mes en $0 (antes cy() recortaba frac a
+    // 0f para cualquier valor negativo, aplastando ambos casos al fondo del gráfico).
+    val maxValue = points.maxOf { it.netWorthMinor }.coerceAtLeast(0L)
+    val minValue = points.minOf { it.netWorthMinor }.coerceAtMost(0L)
+    val range = (maxValue - minValue).coerceAtLeast(1L)
     val rising = points.last().netWorthMinor - points.first().netWorthMinor >= 0
     val lineColor = if (rising) finance.income else finance.expense
     val n = points.size
@@ -76,10 +81,20 @@ fun NetWorthAreaChart(points: List<DayNetWorth>, currency: String, modifier: Mod
                     val cw = size.width / n
                     fun cx(i: Int) = (i + 0.5f) * cw
                     fun cy(value: Long): Float {
-                        val frac = (value.toFloat() / maxValue.toFloat()).coerceIn(0f, 1f)
+                        val frac = (value - minValue).toFloat() / range.toFloat()
                         return padTop + (1f - frac) * usableH
                     }
                     val bottom = size.height - padBottom
+                    if (minValue < 0L) {
+                        // Línea base en 0: sin ella, un patrimonio muy negativo y uno en break-even se
+                        // verían igual de "abajo" en el gráfico.
+                        drawLine(
+                            color = markerLineColor,
+                            start = Offset(0f, cy(0L)),
+                            end = Offset(size.width, cy(0L)),
+                            strokeWidth = 1.5f,
+                        )
+                    }
                     val line = Path()
                     val fill = Path()
                     points.forEachIndexed { i, p ->
@@ -122,11 +137,11 @@ fun NetWorthAreaChart(points: List<DayNetWorth>, currency: String, modifier: Mod
                     }
                 }
             }
-            // Eje de días: con hasta 31 puntos solo se rotula cada ~5 días (y el seleccionado).
+            // Eje de meses: 12 puntos caben sin adelgazar etiquetas.
             Row(Modifier.fillMaxWidth()) {
                 points.forEachIndexed { i, p ->
                     Text(
-                        if (i % 5 == 0 || i == selectedIndex) p.label else "",
+                        p.label,
                         modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.labelSmall,
                         color = if (i == selectedIndex) {

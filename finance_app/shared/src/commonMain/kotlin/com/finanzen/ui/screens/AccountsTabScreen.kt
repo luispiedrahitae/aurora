@@ -58,6 +58,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -459,24 +460,31 @@ private fun AccountMovementsSection(
                 }
             }
             HorizontalDivider()
+            val finance = LocalFinanceColors.current
             if (includeIncome) {
                 val income = filtered.filter { it.kind == "INCOME" }.sumOf { it.amountMinor }
                 val expense = filtered.filter { it.kind == "EXPENSE" }.sumOf { it.amountMinor }
-                MovementSummaryRow("Ingreso", income, currency)
-                MovementSummaryRow("Gasto", -expense, currency)
+                MovementSummaryRow("Ingreso", income, currency, colorOverride = finance.income)
+                MovementSummaryRow("Gasto", -expense, currency, colorOverride = finance.expense)
             } else {
                 val expense = filtered.sumOf { it.amountMinor }
-                MovementSummaryRow("Total", -expense, currency)
+                MovementSummaryRow("Total", -expense, currency, colorOverride = finance.expense)
             }
         }
     }
 }
 
 @Composable
-private fun MovementSummaryRow(label: String, amountMinor: Long, currency: String) {
+private fun MovementSummaryRow(label: String, amountMinor: Long, currency: String, colorOverride: Color) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        MoneyText(amountMinor = amountMinor, currency = currency, style = MaterialTheme.typography.bodyMedium, signed = true)
+        MoneyText(
+            amountMinor = amountMinor,
+            currency = currency,
+            style = MaterialTheme.typography.bodyMedium,
+            signed = true,
+            colorOverride = colorOverride,
+        )
     }
 }
 
@@ -485,6 +493,7 @@ private fun MovementSummaryRow(label: String, amountMinor: Long, currency: Strin
 @Composable
 private fun AccountMovementRow(row: TransactionRow, cuotaLabel: String? = null) {
     val dateLocale = LocalDateLocale.current
+    val finance = LocalFinanceColors.current
     val isIncome = row.kind == "INCOME"
     val signedAmount = if (isIncome) row.amountMinor else -row.amountMinor
     val dateLine = formatDiaMes(row.date, dateLocale) + (cuotaLabel?.let { " · $it" } ?: "")
@@ -498,7 +507,13 @@ private fun AccountMovementRow(row: TransactionRow, cuotaLabel: String? = null) 
             Text(row.note.ifBlank { kindLabel(row.kind) }, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
             Text(dateLine, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        MoneyText(amountMinor = signedAmount, currency = row.currency, style = MaterialTheme.typography.bodyMedium, signed = true)
+        MoneyText(
+            amountMinor = signedAmount,
+            currency = row.currency,
+            style = MaterialTheme.typography.bodyMedium,
+            signed = true,
+            colorOverride = if (isIncome) finance.income else finance.expense,
+        )
     }
 }
 

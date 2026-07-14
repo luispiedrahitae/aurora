@@ -18,6 +18,9 @@ insert:
 INSERT INTO Account(name, type, currency, openingBalanceMinor, color, archived)
 VALUES (?, ?, ?, ?, ?, ?);
 
+lastInsertRowId:
+SELECT last_insert_rowid();
+
 update:
 UPDATE Account SET name = ?, type = ?, currency = ?, openingBalanceMinor = ?, color = ?, archived = ?
 WHERE id = ?;
@@ -38,7 +41,7 @@ unarchive:
 UPDATE Account SET archived = 0 WHERE id = ?;
 
 setAllCurrency:
-UPDATE Account SET currency = ?, openingBalanceMinor = (openingBalanceMinor * ?) / ?;
+UPDATE Account SET currency = :newCode, openingBalanceMinor = (openingBalanceMinor * :mult) / :div WHERE currency = :oldCode;
 
 delete:
 DELETE FROM Account WHERE id = ?;

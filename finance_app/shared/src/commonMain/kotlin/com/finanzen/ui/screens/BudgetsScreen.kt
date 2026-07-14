@@ -43,7 +43,6 @@ import com.finanzen.ui.components.LabeledDropdown
 import com.finanzen.ui.components.MainTabHeader
 import com.finanzen.ui.components.MoneyField
 import com.finanzen.ui.components.MonthSelector
-import com.finanzen.ui.components.categoryColor
 import com.finanzen.ui.format.formatMesAnio
 import com.finanzen.ui.theme.LocalDateLocale
 import com.finanzen.ui.theme.LocalFinanceColors
@@ -188,7 +187,7 @@ private fun BudgetRowCard(row: BudgetRow, currency: String, onClick: () -> Unit)
     FinanceCard(modifier = Modifier.fillMaxWidth(), onClick = onClick) {
         Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(spacing.md)) {
-                CategoryAvatar(icon = row.icon, color = categoryColor(row.categoryName, row.color), size = 36.dp)
+                CategoryAvatar(icon = row.icon, size = 36.dp)
                 Text(row.categoryName, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                 Text(
                     "$pct%",

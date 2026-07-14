@@ -63,66 +63,73 @@ fun SavingsRateGauge(savingsRate: Float, goalPct: Long, onGoalChange: (Long) -> 
         },
         onClick = { showGoalDialog = true },
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
-                Canvas(Modifier.fillMaxWidth().aspectRatio(2f)) {
-                    val strokeW = 26f
-                    val cx = size.width / 2f
-                    val cy = size.height - strokeW / 2f
-                    val r = (min(size.width / 2f, size.height) - strokeW).coerceAtLeast(1f)
-                    val topLeft = Offset(cx - r, cy - r)
-                    val arcSize = Size(r * 2f, r * 2f)
-                    drawArc(
-                        color = trackColor,
-                        startAngle = 180f,
-                        sweepAngle = 180f,
-                        useCenter = false,
-                        topLeft = topLeft,
-                        size = arcSize,
-                        style = Stroke(width = strokeW, cap = StrokeCap.Round),
-                    )
-                    drawArc(
+        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopEnd) {
+            Column(
+                modifier = Modifier.fillMaxWidth().align(Alignment.TopStart),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
+                    Canvas(Modifier.fillMaxWidth().aspectRatio(2f)) {
+                        val strokeW = 26f
+                        val cx = size.width / 2f
+                        val cy = size.height - strokeW / 2f
+                        val r = (min(size.width / 2f, size.height) - strokeW).coerceAtLeast(1f)
+                        val topLeft = Offset(cx - r, cy - r)
+                        val arcSize = Size(r * 2f, r * 2f)
+                        drawArc(
+                            color = trackColor,
+                            startAngle = 180f,
+                            sweepAngle = 180f,
+                            useCenter = false,
+                            topLeft = topLeft,
+                            size = arcSize,
+                            style = Stroke(width = strokeW, cap = StrokeCap.Round),
+                        )
+                        drawArc(
+                            color = finance.income,
+                            startAngle = 180f,
+                            sweepAngle = 180f * animated,
+                            useCenter = false,
+                            topLeft = topLeft,
+                            size = arcSize,
+                            style = Stroke(width = strokeW, cap = StrokeCap.Round),
+                        )
+                        // Marca de la meta (editable): tick radial que cruza el arco de lado a lado.
+                        val goalRad = ((180f + goalFraction * 180f) * PI / 180f).toFloat()
+                        val cosA = cos(goalRad)
+                        val sinA = sin(goalRad)
+                        val inner = r - strokeW / 2f - 2f
+                        val outer = r + strokeW / 2f + 2f
+                        drawLine(
+                            color = markerColor,
+                            start = Offset(cx + inner * cosA, cy + inner * sinA),
+                            end = Offset(cx + outer * cosA, cy + outer * sinA),
+                            strokeWidth = 3f,
+                        )
+                    }
+                    AutoSizeText(
+                        text = "$pctInt%",
+                        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp),
                         color = finance.income,
-                        startAngle = 180f,
-                        sweepAngle = 180f * animated,
-                        useCenter = false,
-                        topLeft = topLeft,
-                        size = arcSize,
-                        style = Stroke(width = strokeW, cap = StrokeCap.Round),
-                    )
-                    // Marca de la meta (editable): tick radial que cruza el arco de lado a lado.
-                    val goalRad = ((180f + goalFraction * 180f) * PI / 180f).toFloat()
-                    val cosA = cos(goalRad)
-                    val sinA = sin(goalRad)
-                    val inner = r - strokeW / 2f - 2f
-                    val outer = r + strokeW / 2f + 2f
-                    drawLine(
-                        color = markerColor,
-                        start = Offset(cx + inner * cosA, cy + inner * sinA),
-                        end = Offset(cx + outer * cosA, cy + outer * sinA),
-                        strokeWidth = 3f,
+                        fontWeight = FontWeight.Bold,
                     )
                 }
-                AutoSizeText(
-                    text = "$pctInt%",
-                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp),
-                    color = finance.income,
-                    fontWeight = FontWeight.Bold,
+                Text(
+                    "Tasa de ahorro",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    "Meta $goalPct%",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Text(
-                "Tasa de ahorro",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                "Meta $goalPct%",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            InfoTooltip(
+                "Es lo que ahorraste del mes: (ingresos − gastos) ÷ ingresos, en porcentaje. " +
+                    "Sin ingresos registrados este mes, muestra 0%.",
+                contentDescription = "Cómo se calcula la tasa de ahorro",
             )
         }
     }

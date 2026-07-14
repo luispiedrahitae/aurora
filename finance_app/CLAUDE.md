@@ -38,12 +38,7 @@ The Gradle project lives in **`finance_app/`**, not at the repo root. Run all Gr
 
 ## Architecture
 
-**One shared module, thin platform shells.** All business logic, UI, and persistence live in `shared/`. The `androidApp/`, `desktopApp/`, and `iosApp/` modules are entry-point-only — they each call `App()` from `commonMain` and contribute nothing else.
-
-**Targets** declared in `shared/build.gradle.kts`:
-- `androidTarget()` — consumed by `:androidApp` (plain Android app, not KMP itself)
-- `jvm("desktop")` — consumed by `:desktopApp` (Compose Desktop, Windows dev preview only, **not distributed**)
-- `iosX64 / iosArm64 / iosSimulatorArm64` — emit `Shared.framework` consumed by `iosApp/iosApp.xcodeproj`
+**One shared module, thin platform shells.** All business logic, UI, and persistence live in `shared/`. The `androidApp/`, `desktopApp/`, and `iosApp/` modules are entry-point-only — they each call `App()` from `commonMain` and contribute nothing else. Targets are declared in `shared/build.gradle.kts`.
 
 **expect/actual surface** — `platform/Platform.kt` plus one file per capability (`platform/BiometricUnlock.kt`, `platform/FilePicker.kt`, `platform/Locale.kt`, `security/Crypto.kt`):
 - `platformName: String` — diagnostic, shown on the splash
@@ -59,22 +54,19 @@ The Gradle project lives in **`finance_app/`**, not at the repo root. Run all Gr
 
 Add new expect/actual pairs here when you need a platform-specific capability. Keep the surface small — most things belong in `commonMain`. iOS actuals are largely stubs (`// ponytail:` marked with the real target: LocalAuthentication, UIDocumentPicker, CryptoKit, UNUserNotificationCenter) since iOS can't be exercised from this Windows dev box.
 
-**`shared/src/commonMain/kotlin/com/finanzen/` layers**:
-- `data/` — one repository per table (`AccountRepository`, `TransactionRepository`, ...) wrapping SQLDelight queries, plus `BackupSerializer`/`BackupSnapshot` (export/import format), `DefaultSeed` (first-launch seed, includes `WorldCurrencies` — 149 ISO 4217 currencies), `WorldLocales` (`CURRENCY_LOCALE_INFO` — CLDR symbol position/date order/month names per currency, plus `COUNTRY_TO_CURRENCY`; static Kotlin data generated once from the JDK's own `java.text`/`java.time` locale catalog, deliberately **not** DB columns — see the note in that file on why), `ReportBuilder` (CSV/PDF content assembly)
-- `domain/` — `Money(amountMinor, currency)`, `InstallmentMath` (French amortization), `SymbolPosition`/`DateOrder` (`CurrencyFormat.kt`); pure logic, no platform deps
-- `di/AppModule.kt` — single Koin module wiring `FinanzenDb` → repositories → ViewModels; `seedIfEmpty(db)` runs here on first launch, in the same transaction as currency seeding (was a referential-integrity bug — see `516d065`)
-- `viewmodel/` — one per feature tab (Dashboard, Transactions, Accounts, Categories, Budgets, Subscriptions, Analysis, Reports, Security, Settings, Backup)
-- `ui/screens/` + `ui/components/` + `ui/navigation/` (`AppNav`/`Destinations`) + `ui/theme/` (includes `MoneyFormat`/`LocalMoneyFormat` — symbol position, AUTO resolves per-currency via CLDR; `LocalDateLocale` — date order + month names per the base currency, consumed by every screen that renders `Money` or a date)
+**`shared/src/commonMain/kotlin/com/finanzen/` layers** — `data/`, `domain/`, `di/`, `viewmodel/`, `ui/`. Two non-obvious things to know:
+- `WorldLocales` (`data/`) is static Kotlin data generated once from the JDK's own `java.text`/`java.time` locale catalog, deliberately **not** DB columns — see the note in that file for why.
+- `di/AppModule.kt`'s `seedIfEmpty(db)` runs in the same transaction as currency seeding on purpose — splitting them was a referential-integrity bug (see `516d065`).
 
 **Persistence: SQLDelight 2.x.** Schemas in `shared/src/commonMain/sqldelight/com/finanzen/db/*.sq` compile to the `com.finanzen.db` package (configured in `shared/build.gradle.kts`). The 10 tables (Currency, Account, Card, Category, TransactionRow, InstallmentPlan, Subscription, RecurringExpense, Budget, Setting) reference each other via FOREIGN KEY; SQLDelight handles cross-`.sq` references at schema compile time. **Use `Money(amountMinor: Long, currency: String)`** everywhere — never `Double` — to avoid float drift. All amounts in the DB are `INTEGER` in the currency's minor units.
 
 **Encryption scope (deliberate)**: only exported backups are AES-GCM encrypted with a PBKDF2/Argon2-derived key from the user PIN. The on-disk SQLite DB is **not** encrypted — OS-level FDE covers data at rest. This is a ponytail shortcut marked in the plan; upgrade to SQLCipher only if the threat model demands it.
 
-**Stack pins** (`gradle/libs.versions.toml`): Kotlin 2.1.0 · AGP 8.7.3 · Compose MP 1.7.3 · SQLDelight 2.0.2 · Koin 4.0 · `androidx.navigation:navigation-compose` 2.8 (KMP, **alpha** — fallback would be Voyager/PreCompose) · `androidx.lifecycle:lifecycle-viewmodel-compose` (KMP, ViewModels in `commonMain`).
+**Stack pins**: see `gradle/libs.versions.toml`. Note: `androidx.navigation:navigation-compose` (KMP) is still **alpha** — fallback would be Voyager/PreCompose if it becomes a blocker.
 
 ## CI
 
-`.github/workflows/ci.yml` (root-level, `working-directory: finance_app`), 4 jobs on every PR: `quality` (checkQuality, ubuntu, gates the rest) → `android` (assembleDebug + bundleRelease, unsigned), `desktop-preview` (Windows installer), `ios` (macos-14, `linkReleaseFrameworkIosArm64`, then unsigned Xcode build only if `iosApp.xcodeproj` exists). The three build jobs run in parallel after `quality` passes.
+See `.github/workflows/ci.yml` (root-level, `working-directory: finance_app`).
 
 ## Platform reality
 

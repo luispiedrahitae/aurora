@@ -14,6 +14,7 @@ data class BackupSnapshot(
     val transactions: List<TransactionDto>,
     val installmentPlans: List<InstallmentPlanDto>,
     val subscriptions: List<SubscriptionDto>,
+    val investments: List<InvestmentDto> = emptyList(),
     val recurringExpenses: List<RecurringExpenseDto>,
     val budgets: List<BudgetDto>,
     val settings: List<SettingDto>,
@@ -70,6 +71,8 @@ data class BackupSnapshot(
     val kind: String,
     val transferAccountId: Long?,
     val installmentPlanId: Long?,
+    val investmentId: Long? = null,
+    val subscriptionId: Long? = null,
 )
 
 @Serializable data class InstallmentPlanDto(
@@ -96,6 +99,24 @@ data class BackupSnapshot(
     val nextChargeDate: Long,
     val remindDaysBefore: Long,
     val active: Long,
+)
+
+@Serializable data class InvestmentDto(
+    val id: Long,
+    val name: String,
+    val amountMinor: Long,
+    val currency: String,
+    val accountId: Long?,
+    val categoryId: Long?,
+    val periodic: Long,
+    val frequency: String?,
+    val intervalCount: Long?,
+    val nextContributionDate: Long?,
+    val startDate: Long,
+    val status: String,
+    val withdrawnAmountMinor: Long?,
+    val closedDate: Long?,
+    val yieldMinor: Long?,
 )
 
 @Serializable data class RecurringExpenseDto(

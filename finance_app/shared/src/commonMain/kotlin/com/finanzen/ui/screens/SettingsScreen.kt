@@ -26,24 +26,18 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TooltipBox
-import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -55,11 +49,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.finanzen.ui.components.FinanceCard
+import com.finanzen.ui.components.InfoTooltip
 import com.finanzen.ui.components.SectionHeader
 import com.finanzen.ui.theme.AccentPreset
 import com.finanzen.viewmodel.SettingsViewModel
 import com.finanzen.viewmodel.ThemeMode
-import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -144,36 +138,15 @@ fun SettingsScreen(
                             Text("Dinámico", fontWeight = FontWeight.SemiBold)
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Switch(checked = dynamicColor, onCheckedChange = vm::setDynamicColor)
-                                InfoTooltip("Usa los colores de tu fondo de pantalla para teñir la app.")
+                                InfoTooltip(
+                                    "Usa los colores de tu fondo de pantalla para teñir la app.",
+                                    contentDescription = "Qué es el color dinámico",
+                                )
                             }
                         }
                     }
                 }
             }
-        }
-    }
-}
-
-/**
- * Icono "i" con tooltip (hover en desktop, toque/toque-largo en móvil). Buen patrón para explicar
- * un control sin recargar la fila con texto.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun InfoTooltip(text: String) {
-    val state = rememberTooltipState(isPersistent = false)
-    val scope = rememberCoroutineScope()
-    TooltipBox(
-        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
-        tooltip = { PlainTooltip { Text(text) } },
-        state = state,
-    ) {
-        IconButton(onClick = { scope.launch { state.show() } }) {
-            Icon(
-                Icons.Outlined.Info,
-                contentDescription = "Qué es el color dinámico",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }

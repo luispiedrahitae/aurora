@@ -10,7 +10,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.PieChart
 import androidx.compose.material.icons.outlined.Visibility
@@ -31,12 +34,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.finanzen.ui.components.AccountBalanceBars
 import com.finanzen.ui.components.AutoSizeText
+import com.finanzen.ui.components.BentoTileSize
 import com.finanzen.ui.components.CategoryDonutChart
 import com.finanzen.ui.components.EmptyState
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.MainTabHeader
-import com.finanzen.ui.components.SavingsRateGauge
+import com.finanzen.ui.components.MonthlyBarChart
+import com.finanzen.ui.components.NetWorthAreaChart
 import com.finanzen.ui.components.SectionHeader
+import com.finanzen.ui.components.YearSelector
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.ui.theme.LocalSpacing
@@ -44,6 +50,7 @@ import com.finanzen.viewmodel.DashboardViewModel
 import com.finanzen.viewmodel.SettingsViewModel
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import kotlin.math.roundToInt
 
 @Composable
 fun DashboardScreen(
@@ -51,19 +58,35 @@ fun DashboardScreen(
     settingsVm: SettingsViewModel = koinInject(),
 ) {
     val data by vm.data.collectAsState()
+    val year by vm.year.collectAsState()
     val hideAmounts by settingsVm.hideAmounts.collectAsState()
-    val savingsGoalPct by settingsVm.savingsGoalPct.collectAsState()
     val spacing = LocalSpacing.current
+    val fmt = LocalMoneyFormat.current
+    val finance = LocalFinanceColors.current
+
+    // Bento: el hero de saldo (vidrio) ocupa las 2 columnas; los pares de KPI son medium tiles lado
+    // a lado; gráficas/secciones vuelven a ocupar el ancho completo — capas de tamaño, no una lista
+    // plana (DESIGN.md, "Bento Tiles"). Todo salvo el hero y "Saldos por cuenta" está acotado al año
+    // seleccionado (selector arriba de la grilla).
+    val fullSpan: LazyGridItemSpanScope.() -> GridItemSpan = { GridItemSpan(maxLineSpan) }
 
     Column(Modifier.fillMaxSize()) {
         MainTabHeader(title = "Resumen")
-        LazyColumn(
+        YearSelector(
+            label = year.toString(),
+            onPrev = { vm.setYear(year - 1) },
+            onNext = { vm.setYear(year + 1) },
+            modifier = Modifier.padding(horizontal = spacing.lg),
+        )
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
             modifier = Modifier.fillMaxSize(),
             // bottom extra para que el FAB central no tape la última tarjeta.
             contentPadding = PaddingValues(start = spacing.lg, end = spacing.lg, top = spacing.sm, bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(spacing.lg),
+            horizontalArrangement = Arrangement.spacedBy(spacing.sm),
         ) {
-            item {
+            item(span = fullSpan) {
                 BalanceHeroCard(
                     totalBalance = data.totalBalanceMinor,
                     currency = data.currency,
@@ -73,37 +96,59 @@ fun DashboardScreen(
             }
 
             item {
-                KpiRow(
-                    income = data.monthIncomeMinor,
-                    expense = data.monthExpenseMinor,
-                    currency = data.currency,
-                    hidden = hideAmounts,
+                KpiCard(
+                    "Ingresos",
+                    if (hideAmounts) MASK else fmt.format(data.yearIncomeMinor, data.currency),
+                    finance.income,
+                )
+            }
+            item {
+                KpiCard(
+                    "Gastos",
+                    if (hideAmounts) MASK else fmt.format(data.yearExpenseMinor, data.currency),
+                    finance.expense,
                 )
             }
 
             item {
-                SavingsRateGauge(
-                    savingsRate = data.savingsRate,
-                    goalPct = savingsGoalPct,
-                    onGoalChange = settingsVm::setSavingsGoalPct,
+                KpiCard(
+                    "Tasa de ahorro anual",
+                    "${(data.savingsRate * 100).roundToInt()}%",
+                    MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            item {
+                KpiCard(
+                    "Suscripciones",
+                    if (hideAmounts) MASK else fmt.format(data.subscriptionSpendMinor, data.currency),
+                    MaterialTheme.colorScheme.onSurface,
                 )
             }
 
-            item { SectionHeader("Saldos por cuenta") }
-            item { AccountBalanceBars(data.accounts, data.currency) }
+            item(span = fullSpan) { SectionHeader("Saldos por cuenta") }
+            item(span = fullSpan) { AccountBalanceBars(data.accounts, data.currency) }
 
-            item { SectionHeader("Gastos por categoría") }
+            item(span = fullSpan) { SectionHeader("Patrimonio neto") }
+            item(span = fullSpan) { NetWorthAreaChart(data.netWorthByMonth, data.currency) }
+
+            item(span = fullSpan) { SectionHeader("Ingresos por mes") }
+            item(span = fullSpan) { MonthlyBarChart(data.incomeByMonth, data.currency, finance.income, "Ingresos") }
+
+            item(span = fullSpan) { SectionHeader("Gastos por mes") }
+            item(span = fullSpan) { MonthlyBarChart(data.expenseByMonth, data.currency, finance.expense, "Gastos") }
+
+            item(span = fullSpan) { SectionHeader("Gastos por categoría") }
             if (data.donut.isEmpty()) {
-                item {
+                item(span = fullSpan) {
                     EmptyState(
                         icon = Icons.Outlined.PieChart,
-                        title = "Sin gastos este mes",
+                        title = "Sin gastos este año",
                         subtitle = "Añade movimientos desde la pestaña Movimientos.",
                         modifier = Modifier.padding(spacing.xl),
                     )
                 }
             } else {
-                item { CategoryDonutChart(data.donut, data.currency) }
+                item(span = fullSpan) { CategoryDonutChart(data.donut, data.currency) }
             }
         }
     }
@@ -127,14 +172,15 @@ private fun BalanceHeroCard(
 
     // El balance general es histórico (saldos iniciales + ingresos − gastos de todo el
     // histórico), con el mismo formato global (símbolo + separadores) que el resto de montos de
-    // la app. AutoSizeText se encarga de que la cifra grande siempre quepa en una línea.
+    // la app. No cambia con el año seleccionado. AutoSizeText se encarga de que la cifra grande
+    // siempre quepa en una línea.
     val fmt = LocalMoneyFormat.current
     val haptic = LocalHapticFeedback.current
     val balanceColor = if (totalBalance >= 0) onSurface else expenseRed
     val animatedBalance by animateFloatAsState(targetValue = totalBalance.toFloat(), animationSpec = tween(400))
     val balanceText = if (hidden) MASK else fmt.format(animatedBalance.toLong(), currency)
 
-    FinanceCard(color = MaterialTheme.colorScheme.surfaceContainerHigh, contentPadding = PaddingValues(spacing.xl)) {
+    FinanceCard(size = BentoTileSize.Hero, glass = true, contentPadding = PaddingValues(spacing.xl)) {
         Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -166,42 +212,21 @@ private fun BalanceHeroCard(
     }
 }
 
-/**
- * Fila de KPIs del mes en curso: ingresos y gastos. Sustituye la barra de proporción que antes
- * vivía en el hero. Cada tarjeta respeta el modo "ocultar montos" con la misma máscara.
- */
-@Composable
-private fun KpiRow(
-    income: Long,
-    expense: Long,
-    currency: String,
-    hidden: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    val spacing = LocalSpacing.current
-    val finance = LocalFinanceColors.current
-    Row(modifier = modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
-        KpiCard("Ingresos", income, currency, finance.income, hidden, Modifier.weight(1f))
-        KpiCard("Gastos", expense, currency, finance.expense, hidden, Modifier.weight(1f))
-    }
-}
-
+/** Tile de KPI del año seleccionado: recibe el valor ya formateado (dinero u otra unidad, p. ej.
+ * un porcentaje) para servir tanto montos como tasas sin duplicar el componente. */
 @Composable
 private fun KpiCard(
     label: String,
-    amountMinor: Long,
-    currency: String,
+    valueText: String,
     accent: Color,
-    hidden: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val spacing = LocalSpacing.current
-    val fmt = LocalMoneyFormat.current
     FinanceCard(modifier = modifier, contentPadding = PaddingValues(spacing.md)) {
         Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
             Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
-                if (hidden) MASK else fmt.format(amountMinor, currency),
+                valueText,
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = accent,

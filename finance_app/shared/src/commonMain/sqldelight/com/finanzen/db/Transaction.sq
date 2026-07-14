@@ -8,7 +8,9 @@ CREATE TABLE TransactionRow (
     note                TEXT NOT NULL DEFAULT '',
     kind                TEXT NOT NULL,                        -- INCOME | EXPENSE | TRANSFER
     transferAccountId   INTEGER REFERENCES Account(id),
-    installmentPlanId   INTEGER REFERENCES InstallmentPlan(id) ON DELETE SET NULL
+    installmentPlanId   INTEGER REFERENCES InstallmentPlan(id) ON DELETE SET NULL,
+    investmentId        INTEGER REFERENCES Investment(id) ON DELETE SET NULL,
+    subscriptionId      INTEGER REFERENCES Subscription(id) ON DELETE SET NULL
 );
 
 CREATE INDEX TransactionRow_date_idx ON TransactionRow(date);
@@ -41,19 +43,34 @@ GROUP BY bucket, kind
 ORDER BY bucket;
 
 insert:
-INSERT INTO TransactionRow(accountId, categoryId, amountMinor, currency, date, note, kind, transferAccountId, installmentPlanId)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+INSERT INTO TransactionRow(accountId, categoryId, amountMinor, currency, date, note, kind, transferAccountId, installmentPlanId, investmentId, subscriptionId)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 update:
 UPDATE TransactionRow
-SET accountId = ?, categoryId = ?, amountMinor = ?, currency = ?, date = ?, note = ?, kind = ?, transferAccountId = ?, installmentPlanId = ?
+SET accountId = ?, categoryId = ?, amountMinor = ?, currency = ?, date = ?, note = ?, kind = ?, transferAccountId = ?, installmentPlanId = ?, investmentId = ?, subscriptionId = ?
 WHERE id = ?;
 
 setAllCurrency:
-UPDATE TransactionRow SET currency = ?, amountMinor = (amountMinor * ?) / ?;
+UPDATE TransactionRow SET currency = :newCode, amountMinor = (amountMinor * :mult) / :div WHERE currency = :oldCode;
 
 delete:
 DELETE FROM TransactionRow WHERE id = ?;
 
+deleteByAccount:
+DELETE FROM TransactionRow WHERE accountId = ?;
+
 countByInstallmentPlan:
 SELECT COUNT(*) FROM TransactionRow WHERE installmentPlanId = ?;
+
+selectByInvestment:
+SELECT * FROM TransactionRow WHERE investmentId = ? ORDER BY date DESC, id DESC;
+
+countByInvestment:
+SELECT COUNT(*) FROM TransactionRow WHERE investmentId = ?;
+
+selectBySubscription:
+SELECT * FROM TransactionRow WHERE subscriptionId = ? ORDER BY date DESC, id DESC;
+
+countBySubscription:
+SELECT COUNT(*) FROM TransactionRow WHERE subscriptionId = ?;

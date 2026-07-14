@@ -98,6 +98,8 @@ class Phase4ManagementTest {
             BudgetRepository(db),
             SettingsRepository(db),
             NotificationScheduler(),
+            InvestmentRepository(db),
+            SubscriptionRepository(db),
         )
 
         txVm.save(
@@ -139,6 +141,8 @@ class Phase4ManagementTest {
             BudgetRepository(db),
             SettingsRepository(db),
             NotificationScheduler(),
+            InvestmentRepository(db),
+            SubscriptionRepository(db),
         )
 
         txVm.save(id = null, accountId = accId, categoryId = null, amountMinor = 50_000, kind = "EXPENSE", note = "Cena", dateEpochDay = 20_000, installments = 1)

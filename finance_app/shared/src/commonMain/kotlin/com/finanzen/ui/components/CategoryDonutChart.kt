@@ -60,7 +60,7 @@ fun CategoryDonutChart(slices: List<CategorySlice>, currency: String, modifier: 
         }
     }
     val colors = display.mapIndexed { i, s ->
-        if (i == otrosIndex) finance.neutral else categoryColor(s.name, 0L)
+        if (i == otrosIndex) finance.neutral else categoryColor(s.name, s.color)
     }
 
     FinanceCard(modifier = modifier.semantics { contentDescription = "Distribución de gastos por categoría" }) {

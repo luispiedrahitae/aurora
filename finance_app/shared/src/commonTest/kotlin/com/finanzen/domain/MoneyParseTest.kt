@@ -34,4 +34,29 @@ class MoneyParseTest {
         assertNull(Money.parseToMinor(""))
         assertNull(Money.parseToMinor("abc"))
     }
+
+    // ---- Edge cases QA (ver reporte de hallazgos) ----
+
+    @Test
+    fun separadorDeMilesConDecimalDaElResultadoCorrecto() {
+        // FIX: el separador decimal es el que aparece más a la derecha ('.' en "1,234.56"); la coma
+        // anterior se trata como agrupador de miles y se descarta.
+        assertEquals(123456L, Money.parseToMinor("1,234.56"))
+        // Formato latino: coma decimal, punto de miles.
+        assertEquals(123456L, Money.parseToMinor("1.234,56"))
+    }
+
+    @Test
+    fun montoNegativoAplicaElSignoAlResultadoCompleto() {
+        // FIX: el signo se aplica al resultado completo (whole*factor + frac), no solo a la parte
+        // entera -> "-12.50" da -1250, no -1150.
+        assertEquals(-1250L, Money.parseToMinor("-12.50"))
+    }
+
+    @Test
+    fun decimalsCeroConTextoFraccionarioTruncaEnVezDeDevolverNull() {
+        // FIX: con decimals=0 la parte fraccionaria se descarta en vez de intentar parsear un string
+        // vacío (que antes lanzaba y devolvía null).
+        assertEquals(12L, Money.parseToMinor("12.50", decimals = 0))
+    }
 }

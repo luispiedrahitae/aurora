@@ -31,12 +31,12 @@ actual class NotificationScheduler {
 actual class ReportExporter {
     actual fun saveCsv(suggestedName: String, content: String): String {
         println("[REPORT-iOS stub] saveCsv '$suggestedName' (${content.length} chars)")
-        return "stub: pendiente integrar share sheet iOS"
+        return "stub: no disponible en esta plataforma todavía"
     }
 
     actual fun savePdf(suggestedName: String, lines: List<String>): String {
         println("[REPORT-iOS stub] savePdf '$suggestedName' (${lines.size} líneas)")
-        return "stub: pendiente integrar PDFKit + share sheet iOS"
+        return "stub: no disponible en esta plataforma todavía"
     }
 }
 
@@ -56,6 +56,6 @@ actual class BackupCrypto {
 actual class BackupIO {
     actual fun writeBackup(filename: String, content: String): String {
         println("[BACKUPIO-iOS stub] writeBackup '$filename' (${content.length} chars)")
-        return "stub: pendiente integrar UIDocumentPicker"
+        return "stub: backup no disponible en esta plataforma todavía"
     }
 }

@@ -7,7 +7,9 @@ import com.finanzen.data.BudgetRepository
 import com.finanzen.data.CardRepository
 import com.finanzen.data.CategoryRepository
 import com.finanzen.data.InstallmentPlanRepository
+import com.finanzen.data.InvestmentRepository
 import com.finanzen.data.SettingsRepository
+import com.finanzen.data.SubscriptionRepository
 import com.finanzen.data.TransactionRepository
 import com.finanzen.db.Account
 import com.finanzen.db.Category
@@ -28,6 +30,8 @@ class TransactionsViewModel(
     private val budgetRepo: BudgetRepository,
     private val settingsRepo: SettingsRepository,
     private val scheduler: NotificationScheduler,
+    private val investRepo: InvestmentRepository,
+    private val subsRepo: SubscriptionRepository,
 ) : ViewModel() {
 
     val transactions: StateFlow<List<TransactionRow>> =
@@ -47,6 +51,12 @@ class TransactionsViewModel(
 
     /** Tarjeta asociada a la cuenta, si es de tipo CREDIT — para el preview de cuotas en el formulario. */
     fun cardFor(accountId: Long) = cardRepo.byAccount(accountId)
+
+    /** Crea una subcategoría (sin ícono) bajo [parentId] y devuelve su id para auto-seleccionarla. */
+    fun addSubcategory(name: String, kind: String, parentId: Long): Long? {
+        if (name.isBlank()) return null
+        return categoryRepo.addAndGetId(name = name.trim(), kind = kind, parentId = parentId, icon = "")
+    }
 
     /**
      * Crea (id null) o actualiza una transacción. La moneda se toma de la cuenta elegida.
@@ -137,7 +147,48 @@ class TransactionsViewModel(
         }
     }
 
-    fun delete(id: Long) = txRepo.delete(id)
+    /**
+     * Borra la transacción y, si era la última vinculada a una inversión o suscripción, limpia
+     * también esa fila huérfana (una inversión periódica o una suscripción con más cobros
+     * pendientes conserva sus demás transacciones y no se toca).
+     */
+    fun delete(id: Long) {
+        val tx = txRepo.byId(id)
+        txRepo.delete(id)
+        tx?.investmentId?.let { investId ->
+            if (txRepo.contributionsForInvestment(investId).isEmpty()) investRepo.delete(investId)
+        }
+        tx?.subscriptionId?.let { subId ->
+            if (txRepo.contributionsForSubscription(subId).isEmpty()) {
+                subsRepo.delete(subId)
+                scheduler.cancel(subId)
+            }
+        }
+    }
+
+    /** Motivo por el que un movimiento no se puede borrar directamente desde Movimientos. */
+    sealed interface DeleteBlock {
+        data class Subscription(val name: String) : DeleteBlock
+        data class Investment(val name: String) : DeleteBlock
+    }
+
+    /**
+     * Null si el movimiento se puede borrar. Si está vinculado a una suscripción o a una
+     * inversión periódica que todavía existen, hay que gestionar el borrado desde su propia
+     * pantalla primero (una vez borrado el padre, el movimiento queda desbloqueado aquí).
+     */
+    fun deleteBlockReason(id: Long): DeleteBlock? {
+        val tx = txRepo.byId(id) ?: return null
+        tx.subscriptionId?.let { subId ->
+            subsRepo.byId(subId)?.let { return DeleteBlock.Subscription(it.name) }
+        }
+        tx.investmentId?.let { investId ->
+            investRepo.byId(investId)?.let { inv ->
+                if (inv.periodic != 0L) return DeleteBlock.Investment(inv.name)
+            }
+        }
+        return null
+    }
 
     private fun monthOf(epochDay: Long): Long = LocalDate.fromEpochDays(epochDay.toInt()).let { (it.year * 100 + it.monthNumber).toLong() }
 

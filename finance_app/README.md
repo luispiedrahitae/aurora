@@ -207,7 +207,7 @@ CI (`.github/workflows/ci.yml`) ejecuta `checkQuality` + build Android + build D
 
 ## Política de privacidad (resumen)
 
-FinanZen **no recolecta, transmite ni vende ningún dato**. Toda la información (cuentas, transacciones, tarjetas, suscripciones, etc.) se almacena exclusivamente en el dispositivo del usuario, en una base de datos SQLite local. Los backups exportados están encriptados con **AES-GCM** usando una clave derivada del PIN/passphrase del usuario y nunca abandonan el dispositivo salvo que el propio usuario los comparta.
+FinanZen **no recolecta, transmite ni vende ningún dato**. Toda la información (cuentas, transacciones, tarjetas, suscripciones, etc.) se almacena exclusivamente en el dispositivo del usuario, en una base de datos SQLite local. El asistente IA opcional (opt-in) descarga un único archivo de modelo (~3.66 GB) desde HuggingFace la primera vez que se activa — es la única conexión a internet que hace la app; todo el procesamiento posterior ocurre 100% en el dispositivo. Los backups exportados están encriptados con **AES-GCM** usando una clave derivada del PIN/passphrase del usuario y nunca abandonan el dispositivo salvo que el propio usuario los comparta.
 
 El texto completo se publica en `docs/privacy.md` y se enlaza desde la pantalla "Sobre la app".
 

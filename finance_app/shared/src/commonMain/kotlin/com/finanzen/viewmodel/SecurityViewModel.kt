@@ -5,6 +5,7 @@ import com.finanzen.data.SecurityRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.datetime.Clock
 
 enum class LockState { Unlocked, Locked }
 
@@ -19,11 +20,23 @@ class SecurityViewModel(private val repo: SecurityRepository) : ViewModel() {
     fun lockEnabled(): Boolean = repo.isLockEnabled()
 
     fun unlock(pin: String) {
-        if (repo.verifyPin(pin)) {
+        val now = Clock.System.now().toEpochMilliseconds()
+        val lockedUntil = repo.lockedUntilMs()
+        if (now < lockedUntil) {
+            val remainingSec = (lockedUntil - now + 999) / 1000
+            _attemptError.value = "Demasiados intentos. Espera ${remainingSec}s."
+            return
+        }
+        if (repo.verifyPin(pin, now)) {
             _attemptError.value = null
             _state.value = LockState.Unlocked
         } else {
-            _attemptError.value = "PIN incorrecto"
+            val newLockedUntil = repo.lockedUntilMs()
+            _attemptError.value = if (newLockedUntil > now) {
+                "Demasiados intentos. Espera ${(newLockedUntil - now + 999) / 1000}s."
+            } else {
+                "PIN incorrecto"
+            }
         }
     }
 

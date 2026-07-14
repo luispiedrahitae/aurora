@@ -6,9 +6,14 @@ import com.finanzen.domain.DateOrder
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.isoDayNumber
 
-fun mesCorto(monthNumber: Int, locale: CurrencyLocaleInfo = DEFAULT_LOCALE_INFO): String = locale.shortMonths[monthNumber - 1]
+private val MESES_CORTOS = listOf("ene.", "feb.", "mar.", "abr.", "may.", "jun.", "jul.", "ago.", "sep.", "oct.", "nov.", "dic.")
+private val MESES_LARGOS = listOf("enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre")
 
-fun mesLargo(monthNumber: Int, locale: CurrencyLocaleInfo = DEFAULT_LOCALE_INFO): String = locale.longMonths[monthNumber - 1]
+// ponytail: nombres de mes fijos en español, igual que DIAS_SEMANA -- la UI es 100% español,
+// solo el orden día/mes/año varía por moneda (locale.dateOrder), no el idioma del texto.
+fun mesCorto(monthNumber: Int, locale: CurrencyLocaleInfo = DEFAULT_LOCALE_INFO): String = MESES_CORTOS[monthNumber - 1]
+
+fun mesLargo(monthNumber: Int, locale: CurrencyLocaleInfo = DEFAULT_LOCALE_INFO): String = MESES_LARGOS[monthNumber - 1]
 
 /** "Julio 2026" / "July 2026" — para cabeceras de mes/selector. */
 fun formatMesAnio(date: LocalDate, locale: CurrencyLocaleInfo = DEFAULT_LOCALE_INFO): String = "${mesLargo(date.monthNumber, locale).replaceFirstChar { it.uppercase() }} ${date.year}"

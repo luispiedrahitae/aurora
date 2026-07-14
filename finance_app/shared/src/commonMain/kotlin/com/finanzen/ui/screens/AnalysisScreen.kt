@@ -3,11 +3,13 @@ package com.finanzen.ui.screens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -25,10 +27,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.finanzen.ui.components.BentoTileSize
 import com.finanzen.ui.components.FinanceCard
-import com.finanzen.ui.components.IncomeExpenseLineChart
+import com.finanzen.ui.components.IncomeExpenseBarChart
 import com.finanzen.ui.components.MonthSelector
-import com.finanzen.ui.components.NetWorthAreaChart
+import com.finanzen.ui.components.SavingsRateGauge
 import com.finanzen.ui.components.SectionHeader
 import com.finanzen.ui.components.TopFrequentExpensesList
 import com.finanzen.ui.format.formatMesAnio
@@ -37,15 +40,22 @@ import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.viewmodel.AnalysisViewModel
+import com.finanzen.viewmodel.SettingsViewModel
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.plus
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AnalysisScreen(onBack: () -> Unit, vm: AnalysisViewModel = koinViewModel()) {
+fun AnalysisScreen(
+    onBack: () -> Unit,
+    vm: AnalysisViewModel = koinViewModel(),
+    settingsVm: SettingsViewModel = koinInject(),
+) {
     val data by vm.data.collectAsState()
     val month by vm.month.collectAsState()
+    val savingsGoalPct by settingsVm.savingsGoalPct.collectAsState()
     val spacing = LocalSpacing.current
     val dateLocale = LocalDateLocale.current
 
@@ -69,37 +79,62 @@ fun AnalysisScreen(onBack: () -> Unit, vm: AnalysisViewModel = koinViewModel()) 
                 onNext = { vm.setMonth(month.plus(DatePeriod(months = 1))) },
                 modifier = Modifier.padding(horizontal = spacing.lg),
             )
-            LazyColumn(
+            val fullSpan: LazyGridItemSpanScope.() -> GridItemSpan = { GridItemSpan(maxLineSpan) }
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
                 modifier = Modifier.fillMaxSize(),
                 // bottom extra para que el FAB central no tape la última tarjeta.
                 contentPadding = PaddingValues(start = spacing.lg, end = spacing.lg, top = spacing.sm, bottom = 96.dp),
                 verticalArrangement = Arrangement.spacedBy(spacing.lg),
+                horizontalArrangement = Arrangement.spacedBy(spacing.sm),
             ) {
-                item { TotalsCard(income = data.totalIncomeMinor, expense = data.totalExpenseMinor, currency = data.currency) }
+                item(span = fullSpan) {
+                    TotalsCard(income = data.totalIncomeMinor, expense = data.totalExpenseMinor, currency = data.currency)
+                }
+                item {
+                    StatTile("Ingresos", data.totalIncomeMinor, data.currency, LocalFinanceColors.current.income)
+                }
+                item {
+                    StatTile("Gastos", data.totalExpenseMinor, data.currency, LocalFinanceColors.current.expense)
+                }
 
-                item { SectionHeader("Ingresos vs gastos") }
-                item { IncomeExpenseLineChart(data.cashflow, data.currency) }
+                item(span = fullSpan) {
+                    StatTile(
+                        "Suscripciones activas",
+                        data.subscriptionMonthlyCostMinor,
+                        data.currency,
+                        MaterialTheme.colorScheme.onSurface,
+                    )
+                }
 
-                item { SectionHeader("Patrimonio neto") }
-                item { NetWorthAreaChart(data.netWorth, data.currency) }
+                item(span = fullSpan) {
+                    SavingsRateGauge(
+                        savingsRate = data.savingsRate,
+                        goalPct = savingsGoalPct,
+                        onGoalChange = settingsVm::setSavingsGoalPct,
+                    )
+                }
 
-                item { SectionHeader("Gastos más frecuentes") }
-                item { TopFrequentExpensesList(data.frequent, data.currency) }
+                item(span = fullSpan) { SectionHeader("Ingresos vs gastos") }
+                item(span = fullSpan) { IncomeExpenseBarChart(data.cashflow, data.currency) }
+
+                item(span = fullSpan) { SectionHeader("Gastos más frecuentes") }
+                item(span = fullSpan) { TopFrequentExpensesList(data.frequent, data.currency) }
             }
         }
     }
 }
 
+/** Hero de vidrio (DESIGN.md, "The One Glass Tile Rule"): el único número que importa por pantalla. */
 @Composable
 private fun TotalsCard(income: Long, expense: Long, currency: String) {
     val finance = LocalFinanceColors.current
     val fmt = LocalMoneyFormat.current
     val net = income - expense
     val netColor = if (net >= 0) finance.income else finance.expense
-
     val spentPct = if (income == 0L) "—" else "${(expense * 100 / income.coerceAtLeast(1))}%"
 
-    FinanceCard(modifier = Modifier.fillMaxWidth()) {
+    FinanceCard(modifier = Modifier.fillMaxWidth(), size = BentoTileSize.Hero, glass = true) {
         Column(
             modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -108,41 +143,33 @@ private fun TotalsCard(income: Long, expense: Long, currency: String) {
             Text("Balance del periodo", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
                 fmt.format(net, currency),
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.displayLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = netColor,
             )
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                StatColumn(label = "Ingresos", amount = income, currency = currency, color = finance.income)
-                StatColumn(label = "Gastos", amount = expense, currency = currency, color = finance.expense)
-            }
-            StatColumn(
-                label = "Gastado de lo ingresado",
-                amount = null,
-                currency = currency,
-                color = MaterialTheme.colorScheme.onSurface,
-                overrideText = spentPct,
+            Text(
+                "Gastado de lo ingresado: $spentPct",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
 }
 
+/** Tile de estadística del periodo (ingresos o gastos totales). */
 @Composable
-private fun StatColumn(
-    label: String,
-    amount: Long?,
-    currency: String,
-    color: Color,
-    overrideText: String? = null,
-) {
+private fun StatTile(label: String, amountMinor: Long, currency: String, color: Color) {
     val fmt = LocalMoneyFormat.current
-    Column {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(
-            overrideText ?: (amount?.let { fmt.format(it, currency) } ?: "—"),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = color,
-        )
+    FinanceCard(modifier = Modifier.fillMaxWidth()) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                fmt.format(amountMinor, currency),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = color,
+                maxLines = 1,
+            )
+        }
     }
 }

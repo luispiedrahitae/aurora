@@ -93,6 +93,8 @@ class FinanzenDbTest {
             kind = "EXPENSE",
             transferAccountId = null,
             installmentPlanId = null,
+            investmentId = null,
+            subscriptionId = null,
         )
 
         val rows = db.transactionQueries.selectAll().executeAsList()

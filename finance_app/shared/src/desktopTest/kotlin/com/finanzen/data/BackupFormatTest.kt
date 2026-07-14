@@ -56,4 +56,46 @@ class BackupFormatTest {
         BackupSerializer.restore(db, snapshot)
         assertEquals("USD", db.currencyQueries.selectByCode("USD").executeAsOne().code)
     }
+
+    // ---- Edge cases QA (ver reporte de hallazgos) ----
+
+    @Test
+    fun restoreRemapeaIdsYPreservaReferenciasCruzadasEnRestoresSucesivos() {
+        // FIX (hallazgo crítico #4): TODAS las tablas declaran `id INTEGER PRIMARY KEY AUTOINCREMENT`,
+        // y SQLite nunca reutiliza un id (lo trackea en sqlite_sequence), así que cada restore asigna
+        // ids nuevos. restore() ahora captura el id nuevo de cada fila padre (accountIdMap,
+        // subscriptionIdMap...) y traduce las FKs de las filas hijas antes de insertarlas, así que la
+        // referencia sobrevive sin importar cuántas veces se restaure el mismo snapshot.
+        val db = freshDb()
+        db.currencyQueries.upsert("USD", "$", 2, 1.0, "US Dollar", ".", ",")
+        val accountRepo = AccountRepository(db)
+        val accId = accountRepo.add(name = "Efectivo", type = "CASH", currency = "USD")
+        db.subscriptionQueries.insert("Streaming", 1_500, "USD", null, accId, "MONTHLY", 15, 0, 3, 1)
+        val subscription = db.subscriptionQueries.selectAll().executeAsList().first()
+        db.transactionQueries.insert(accId, null, 1_500, "USD", 0, "cargo streaming", "EXPENSE", null, null, null, subscription.id)
+
+        val snapshot = BackupSerializer.snapshotOf(db, 0)
+        BackupSerializer.restore(db, snapshot) // primer restore
+        BackupSerializer.restore(db, snapshot) // segundo restore del MISMO snapshot: el contador ya avanzó
+
+        val restoredSub = db.subscriptionQueries.selectAll().executeAsList().single()
+        val restoredTx = db.transactionQueries.selectAll().executeAsList().single()
+        // Aunque el id real de la suscripción ya no coincide con el id=1 original del snapshot, la
+        // transacción sigue apuntando a la fila correcta gracias al remapeo.
+        assertEquals(restoredSub.id, restoredTx.subscriptionId)
+    }
+
+    @Test
+    fun restoreConSnapshotDeVersionFuturaNoLoRechaza() {
+        // BackupSnapshot.version existe pero nunca se lee/valida en restore() — es decorativo. Un
+        // backup marcado con una versión futura (con el set de campos actual) importa igual, sin
+        // ningún aviso de incompatibilidad.
+        val db = freshDb()
+        seedIfEmpty(db)
+        val snapshot = BackupSerializer.snapshotOf(db, 0).copy(version = 99)
+
+        BackupSerializer.restore(db, snapshot)
+
+        assertEquals(true, db.currencyQueries.selectAll().executeAsList().isNotEmpty())
+    }
 }

@@ -2,6 +2,8 @@ package com.finanzen.data
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.finanzen.db.FinanzenDb
+import com.finanzen.platform.NotificationScheduler
+import com.finanzen.viewmodel.AccountsViewModel
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -25,5 +27,49 @@ class AccountRepositoryTest {
         assertEquals("Billetera", account.name)
         assertEquals("CASH", account.type)
         assertEquals(1000, account.openingBalanceMinor)
+    }
+
+    // ---- Edge cases QA (ver reporte de hallazgos) ----
+
+    @Test
+    fun deleteCuentaBorraSusTransaccionesYPlanesDeCuotas() {
+        // FIX (hallazgo crítico #3): el diálogo de confirmación en AccountsTabScreen.kt promete
+        // "Se eliminarán también sus movimientos y planes de cuotas asociados" — AccountsViewModel.
+        // delete(id) ahora sí borra las transacciones de la cuenta (y los planes de cuotas de su
+        // tarjeta, si es de crédito) antes de borrar la Card y la cuenta misma.
+        val db = freshDb()
+        db.currencyQueries.upsert("USD", "$", 2, 1.0, "US Dollar", ".", ",")
+        val accountRepo = AccountRepository(db)
+        val txRepo = TransactionRepository(db)
+        val cardRepo = CardRepository(db)
+        val planRepo = InstallmentPlanRepository(db)
+        val vm = AccountsViewModel(accountRepo, txRepo, cardRepo, planRepo, SettingsRepository(db), NotificationScheduler())
+        val accId = accountRepo.add(name = "Efectivo", type = "CASH", currency = "USD")
+        txRepo.add(accountId = accId, categoryId = null, amountMinor = 1_000, currency = "USD", epochDay = 0, note = "super", kind = "EXPENSE")
+
+        vm.delete(accId)
+
+        assertEquals(0, accountRepo.all().size) // la cuenta desapareció
+        assertEquals(0, txRepo.all().size) // y su transacción, con ella
+    }
+
+    @Test
+    fun deleteCuentaDeCreditoBorraPlanesDeCuotasDeSuTarjeta() {
+        val db = freshDb()
+        db.currencyQueries.upsert("USD", "$", 2, 1.0, "US Dollar", ".", ",")
+        val accountRepo = AccountRepository(db)
+        val txRepo = TransactionRepository(db)
+        val cardRepo = CardRepository(db)
+        val planRepo = InstallmentPlanRepository(db)
+        val vm = AccountsViewModel(accountRepo, txRepo, cardRepo, planRepo, SettingsRepository(db), NotificationScheduler())
+        val accId = accountRepo.add(name = "Tarjeta", type = "CREDIT", currency = "USD")
+        cardRepo.add(accountId = accId, last4 = "1234", network = "OTRA", creditLimitMinor = 100_000, cutoffDay = null, dueDay = null)
+        val cardId = cardRepo.byAccount(accId)!!.id
+        planRepo.add(cardId = cardId, categoryId = null, totalAmountMinor = 30_000, installments = 3, interestRate = 0.0, startDateEpochDay = 0, description = "compra")
+
+        vm.delete(accId)
+
+        assertEquals(0, accountRepo.all().size)
+        assertEquals(0, db.installmentPlanQueries.selectAll().executeAsList().size)
     }
 }

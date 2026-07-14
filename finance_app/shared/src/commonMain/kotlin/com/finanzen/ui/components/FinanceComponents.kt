@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountBalance
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
@@ -46,6 +45,7 @@ import androidx.compose.material.icons.outlined.Forum
 import androidx.compose.material.icons.outlined.GasMeter
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Icecream
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.LiveTv
 import androidx.compose.material.icons.outlined.LocalBar
@@ -89,14 +89,20 @@ import androidx.compose.material.icons.outlined.Weekend
 import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material.icons.outlined.WineBar
 import androidx.compose.material.icons.outlined.Work
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -112,9 +118,12 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.finanzen.domain.Money
+import com.finanzen.ui.theme.LocalAccentColor
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.ui.theme.LocalSpacing
+import com.finanzen.ui.theme.PillShape
+import com.finanzen.ui.theme.glassSurface
 import finanzen.shared.generated.resources.Res
 import finanzen.shared.generated.resources.brand_airbnb
 import finanzen.shared.generated.resources.brand_aliexpress
@@ -189,27 +198,50 @@ import finanzen.shared.generated.resources.brand_wikipedia
 import finanzen.shared.generated.resources.brand_x
 import finanzen.shared.generated.resources.brand_xbox
 import finanzen.shared.generated.resources.brand_youtube
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 
+/** Los tres tamaños de tile bento (DESIGN.md, sección "Bento Tiles"). Fija radio/padding/tono por defecto. */
+enum class BentoTileSize { Hero, Medium, Small }
+
 /**
- * Superficie base de todas las tarjetas: tonal (sin sombras pesadas), radio `large`, padding
- * consistente. Centraliza la apariencia para no repetir Card+padding en cada pantalla.
+ * Superficie base de todos los tiles bento: tonal (sin sombras pesadas), radio y padding derivados
+ * de [size]. Centraliza la apariencia para no repetir Card+padding en cada pantalla.
+ *
+ * [glass] activa el material de vidrio ([Modifier.glassSurface]) — reservado para **un solo** tile
+ * por pantalla (DESIGN.md, "The One Glass Tile Rule"); el resto de tiles se queda plano/tonal.
  */
 @Composable
 fun FinanceCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
-    color: Color = MaterialTheme.colorScheme.surfaceContainer,
-    contentPadding: PaddingValues = PaddingValues(16.dp),
+    size: BentoTileSize = BentoTileSize.Medium,
+    glass: Boolean = false,
+    color: Color = when (size) {
+        BentoTileSize.Hero -> MaterialTheme.colorScheme.surfaceContainerHigh
+        BentoTileSize.Medium -> MaterialTheme.colorScheme.surfaceContainer
+        BentoTileSize.Small -> MaterialTheme.colorScheme.surfaceContainerLow
+    },
+    contentPadding: PaddingValues = when (size) {
+        BentoTileSize.Hero -> PaddingValues(20.dp)
+        BentoTileSize.Medium -> PaddingValues(16.dp)
+        BentoTileSize.Small -> PaddingValues(12.dp)
+    },
     content: @Composable () -> Unit,
 ) {
-    val shape = MaterialTheme.shapes.large
+    val shape = when (size) {
+        BentoTileSize.Hero -> MaterialTheme.shapes.extraLarge
+        BentoTileSize.Medium -> MaterialTheme.shapes.medium
+        BentoTileSize.Small -> MaterialTheme.shapes.small
+    }
+    val surfaceModifier = if (glass) modifier.glassSurface(shape) else modifier
+    val surfaceColor = if (glass) Color.Transparent else color
     val inner: @Composable () -> Unit = { Box(Modifier.padding(contentPadding)) { content() } }
     if (onClick != null) {
-        Surface(onClick = onClick, modifier = modifier, shape = shape, color = color, content = inner)
+        Surface(onClick = onClick, modifier = surfaceModifier, shape = shape, color = surfaceColor, content = inner)
     } else {
-        Surface(modifier = modifier, shape = shape, color = color, content = inner)
+        Surface(modifier = surfaceModifier, shape = shape, color = surfaceColor, content = inner)
     }
 }
 
@@ -312,6 +344,50 @@ fun MonthSelector(label: String, onPrev: () -> Unit, onNext: () -> Unit, modifie
     }
 }
 
+/** Selector de anio con flechas prev/next, mismo patron que [MonthSelector] pero para pantallas
+ * anuales (Resumen). */
+@Composable
+fun YearSelector(label: String, onPrev: () -> Unit, onNext: () -> Unit, modifier: Modifier = Modifier) {
+    Row(
+        modifier = modifier.fillMaxWidth().padding(vertical = LocalSpacing.current.sm),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        IconButton(onClick = onPrev) {
+            Icon(Icons.Outlined.ChevronLeft, contentDescription = "Anio anterior")
+        }
+        Text(label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        IconButton(onClick = onNext) {
+            Icon(Icons.Outlined.ChevronRight, contentDescription = "Anio siguiente")
+        }
+    }
+}
+
+/**
+ * Icono "i" con tooltip (hover en desktop, toque/toque-largo en móvil). Buen patrón para explicar
+ * un control o gráfica sin recargar la fila con texto.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun InfoTooltip(text: String, contentDescription: String = "Más información", modifier: Modifier = Modifier) {
+    val state = rememberTooltipState(isPersistent = false)
+    val scope = rememberCoroutineScope()
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+        tooltip = { PlainTooltip { Text(text) } },
+        state = state,
+        modifier = modifier,
+    ) {
+        IconButton(onClick = { scope.launch { state.show() } }) {
+            Icon(
+                Icons.Outlined.Info,
+                contentDescription = contentDescription,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
 /** Fila de categoría con barra de progreso redondeada (tokens en vez de RoundedCornerShape(4dp)). */
 @Composable
 fun CategoryProgressRow(
@@ -336,14 +412,14 @@ fun CategoryProgressRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(10.dp)
-                .clip(RoundedCornerShape(50))
+                .clip(PillShape)
                 .background(MaterialTheme.colorScheme.surfaceVariant),
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth(animatedPct)
                     .height(10.dp)
-                    .clip(RoundedCornerShape(50))
+                    .clip(PillShape)
                     .background(color),
             )
         }
@@ -610,11 +686,15 @@ private val glyphByKey = categoryIcons.toMap()
 /** Glifo de una categoría por su clave; cae a un icono genérico si la clave es desconocida o legacy. */
 fun glyphForKey(key: String): CategoryGlyph = glyphByKey[key] ?: CategoryGlyph.Vec(Icons.Outlined.Category)
 
-/** Glifo blanco (vector Material o logo de marca) dentro de un círculo de color. Avatar único. */
+/**
+ * Glifo blanco (vector Material o logo de marca) dentro de un círculo del color de acento de
+ * Apariencia — mismo tratamiento uniforme que [AccountTypeAvatar], la categoría se distingue por
+ * el icono, no por un color propio. Avatar único.
+ */
 @Composable
-fun CategoryAvatar(icon: String, color: Color, modifier: Modifier = Modifier, size: Dp = 36.dp) {
+fun CategoryAvatar(icon: String, modifier: Modifier = Modifier, size: Dp = 36.dp) {
     Box(
-        modifier = modifier.size(size).clip(CircleShape).background(color),
+        modifier = modifier.size(size).clip(CircleShape).background(LocalAccentColor.current),
         contentAlignment = Alignment.Center,
     ) {
         val glyphModifier = Modifier.size(size * 0.58f)
@@ -651,34 +731,19 @@ fun kindLabel(kind: String): String = when (kind) {
 }
 
 /**
- * Avatar por tipo de movimiento: círculo tenue del color semántico + flecha. Fallback cuando el
- * movimiento no tiene categoría (transferencias, o ingreso/gasto sin categoría asignada).
+ * Avatar por tipo de movimiento: círculo del color de acento de Apariencia + flecha blanca, mismo
+ * patrón que [CategoryAvatar]. Fallback cuando el movimiento no tiene categoría (transferencias,
+ * o ingreso/gasto sin categoría asignada); el tipo se distingue por el glifo, no por el color.
  */
 @Composable
 fun KindAvatar(kind: String, modifier: Modifier = Modifier, size: Dp = 40.dp) {
-    val finance = LocalFinanceColors.current
-    val container: Color
-    val icon: ImageVector
-    val tint: Color
-    when (kind) {
-        "INCOME" -> {
-            container = finance.incomeContainer
-            icon = Icons.Outlined.ArrowUpward
-            tint = finance.income
-        }
-        "TRANSFER" -> {
-            container = MaterialTheme.colorScheme.surfaceContainerHigh
-            icon = Icons.Outlined.SwapHoriz
-            tint = finance.neutral
-        }
-        else -> {
-            container = finance.expenseContainer
-            icon = Icons.Outlined.ArrowDownward
-            tint = finance.expense
-        }
+    val icon = when (kind) {
+        "INCOME" -> Icons.Outlined.ArrowUpward
+        "TRANSFER" -> Icons.Outlined.SwapHoriz
+        else -> Icons.Outlined.ArrowDownward
     }
-    Box(modifier.size(size).clip(CircleShape).background(container), contentAlignment = Alignment.Center) {
-        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(size * 0.5f))
+    Box(modifier.size(size).clip(CircleShape).background(LocalAccentColor.current), contentAlignment = Alignment.Center) {
+        Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(size * 0.5f))
     }
 }
 
@@ -711,7 +776,7 @@ fun EmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Surface(shape = RoundedCornerShape(50), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+        Surface(shape = PillShape, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
             Icon(
                 icon,
                 contentDescription = null,

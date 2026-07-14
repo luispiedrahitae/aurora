@@ -13,6 +13,7 @@ import androidx.compose.material.icons.outlined.ArrowDownward
 import androidx.compose.material.icons.outlined.ArrowUpward
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.SwapHoriz
+import androidx.compose.material.icons.outlined.TrendingUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -23,6 +24,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
@@ -38,12 +41,14 @@ import com.finanzen.ui.components.SpeedDialFab
 import com.finanzen.ui.screens.AboutScreen
 import com.finanzen.ui.screens.AccountsTabScreen
 import com.finanzen.ui.screens.AnalysisScreen
+import com.finanzen.ui.screens.AssistantScreen
 import com.finanzen.ui.screens.BackupScreen
 import com.finanzen.ui.screens.BudgetsScreen
 import com.finanzen.ui.screens.CalendarScreen
 import com.finanzen.ui.screens.CategoriesScreen
 import com.finanzen.ui.screens.CurrencyScreen
 import com.finanzen.ui.screens.DashboardScreen
+import com.finanzen.ui.screens.InvestmentsScreen
 import com.finanzen.ui.screens.MoreScreen
 import com.finanzen.ui.screens.NotificationsScreen
 import com.finanzen.ui.screens.ReportsScreen
@@ -85,7 +90,10 @@ fun AppNav() {
     // Orden de arriba hacia abajo en el desplegable; "Gasto" queda junto al FAB (lo más usado).
     val speedDialActions = listOf(
         SpeedDialAction("Suscripción", Icons.Outlined.Repeat, MaterialTheme.colorScheme.primary) {
-            navController.navigate("subscriptions?add=1")
+            navController.navigate("subscriptions?add=true")
+        },
+        SpeedDialAction("Inversión", Icons.Outlined.TrendingUp, MaterialTheme.colorScheme.primary) {
+            navController.navigate("investments?add=true")
         },
         SpeedDialAction("Transferencia", Icons.Outlined.SwapHoriz, finance.neutral) {
             navController.navigate("tx_form?kind=TRANSFER")
@@ -101,7 +109,15 @@ fun AppNav() {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         if (maxWidth >= WIDE_BREAKPOINT && showNav) {
             Row(Modifier.fillMaxSize()) {
-                NavigationRail {
+                // Riel translúcido (recorta el material de vidrio a "flat" hasta que haya blur de
+                // fondo real disponible sin dependencias nuevas — ver Glass.kt) con un hairline en el
+                // borde que toca el contenido, no un rectángulo completo.
+                NavigationRail(
+                    containerColor = finance.glassSurface,
+                    modifier = Modifier.drawBehind {
+                        drawLine(finance.glassBorder, Offset(size.width, 0f), Offset(size.width, size.height), strokeWidth = 1.dp.toPx())
+                    },
+                ) {
                     TopDestination.entries.forEach { dest ->
                         val selected = currentRoute == dest.route
                         NavigationRailItem(
@@ -128,7 +144,12 @@ fun AppNav() {
             Scaffold(
                 bottomBar = {
                     if (showNav) {
-                        NavigationBar {
+                        NavigationBar(
+                            containerColor = finance.glassSurface,
+                            modifier = Modifier.drawBehind {
+                                drawLine(finance.glassBorder, Offset(0f, 0f), Offset(size.width, 0f), strokeWidth = 1.dp.toPx())
+                            },
+                        ) {
                             TopDestination.entries.forEach { dest ->
                                 val selected = currentRoute == dest.route
                                 NavigationBarItem(
@@ -186,13 +207,27 @@ private fun AppNavHost(navController: NavHostController, modifier: Modifier = Mo
             "subscriptions?add={add}",
             arguments = listOf(
                 navArgument("add") {
-                    type = NavType.StringType
-                    defaultValue = "0"
+                    type = NavType.BoolType
+                    defaultValue = false
                 },
             ),
         ) { entry ->
             SubscriptionsScreen(
-                openAddInitially = entry.arguments?.getString("add") == "1",
+                openAddInitially = entry.arguments?.getBoolean("add") == true,
+                onBack = { navController.popBackStack() },
+            )
+        }
+        composable(
+            "investments?add={add}",
+            arguments = listOf(
+                navArgument("add") {
+                    type = NavType.BoolType
+                    defaultValue = false
+                },
+            ),
+        ) { entry ->
+            InvestmentsScreen(
+                openAddInitially = entry.arguments?.getBoolean("add") == true,
                 onBack = { navController.popBackStack() },
             )
         }
@@ -247,6 +282,9 @@ private fun AppNavHost(navController: NavHostController, modifier: Modifier = Mo
         }
         composable("analysis") {
             AnalysisScreen(onBack = { navController.popBackStack() })
+        }
+        composable("assistant") {
+            AssistantScreen(onBack = { navController.popBackStack() })
         }
         composable("calendar") {
             CalendarScreen(

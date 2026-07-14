@@ -20,7 +20,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -43,8 +42,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.finanzen.db.Category
@@ -52,8 +49,6 @@ import com.finanzen.ui.components.CategoryAvatar
 import com.finanzen.ui.components.CategoryGlyph
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.SectionHeader
-import com.finanzen.ui.components.categoryColor
-import com.finanzen.ui.components.categoryColors
 import com.finanzen.ui.components.iconGroups
 import com.finanzen.viewmodel.CategoriesViewModel
 import org.jetbrains.compose.resources.painterResource
@@ -69,9 +64,10 @@ fun CategoriesScreen(
     var name by remember { mutableStateOf("") }
     var kind by remember { mutableStateOf("EXPENSE") }
     var icon by remember { mutableStateOf(iconGroups.first().icons.first().first) }
-    var color by remember { mutableStateOf(categoryColors.first()) }
 
     val parents = categories.filter { it.parentId == null }
+    val existingNames = categories.filter { it.kind == kind }.map { it.name.trim().lowercase() }.toSet()
+    val nameTaken = name.isNotBlank() && name.trim().lowercase() in existingNames
 
     Scaffold(
         topBar = {
@@ -112,25 +108,29 @@ fun CategoriesScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
-                            CategoryAvatar(icon, color, size = 44.dp)
+                            CategoryAvatar(icon, size = 44.dp)
                             OutlinedTextField(
                                 value = name,
                                 onValueChange = { name = it },
                                 label = { Text("Nombre") },
                                 singleLine = true,
+                                isError = nameTaken,
+                                supportingText = if (nameTaken) {
+                                    { Text("Ya existe una categoría con ese nombre") }
+                                } else {
+                                    null
+                                },
                                 modifier = Modifier.weight(1f),
                             )
                         }
                         IconPicker(selected = icon, onSelect = { icon = it })
-                        ColorPicker(selected = color, onSelect = { color = it })
                         Button(
                             onClick = {
-                                vm.add(name, kind, parentId = null, icon = icon, color = color.toArgb().toLong())
+                                vm.add(name, kind, parentId = null, icon = icon)
                                 name = ""
                                 icon = iconGroups.first().icons.first().first
-                                color = categoryColors.first()
                             },
-                            enabled = name.isNotBlank(),
+                            enabled = name.isNotBlank() && !nameTaken,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Icon(Icons.Outlined.Add, null)
@@ -140,8 +140,13 @@ fun CategoriesScreen(
                 }
             }
 
-            categoryGroup(parents.filter { it.kind == "EXPENSE" }, "Gastos", categories, vm::delete)
-            categoryGroup(parents.filter { it.kind == "INCOME" }, "Ingresos", categories, vm::delete)
+            val addSubcategory: (Long, String) -> Unit = { parentId, subName ->
+                categories.firstOrNull { it.id == parentId }?.let { parent ->
+                    vm.add(subName, parent.kind, parentId = parent.id, icon = "")
+                }
+            }
+            categoryGroup(parents.filter { it.kind == "EXPENSE" }, "Gastos", categories, vm::delete, addSubcategory)
+            categoryGroup(parents.filter { it.kind == "INCOME" }, "Ingresos", categories, vm::delete, addSubcategory)
         }
     }
 }
@@ -151,22 +156,59 @@ private fun androidx.compose.foundation.lazy.LazyListScope.categoryGroup(
     title: String,
     all: List<Category>,
     onDelete: (Long) -> Unit,
+    onAddSubcategory: (parentId: Long, name: String) -> Unit,
 ) {
     if (parents.isEmpty()) return
     item { SectionHeader(title) }
     items(parents, key = { it.id }) { parent ->
         val children = all.filter { it.parentId == parent.id }
-        CategoryCard(parent, children, onDelete)
+        CategoryCard(parent, children, onDelete, onAddSubcategory)
     }
 }
 
 @Composable
-private fun CategoryCard(parent: Category, children: List<Category>, onDelete: (Long) -> Unit) {
+private fun CategoryCard(
+    parent: Category,
+    children: List<Category>,
+    onDelete: (Long) -> Unit,
+    onAddSubcategory: (parentId: Long, name: String) -> Unit,
+) {
     FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(12.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             CategoryRow(parent, onDelete)
             children.forEach { child ->
                 Row(modifier = Modifier.padding(start = 16.dp)) { CategoryRow(child, onDelete) }
+            }
+            var newSubName by remember { mutableStateOf("") }
+            val existingNames = children.map { it.name.trim().lowercase() }.toSet()
+            val nameTaken = newSubName.isNotBlank() && newSubName.trim().lowercase() in existingNames
+            Row(
+                modifier = Modifier.padding(start = 16.dp, top = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                OutlinedTextField(
+                    value = newSubName,
+                    onValueChange = { newSubName = it },
+                    label = { Text("Subcategoría") },
+                    singleLine = true,
+                    isError = nameTaken,
+                    supportingText = if (nameTaken) {
+                        { Text("Ya existe") }
+                    } else {
+                        null
+                    },
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(
+                    onClick = {
+                        onAddSubcategory(parent.id, newSubName)
+                        newSubName = ""
+                    },
+                    enabled = newSubName.isNotBlank() && !nameTaken,
+                ) {
+                    Icon(Icons.Outlined.Add, contentDescription = "Añadir subcategoría")
+                }
             }
         }
     }
@@ -179,7 +221,9 @@ private fun CategoryRow(category: Category, onDelete: (Long) -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        CategoryAvatar(category.icon, categoryColor(category.name, category.color), size = 28.dp)
+        if (category.parentId == null) {
+            CategoryAvatar(category.icon, size = 28.dp)
+        }
         Text(category.name, modifier = Modifier.weight(1f))
         IconButton(onClick = { onDelete(category.id) }) {
             Icon(Icons.Outlined.Delete, contentDescription = "Eliminar")
@@ -222,32 +266,6 @@ private fun IconSection(
                 when (glyph) {
                     is CategoryGlyph.Vec -> Icon(glyph.image, contentDescription = key, tint = tint, modifier = glyphModifier)
                     is CategoryGlyph.Res -> Icon(painterResource(glyph.drawable), contentDescription = key, tint = tint, modifier = glyphModifier)
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun ColorPicker(selected: Color, onSelect: (Color) -> Unit) {
-    Text("Color", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        categoryColors.forEach { swatch ->
-            val isSelected = swatch == selected
-            Box(
-                modifier = Modifier
-                    .size(34.dp)
-                    .clip(CircleShape)
-                    .background(swatch)
-                    .then(
-                        if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.onSurface, CircleShape) else Modifier,
-                    )
-                    .clickable { onSelect(swatch) },
-                contentAlignment = Alignment.Center,
-            ) {
-                if (isSelected) {
-                    Icon(Icons.Outlined.Check, contentDescription = "Seleccionado", tint = Color.White, modifier = Modifier.size(18.dp))
                 }
             }
         }

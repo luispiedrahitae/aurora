@@ -7,15 +7,13 @@ import com.finanzen.data.SettingsRepository
 import com.finanzen.data.SubscriptionRepository
 import com.finanzen.data.TransactionRepository
 import com.finanzen.db.Subscription
+import com.finanzen.domain.RecurrenceSchedule
 import com.finanzen.platform.NotificationScheduler
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.datetime.Clock
-import kotlinx.datetime.DatePeriod
-import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
 
 class SubscriptionsViewModel(
@@ -44,17 +42,7 @@ class SubscriptionsViewModel(
         val account = ensureAccount()
         val today = todayEpochDay()
         val remindDaysBefore = settingsRepo.reminderDaysBefore()
-        // Cobrar ahora: el gasto aparece de inmediato en Movimientos.
-        txRepo.add(
-            accountId = account.id,
-            categoryId = null,
-            amountMinor = amountMinor,
-            currency = account.currency,
-            epochDay = today,
-            note = name,
-            kind = "EXPENSE",
-        )
-        val nextCharge = nextChargeAfter(today, frequency, interval)
+        val nextCharge = RecurrenceSchedule.nextOccurrenceAfter(today, frequency, interval)
         val id = subsRepo.add(
             name = name,
             amountMinor = amountMinor,
@@ -65,6 +53,17 @@ class SubscriptionsViewModel(
             intervalCount = interval,
             nextChargeDateEpochDay = nextCharge,
             remindDaysBefore = remindDaysBefore,
+        )
+        // Cobrar ahora: el gasto aparece de inmediato en Movimientos, vinculado a la suscripción.
+        txRepo.add(
+            accountId = account.id,
+            categoryId = null,
+            amountMinor = amountMinor,
+            currency = account.currency,
+            epochDay = today,
+            note = name,
+            kind = "EXPENSE",
+            subscriptionId = id,
         )
         scheduler.scheduleReminder(
             id = id,
@@ -83,8 +82,8 @@ class SubscriptionsViewModel(
     private fun postDueCharges() {
         val today = todayEpochDay()
         subsRepo.activeNow().forEach { s ->
-            val due = chargesDueUpTo(s.nextChargeDate, today, s.frequency, s.intervalCount)
-            due.charges.forEach { chargeDay ->
+            val due = RecurrenceSchedule.occurrencesDueUpTo(s.nextChargeDate, today, s.frequency, s.intervalCount)
+            due.dates.forEach { chargeDay ->
                 txRepo.add(
                     accountId = s.accountId ?: ensureAccount().id,
                     categoryId = s.categoryId,
@@ -93,6 +92,7 @@ class SubscriptionsViewModel(
                     epochDay = chargeDay,
                     note = s.name,
                     kind = "EXPENSE",
+                    subscriptionId = s.id,
                 )
             }
             if (due.next != s.nextChargeDate) {
@@ -113,52 +113,4 @@ class SubscriptionsViewModel(
         ?: accountRepo.add("Efectivo", "CASH", "USD").let { id ->
             accountRepo.all().first { it.id == id }
         }
-
-    /** Cobros pendientes hasta hoy ([charges], epoch days) y la nueva próxima fecha ([next]). */
-    data class DueCharges(val charges: List<Long>, val next: Long)
-
-    companion object {
-        /**
-         * Calcula, de forma pura, todos los cobros con fecha ≤ [todayEpochDay] partiendo de
-         * [firstChargeEpochDay] y avanzando con [nextChargeAfter], más la próxima fecha resultante.
-         * Es la lógica del catch-up sin tocar la BD (testeable y sin bucle infinito: [nextChargeAfter]
-         * siempre avanza ≥1 día).
-         */
-        fun chargesDueUpTo(firstChargeEpochDay: Long, todayEpochDay: Long, frequency: String, interval: Long): DueCharges {
-            val charges = mutableListOf<Long>()
-            var next = firstChargeEpochDay
-            while (next <= todayEpochDay) {
-                charges += next
-                next = nextChargeAfter(next, frequency, interval)
-            }
-            return DueCharges(charges, next)
-        }
-
-        /**
-         * Próximo cobro **estrictamente posterior** a [fromEpochDay].
-         * - DAILY: suma [interval] días (cada N días).
-         * - MONTHLY: [interval] es el día del mes (1–31); devuelve su próxima ocurrencia, recortada en
-         *   meses cortos (día 31 → 28/29 feb).
-         */
-        fun nextChargeAfter(fromEpochDay: Long, frequency: String, interval: Long): Long {
-            val from = LocalDate.fromEpochDays(fromEpochDay.toInt())
-            if (frequency != "MONTHLY") {
-                return from.plus(DatePeriod(days = interval.coerceAtLeast(1).toInt())).toEpochDays().toLong()
-            }
-            val day = interval.coerceIn(1, 31).toInt()
-            var cand = dayInMonth(from.year, from.monthNumber, day)
-            if (cand <= from) {
-                val nm = LocalDate(from.year, from.monthNumber, 1).plus(DatePeriod(months = 1))
-                cand = dayInMonth(nm.year, nm.monthNumber, day)
-            }
-            return cand.toEpochDays().toLong()
-        }
-
-        /** Día [day] del mes [m]/[y], recortado al último día si el mes es más corto. */
-        private fun dayInMonth(y: Int, m: Int, day: Int): LocalDate {
-            val first = LocalDate(y, m, 1)
-            val daysInMonth = first.plus(DatePeriod(months = 1)).toEpochDays() - first.toEpochDays()
-            return LocalDate(y, m, minOf(day, daysInMonth))
-        }
-    }
 }

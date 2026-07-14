@@ -1,0 +1,48 @@
+-- ponytail: tabla nueva sin migración (proyecto pre-release, mismo patrón que InstallmentPlan) —
+-- requiere reinstalar/limpiar la BD de desarrollo.
+CREATE TABLE Investment (
+    id                   INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    name                 TEXT NOT NULL,
+    amountMinor          INTEGER NOT NULL,                 -- monto por aporte (puntual = el monto único)
+    currency             TEXT NOT NULL REFERENCES Currency(code),
+    accountId            INTEGER REFERENCES Account(id),
+    categoryId           INTEGER REFERENCES Category(id),  -- null por defecto (igual que Subscription)
+    periodic             INTEGER NOT NULL DEFAULT 0,
+    frequency            TEXT,                             -- null salvo periódica: DAILY | MONTHLY
+    intervalCount        INTEGER,
+    nextContributionDate INTEGER,                          -- epoch day; null si puntual o CLOSED
+    startDate            INTEGER NOT NULL,
+    status               TEXT NOT NULL DEFAULT 'OPEN',      -- OPEN | CLOSED
+    withdrawnAmountMinor INTEGER,
+    closedDate           INTEGER,
+    yieldMinor           INTEGER                            -- retirado − aportado; puede ser negativo
+);
+
+selectOpen:
+SELECT * FROM Investment WHERE status = 'OPEN' ORDER BY periodic DESC, nextContributionDate;
+
+selectClosed:
+SELECT * FROM Investment WHERE status = 'CLOSED' ORDER BY closedDate DESC;
+
+selectById:
+SELECT * FROM Investment WHERE id = ?;
+
+insert:
+INSERT INTO Investment(name, amountMinor, currency, accountId, categoryId, periodic, frequency, intervalCount, nextContributionDate, startDate, status, withdrawnAmountMinor, closedDate, yieldMinor)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'OPEN', NULL, NULL, NULL);
+
+lastInsertRowId:
+SELECT last_insert_rowid();
+
+insertFull:
+INSERT INTO Investment(name, amountMinor, currency, accountId, categoryId, periodic, frequency, intervalCount, nextContributionDate, startDate, status, withdrawnAmountMinor, closedDate, yieldMinor)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateNextContribution:
+UPDATE Investment SET nextContributionDate = ? WHERE id = ?;
+
+close:
+UPDATE Investment SET status = 'CLOSED', withdrawnAmountMinor = ?, closedDate = ?, yieldMinor = ?, nextContributionDate = NULL WHERE id = ?;
+
+delete:
+DELETE FROM Investment WHERE id = ?;

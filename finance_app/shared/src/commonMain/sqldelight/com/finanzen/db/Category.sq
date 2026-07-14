@@ -23,6 +23,9 @@ SELECT * FROM Category WHERE id = ?;
 insert:
 INSERT INTO Category(parentId, name, icon, color, kind) VALUES (?, ?, ?, ?, ?);
 
+lastInsertRowId:
+SELECT last_insert_rowid();
+
 update:
 UPDATE Category SET parentId = ?, name = ?, icon = ?, color = ?, kind = ? WHERE id = ?;
 

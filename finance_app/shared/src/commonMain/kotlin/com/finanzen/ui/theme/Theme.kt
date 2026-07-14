@@ -19,10 +19,12 @@ fun FinanZenTheme(
     val dynamicScheme = if (useDynamic) platformColorScheme(darkTheme) else null
     val colorScheme = dynamicScheme ?: if (darkTheme) accent.dark else accent.light
     val financeColors = if (darkTheme) DarkFinanceColors else LightFinanceColors
+    val accentColor = (if (useDynamic) platformColorScheme(false) else null)?.primary ?: accent.light.primary
 
     CompositionLocalProvider(
         LocalFinanceColors provides financeColors,
         LocalSpacing provides Spacing(),
+        LocalAccentColor provides accentColor,
     ) {
         MaterialTheme(
             colorScheme = colorScheme,

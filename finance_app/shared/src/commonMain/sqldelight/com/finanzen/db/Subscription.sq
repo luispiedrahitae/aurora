@@ -25,6 +25,9 @@ insert:
 INSERT INTO Subscription(name, amountMinor, currency, categoryId, accountId, frequency, intervalCount, nextChargeDate, remindDaysBefore, active)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
+lastInsertRowId:
+SELECT last_insert_rowid();
+
 update:
 UPDATE Subscription
 SET name = ?, amountMinor = ?, currency = ?, categoryId = ?, accountId = ?, frequency = ?,

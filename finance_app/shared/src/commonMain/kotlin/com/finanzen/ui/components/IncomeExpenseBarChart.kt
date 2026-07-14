@@ -23,12 +23,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -39,13 +37,15 @@ import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.viewmodel.DayPoint
 
 /**
- * Dos líneas (ingresos en verde, gastos en rojo) sobre un eje de días del mes seleccionado. Tocar
- * la columna de un día lo selecciona y muestra sus valores exactos arriba (mismo mecanismo de
- * "tap para seleccionar" de ExpenseBarChart; no hay hover en táctil). El día más reciente empieza
- * seleccionado. Leyenda con etiquetas de texto para que el color no sea la única señal.
+ * Barras divergentes, un día por columna (mes seleccionado): tramo verde hacia arriba (ingreso) y
+ * tramo rosa hacia abajo (gasto) desde una línea base compartida. La mayoría de los días no tienen
+ * movimiento, así que una línea continua conectando ceros con picos aislados se ve como un
+ * electrocardiograma; con barras independientes por día, un día sin movimiento simplemente no
+ * dibuja nada. Tocar una columna la selecciona y muestra sus valores exactos arriba (mismo
+ * mecanismo de "tap para seleccionar" que [NetWorthAreaChart]/[MonthlyBarChart]).
  */
 @Composable
-fun IncomeExpenseLineChart(points: List<DayPoint>, currency: String, modifier: Modifier = Modifier) {
+fun IncomeExpenseBarChart(points: List<DayPoint>, currency: String, modifier: Modifier = Modifier) {
     if (points.isEmpty()) return
     val finance = LocalFinanceColors.current
     val fmt = LocalMoneyFormat.current
@@ -57,7 +57,7 @@ fun IncomeExpenseLineChart(points: List<DayPoint>, currency: String, modifier: M
 
     FinanceCard(modifier = modifier.semantics { contentDescription = "Ingresos y gastos por día" }) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            // Encabezado: valores exactos del mes seleccionado.
+            // Encabezado: valores exactos del día seleccionado.
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(sel.label, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -80,49 +80,56 @@ fun IncomeExpenseLineChart(points: List<DayPoint>, currency: String, modifier: M
                 LegendMark(finance.income, "Ingresos")
                 LegendMark(finance.expense, "Gastos")
             }
-            // Área del gráfico con overlay táctil por mes.
+            // Barras divergentes con overlay táctil por día.
             Box(Modifier.fillMaxWidth().height(160.dp)) {
                 Canvas(Modifier.fillMaxSize()) {
-                    val padTop = 12f
-                    val padBottom = 12f
-                    val usableH = (size.height - padTop - padBottom).coerceAtLeast(1f)
+                    val pad = 12f
+                    val baselineY = size.height / 2f
+                    val usableHalf = (baselineY - pad).coerceAtLeast(1f)
                     val cw = size.width / n
+                    val barWidth = cw * 0.5f
                     fun cx(i: Int) = (i + 0.5f) * cw
-                    fun cy(value: Long): Float {
-                        val frac = (value.toFloat() / maxValue.toFloat()).coerceIn(0f, 1f)
-                        return padTop + (1f - frac) * usableH
+
+                    drawLine(
+                        color = markerLineColor,
+                        start = Offset(0f, baselineY),
+                        end = Offset(size.width, baselineY),
+                        strokeWidth = 1f,
+                    )
+
+                    points.forEachIndexed { i, p ->
+                        val left = i * cw + (cw - barWidth) / 2f
+                        val alpha = if (i == selectedIndex) 1f else 0.4f
+                        // .coerceAtLeast(2f) igual que MonthlyBarChart: sin piso mínimo, un monto
+                        // pequeño pero distinto de cero puede redondear a menos de 1px y desaparecer.
+                        if (p.incomeMinor > 0L) {
+                            val incomeHeight = ((p.incomeMinor.toFloat() / maxValue.toFloat()).coerceIn(0f, 1f) * usableHalf).coerceAtLeast(2f)
+                            drawRoundRect(
+                                color = finance.income.copy(alpha = alpha),
+                                topLeft = Offset(left, baselineY - incomeHeight),
+                                size = Size(barWidth, incomeHeight),
+                                cornerRadius = CornerRadius(6f, 6f),
+                            )
+                        }
+                        if (p.expenseMinor > 0L) {
+                            val expenseHeight = ((p.expenseMinor.toFloat() / maxValue.toFloat()).coerceIn(0f, 1f) * usableHalf).coerceAtLeast(2f)
+                            drawRoundRect(
+                                color = finance.expense.copy(alpha = alpha),
+                                topLeft = Offset(left, baselineY),
+                                size = Size(barWidth, expenseHeight),
+                                cornerRadius = CornerRadius(6f, 6f),
+                            )
+                        }
                     }
-                    // Línea vertical del mes seleccionado.
+
+                    // Línea vertical del día seleccionado.
                     val selX = cx(selectedIndex)
                     drawLine(
                         color = markerLineColor,
-                        start = Offset(selX, padTop),
-                        end = Offset(selX, size.height - padBottom),
+                        start = Offset(selX, pad),
+                        end = Offset(selX, size.height - pad),
                         strokeWidth = 2f,
                     )
-                    val incomePath = Path()
-                    val expensePath = Path()
-                    points.forEachIndexed { i, p ->
-                        val x = cx(i)
-                        val yi = cy(p.incomeMinor)
-                        val ye = cy(p.expenseMinor)
-                        if (i == 0) {
-                            incomePath.moveTo(x, yi)
-                            expensePath.moveTo(x, ye)
-                        } else {
-                            incomePath.lineTo(x, yi)
-                            expensePath.lineTo(x, ye)
-                        }
-                    }
-                    val stroke = Stroke(width = 4f, cap = StrokeCap.Round, join = StrokeJoin.Round)
-                    drawPath(incomePath, finance.income, style = stroke)
-                    drawPath(expensePath, finance.expense, style = stroke)
-                    points.forEachIndexed { i, p ->
-                        val x = cx(i)
-                        val r = if (i == selectedIndex) 6f else 3.5f
-                        drawCircle(finance.income, radius = r, center = Offset(x, cy(p.incomeMinor)))
-                        drawCircle(finance.expense, radius = r, center = Offset(x, cy(p.expenseMinor)))
-                    }
                 }
                 Row(Modifier.fillMaxSize()) {
                     points.forEachIndexed { i, _ ->

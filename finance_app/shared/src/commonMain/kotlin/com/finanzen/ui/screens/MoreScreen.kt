@@ -21,6 +21,8 @@ import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Payments
 import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.SmartToy
+import androidx.compose.material.icons.outlined.TrendingUp
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -41,6 +43,9 @@ fun MoreScreen(onNavigate: (route: String) -> Unit) {
         MoreItem("Suscripciones", "Cobros recurrentes en Movimientos", Icons.Outlined.Repeat) {
             onNavigate("subscriptions")
         },
+        MoreItem("Inversiones", "Aportes y rendimiento", Icons.Outlined.TrendingUp) {
+            onNavigate("investments")
+        },
         MoreItem("Calendario", "Movimientos por día", Icons.Outlined.CalendarMonth) {
             onNavigate("calendar")
         },
@@ -55,6 +60,9 @@ fun MoreScreen(onNavigate: (route: String) -> Unit) {
         },
         MoreItem("Categorías", "Personalizar", Icons.Outlined.AutoAwesome) {
             onNavigate("categories")
+        },
+        MoreItem("Asistente IA", "Pregunta sobre tus finanzas, sin conexión", Icons.Outlined.SmartToy) {
+            onNavigate("assistant")
         },
         MoreItem("Notificaciones", "Recordatorios y avisos", Icons.Outlined.Notifications) {
             onNavigate("notifications")

@@ -62,4 +62,12 @@ class MoneyTest {
         // JPY-like: sin decimales, con miles
         assertEquals("1,234,567", Money(1234567, "JPY").format(0, ".", ","))
     }
+
+    @Test
+    fun formatConLongMinValueNoDesborda() {
+        // FIX: kotlin.math.abs(Long.MIN_VALUE) desborda (su magnitud no cabe en Long) y seguía dando
+        // negativo, produciendo doble signo. Dividir/tomar el resto primero y recién ahí aplicar abs
+        // evita el desborde (ni el cociente ni el resto de Long.MIN_VALUE llegan a ese extremo).
+        assertEquals("-92233720368547758.08", Money(Long.MIN_VALUE, "USD").format(2))
+    }
 }

@@ -65,9 +65,10 @@ fun AboutScreen(onBack: () -> Unit) {
                 InfoCard(
                     title = "Privacidad",
                     body = "Tus datos viven solo en este dispositivo. No hay servidores, ni cuentas, ni telemetría, " +
-                        "ni publicidad. La app no requiere conexión a internet para funcionar. Los backups que " +
-                        "exportes se cifran con AES-GCM usando una clave derivada de tu PIN: sin ese PIN, el archivo " +
-                        "no se puede leer.",
+                        "ni publicidad. La app no requiere conexión a internet para funcionar. El asistente IA " +
+                        "opcional es la única función que usa internet, y solo para descargar el modelo una vez; " +
+                        "después responde 100% en tu dispositivo. Los backups que exportes se cifran con AES-GCM " +
+                        "usando una clave derivada de tu PIN: sin ese PIN, el archivo no se puede leer.",
                 )
             }
 

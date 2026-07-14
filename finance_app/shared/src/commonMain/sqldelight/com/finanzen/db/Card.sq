@@ -24,6 +24,9 @@ insert:
 INSERT INTO Card(accountId, last4, network, creditLimitMinor, cutoffDay, dueDay, interestRate)
 VALUES (?, ?, ?, ?, ?, ?, ?);
 
+lastInsertRowId:
+SELECT last_insert_rowid();
+
 update:
 UPDATE Card SET accountId = ?, last4 = ?, network = ?, creditLimitMinor = ?, cutoffDay = ?, dueDay = ?, interestRate = ?
 WHERE id = ?;

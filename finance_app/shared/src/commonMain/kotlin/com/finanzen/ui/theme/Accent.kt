@@ -48,20 +48,6 @@ enum class AccentPreset(
         FinanZenDarkScheme.withAccent(Color(0xFFD0BCFF), Color(0xFF381E72), Color(0xFF4F378B), Color(0xFFEADDFF)),
     ),
 
-    Rose(
-        "Rosa",
-        Color(0xFFB42058),
-        FinanZenLightScheme.withAccent(Color(0xFFB42058), Color.White, Color(0xFFFFD9E2), Color(0xFF3E001C)),
-        FinanZenDarkScheme.withAccent(Color(0xFFFFB1C7), Color(0xFF65072F), Color(0xFF8E2C48), Color(0xFFFFD9E2)),
-    ),
-
-    Red(
-        "Rojo",
-        Color(0xFFBB1A1A),
-        FinanZenLightScheme.withAccent(Color(0xFFBB1A1A), Color.White, Color(0xFFFFDAD6), Color(0xFF410002)),
-        FinanZenDarkScheme.withAccent(Color(0xFFFFB4AB), Color(0xFF690005), Color(0xFF93000A), Color(0xFFFFDAD6)),
-    ),
-
     Orange(
         "Naranja",
         Color(0xFF9A4500),
@@ -74,6 +60,20 @@ enum class AccentPreset(
         Color(0xFF8A5100),
         FinanZenLightScheme.withAccent(Color(0xFF8A5100), Color.White, Color(0xFFFFDDB6), Color(0xFF2C1600)),
         FinanZenDarkScheme.withAccent(Color(0xFFFFB868), Color(0xFF4A2800), Color(0xFF693C00), Color(0xFFFFDDB6)),
+    ),
+
+    Amarillo(
+        "Amarillo",
+        Color(0xFF6B5D00),
+        FinanZenLightScheme.withAccent(Color(0xFF6B5D00), Color.White, Color(0xFFFFE173), Color(0xFF221B00)),
+        FinanZenDarkScheme.withAccent(Color(0xFFE7C400), Color(0xFF3A2F00), Color(0xFF544600), Color(0xFFFFE173)),
+    ),
+
+    Lima(
+        "Lima",
+        Color(0xFF56690A),
+        FinanZenLightScheme.withAccent(Color(0xFF56690A), Color.White, Color(0xFFD7EE8F), Color(0xFF171E00)),
+        FinanZenDarkScheme.withAccent(Color(0xFFBBD273), Color(0xFF2B3300), Color(0xFF404D00), Color(0xFFD7EE8F)),
     ),
 
     Green(
