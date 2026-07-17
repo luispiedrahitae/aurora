@@ -21,6 +21,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -161,7 +163,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.categoryGroup(
     if (parents.isEmpty()) return
     item { SectionHeader(title) }
     items(parents, key = { it.id }) { parent ->
-        val children = all.filter { it.parentId == parent.id }
+        val children = all.filter { it.parentId == parent.id }.sortedBy { it.name.lowercase() }
         CategoryCard(parent, children, onDelete, onAddSubcategory)
     }
 }
@@ -173,41 +175,63 @@ private fun CategoryCard(
     onDelete: (Long) -> Unit,
     onAddSubcategory: (parentId: Long, name: String) -> Unit,
 ) {
+    var expanded by remember { mutableStateOf(false) }
     FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(12.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             CategoryRow(parent, onDelete)
-            children.forEach { child ->
-                Row(modifier = Modifier.padding(start = 16.dp)) { CategoryRow(child, onDelete) }
-            }
-            var newSubName by remember { mutableStateOf("") }
-            val existingNames = children.map { it.name.trim().lowercase() }.toSet()
-            val nameTaken = newSubName.isNotBlank() && newSubName.trim().lowercase() in existingNames
             Row(
-                modifier = Modifier.padding(start = 16.dp, top = 4.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = !expanded }
+                    .padding(start = 16.dp, top = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                OutlinedTextField(
-                    value = newSubName,
-                    onValueChange = { newSubName = it },
-                    label = { Text("Subcategoría") },
-                    singleLine = true,
-                    isError = nameTaken,
-                    supportingText = if (nameTaken) {
-                        { Text("Ya existe") }
-                    } else {
-                        null
-                    },
-                    modifier = Modifier.weight(1f),
+                Icon(
+                    if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                    contentDescription = if (expanded) "Contraer" else "Expandir",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                IconButton(
-                    onClick = {
-                        onAddSubcategory(parent.id, newSubName)
-                        newSubName = ""
-                    },
-                    enabled = newSubName.isNotBlank() && !nameTaken,
+                Text(
+                    "Subcategorías (${children.size})",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (expanded) {
+                children.forEach { child ->
+                    Row(modifier = Modifier.padding(start = 16.dp)) { CategoryRow(child, onDelete) }
+                }
+                var newSubName by remember { mutableStateOf("") }
+                val existingNames = children.map { it.name.trim().lowercase() }.toSet()
+                val nameTaken = newSubName.isNotBlank() && newSubName.trim().lowercase() in existingNames
+                Row(
+                    modifier = Modifier.padding(start = 16.dp, top = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Icon(Icons.Outlined.Add, contentDescription = "Añadir subcategoría")
+                    OutlinedTextField(
+                        value = newSubName,
+                        onValueChange = { newSubName = it },
+                        label = { Text("Subcategoría") },
+                        singleLine = true,
+                        isError = nameTaken,
+                        supportingText = if (nameTaken) {
+                            { Text("Ya existe") }
+                        } else {
+                            null
+                        },
+                        modifier = Modifier.weight(1f),
+                    )
+                    IconButton(
+                        onClick = {
+                            onAddSubcategory(parent.id, newSubName)
+                            newSubName = ""
+                        },
+                        enabled = newSubName.isNotBlank() && !nameTaken,
+                    ) {
+                        Icon(Icons.Outlined.Add, contentDescription = "Añadir subcategoría")
+                    }
                 }
             }
         }

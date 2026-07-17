@@ -92,7 +92,10 @@ class AccountsViewModel(
 
     /**
      * Crea una cuenta según su tipo. Para crédito guarda los metadatos de tarjeta (cupo, corte, pago,
-     * interés) en la tabla Card; el resto usa el saldo inicial. Devuelve el id de la cuenta creada.
+     * interés) en la tabla Card; el resto registra el monto inicial como el primer movimiento de la
+     * cuenta (`kind = "ADJUSTMENT"`) en vez de guardarlo solo en la columna cruda — así aparece en su
+     * historial igual que cualquier otro ingreso/gasto (ver `computeBalances` y `AccountMovementRow`).
+     * Devuelve el id de la cuenta creada.
      */
     fun addAccount(
         type: String,
@@ -118,7 +121,20 @@ class AccountsViewModel(
             scheduleCardReminders(accountId, name.trim(), cutoffDay, dueDay)
             accountId
         } else {
-            accountRepo.add(name.trim(), type, settingsRepo.baseCurrency(), openingBalanceMinor = amountMinor)
+            val currency = settingsRepo.baseCurrency()
+            val accountId = accountRepo.add(name.trim(), type, currency, openingBalanceMinor = 0)
+            if (amountMinor != 0L) {
+                txRepo.add(
+                    accountId = accountId,
+                    categoryId = null,
+                    amountMinor = amountMinor,
+                    currency = currency,
+                    epochDay = todayEpochDay(),
+                    note = "Saldo inicial",
+                    kind = "ADJUSTMENT",
+                )
+            }
+            accountId
         }
     }
 
@@ -164,7 +180,40 @@ class AccountsViewModel(
     fun archive(id: Long) = accountRepo.archive(id)
     fun unarchive(id: Long) = accountRepo.unarchive(id)
 
-    fun updateAccount(id: Long, name: String, openingBalanceMinor: Long) = accountRepo.updateBasics(id, name.trim(), openingBalanceMinor)
+    /**
+     * Actualiza el nombre y, si el monto asignado cambió, registra la diferencia como un nuevo
+     * movimiento `ADJUSTMENT` (puede ser negativo) en vez de sobreescribir el saldo en silencio —
+     * así el ajuste queda visible en el historial de la cuenta y el saldo total sigue cuadrando
+     * (ver `computeBalances`). El monto "actual" se deriva de `openingBalanceMinor` (el seed, nunca
+     * reescrito) más la suma de los `ADJUSTMENT` ya existentes, para que cuentas antiguas (creadas
+     * antes de este cambio, con el monto todavía en `openingBalanceMinor`) y cuentas nuevas
+     * (`openingBalanceMinor = 0`, monto en movimientos) se traten con la misma fórmula.
+     */
+    fun updateAccount(id: Long, name: String, newAmountMinor: Long) {
+        // Lee de los repos en vez de accounts.value/transactionsByAccount.value: esos StateFlow
+        // solo empiezan a coleccionar con un suscriptor activo (WhileSubscribed) y pueden seguir en
+        // su valor inicial vacío si se llama antes de que la UI los recolecte.
+        val account = accountRepo.all().firstOrNull { it.id == id } ?: return
+        // ponytail: escanea todas las transacciones (no hay TransactionRepository.byAccount todavía);
+        // a la escala de una app financiera personal esto es barato, subir a una query dedicada si crece.
+        val existingAdjustments = txRepo.all()
+            .filter { it.accountId == id && it.kind == "ADJUSTMENT" }
+            .sumOf { it.amountMinor }
+        val currentTotal = account.openingBalanceMinor + existingAdjustments
+        val delta = newAmountMinor - currentTotal
+        accountRepo.updateBasics(id, name.trim(), account.openingBalanceMinor)
+        if (delta != 0L) {
+            txRepo.add(
+                accountId = id,
+                categoryId = null,
+                amountMinor = delta,
+                currency = account.currency,
+                epochDay = todayEpochDay(),
+                note = "Ajuste de saldo",
+                kind = "ADJUSTMENT",
+            )
+        }
+    }
 
     fun updateCard(cardId: Long, creditLimitMinor: Long?, cutoffDay: Long?, dueDay: Long?, interestRate: Double?) = cardRepo.updateCreditTerms(cardId, creditLimitMinor, cutoffDay, dueDay, interestRate)
 
@@ -242,6 +291,7 @@ class AccountsViewModel(
                         balance[t.accountId] = (balance[t.accountId] ?: 0L) - t.amountMinor
                         t.transferAccountId?.let { to -> balance[to] = (balance[to] ?: 0L) + t.amountMinor }
                     }
+                    "ADJUSTMENT" -> balance[t.accountId] = (balance[t.accountId] ?: 0L) + t.amountMinor
                 }
             }
             return balance

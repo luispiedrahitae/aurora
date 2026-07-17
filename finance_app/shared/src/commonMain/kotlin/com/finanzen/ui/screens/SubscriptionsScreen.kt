@@ -45,12 +45,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.finanzen.db.Account
+import com.finanzen.ui.components.DateField
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.MoneyField
 import com.finanzen.ui.components.MoneyText
+import com.finanzen.ui.components.PickerField
 import com.finanzen.ui.components.SectionHeader
 import com.finanzen.viewmodel.SubscriptionsViewModel
+import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
 import org.koin.compose.viewmodel.koinViewModel
 
 private val MESES_SUB = listOf("ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic")
@@ -68,14 +74,16 @@ fun SubscriptionsScreen(
     vm: SubscriptionsViewModel = koinViewModel(),
 ) {
     val subs by vm.subscriptions.collectAsState()
+    val accounts by vm.accounts.collectAsState()
     var showForm by remember { mutableStateOf(openAddInitially) }
 
     if (showForm) {
         SubscriptionFormDialog(
+            accounts = accounts,
             currencyCode = vm.baseCurrency,
             onDismiss = { showForm = false },
-            onConfirm = { name, amountMinor, frequency, interval ->
-                vm.addSubscription(name, amountMinor, frequency, interval)
+            onConfirm = { name, amountMinor, frequency, interval, accountId, startEpochDay ->
+                vm.addSubscription(name, amountMinor, frequency, interval, accountId, startEpochDay)
                 showForm = false
             },
         )
@@ -125,17 +133,25 @@ fun SubscriptionsScreen(
 
 /**
  * Alta de suscripción. La recurrencia se elige con un segmented control:
- * "Cada X días" (DAILY) o "Día del mes" (MONTHLY). `onConfirm(nombre, montoMinor, frequency, interval)`.
- * Los días de antelación del recordatorio son una preferencia global (Más › Notificaciones).
+ * "Cada X días" (DAILY) o "Día del mes" (MONTHLY). `onConfirm(nombre, montoMinor, frequency,
+ * interval, accountId, startEpochDay)`. La fecha de inicio (por defecto hoy) puede ser distinta de
+ * hoy: pasada (pone al día los cobros atrasados) o futura (no cobra nada hasta que corresponda).
+ * La cuenta de pago se puede elegir libremente, incluida una de crédito — deliberadamente no se
+ * agrega ningún campo de "Cuotas" aquí, a diferencia de un gasto normal con tarjeta de crédito: una
+ * suscripción es un cargo recurrente, no una compra a plazos. Los días de antelación del
+ * recordatorio son una preferencia global (Más › Notificaciones).
  */
 @Composable
 private fun SubscriptionFormDialog(
+    accounts: List<Account>,
     currencyCode: String,
     onDismiss: () -> Unit,
-    onConfirm: (name: String, amountMinor: Long, frequency: String, interval: Long) -> Unit,
+    onConfirm: (name: String, amountMinor: Long, frequency: String, interval: Long, accountId: Long?, startEpochDay: Long) -> Unit,
 ) {
     var name by remember { mutableStateOf("") }
     var amountMinor by remember { mutableStateOf(0L) }
+    var selectedAccount by remember { mutableStateOf(accounts.firstOrNull()) }
+    var startEpochDay by remember { mutableStateOf(Clock.System.todayIn(TimeZone.currentSystemDefault()).toEpochDays().toLong()) }
     var monthly by remember { mutableStateOf(true) } // true = Día del mes, false = Cada X días
     var dayOfMonth by remember { mutableStateOf("1") }
     var everyDays by remember { mutableStateOf("30") }
@@ -162,6 +178,20 @@ private fun SubscriptionFormDialog(
                     onAmountChange = { amountMinor = it },
                     currencyCode = currencyCode,
                     label = "Monto",
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                PickerField(
+                    label = "Cuenta",
+                    options = accounts,
+                    selected = selectedAccount,
+                    optionLabel = { "${it.name} (${it.currency})" },
+                    onSelect = { selectedAccount = it },
+                    emptyHint = "Crea una cuenta primero (pestaña Cuentas).",
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                DateField(
+                    epochDay = startEpochDay,
+                    onEpochDayChange = { startEpochDay = it },
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Text("Recurrencia", style = MaterialTheme.typography.labelLarge)
@@ -207,7 +237,7 @@ private fun SubscriptionFormDialog(
                 onClick = {
                     val frequency = if (monthly) "MONTHLY" else "DAILY"
                     val interval = if (monthly) dayOfMonth.toLong() else everyDays.toLong()
-                    onConfirm(name.trim(), amountMinor, frequency, interval)
+                    onConfirm(name.trim(), amountMinor, frequency, interval, selectedAccount?.id, startEpochDay)
                 },
                 enabled = valid,
             ) { Text("Guardar") }

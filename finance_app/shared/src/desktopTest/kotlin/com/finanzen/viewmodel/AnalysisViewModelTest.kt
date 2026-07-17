@@ -191,4 +191,78 @@ class AnalysisViewModelTest {
     fun computeSubscriptionMonthlyCostConListaVaciaEsCero() {
         assertEquals(0L, AnalysisViewModel.computeSubscriptionMonthlyCost(emptyList()))
     }
+
+    @Test
+    fun mergeOthersByPctUbicaOtrosSegunSuPropioPorcentajeNoSiempreAlFinal() {
+        // Reproduce el bug reportado: "Otros" agrega más que cualquier categoría individual (39%)
+        // y antes quedaba fijo al final en vez de aparecer primero.
+        val top = listOf(
+            CategorySlice(name = "A", amountMinor = 30, pct = 0.30f),
+            CategorySlice(name = "B", amountMinor = 20, pct = 0.20f),
+            CategorySlice(name = "C", amountMinor = 11, pct = 0.11f),
+        )
+        val otros = CategorySlice(name = "Otros", amountMinor = 39, pct = 0.39f)
+
+        val merged = AnalysisViewModel.mergeOthersByPct(top, otros)
+
+        assertEquals(listOf("Otros", "A", "B", "C"), merged.map { it.name })
+    }
+
+    @Test
+    fun mergeOthersByPctSinOtrosDevuelveElTopSinCambios() {
+        val top = listOf(CategorySlice(name = "A", amountMinor = 30, pct = 0.30f))
+        assertEquals(top, AnalysisViewModel.mergeOthersByPct(top, null))
+    }
+
+    @Test
+    fun computeFrequentExpensesConSubcategoriaMuestraCategoriaPadreYSubcategoriaSeparadas() {
+        val db = freshDb()
+        db.accountQueries.insert("Efectivo", "CASH", "USD", 0, 0, 0)
+        val account = db.accountQueries.selectAll().executeAsList().first()
+        db.categoryQueries.insert(null, "Comida", "", 0, "EXPENSE")
+        val parent = db.categoryQueries.selectAll().executeAsList().first { it.name == "Comida" }
+        db.categoryQueries.insert(parent.id, "Restaurantes", "", 0, "EXPENSE")
+        val cats = db.categoryQueries.selectAll().executeAsList()
+        val child = cats.first { it.name == "Restaurantes" }
+
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        val referenceMonth = LocalDate(today.year, today.month, 1)
+        db.transactionQueries.insert(
+            account.id, child.id, 100, "USD", referenceMonth.toEpochDays().toLong(), "cena", "EXPENSE", null, null, null, null,
+        )
+
+        val frequent = AnalysisViewModel.computeFrequentExpenses(
+            txs = db.transactionQueries.selectAll().executeAsList(),
+            cats = cats,
+            period = monthPeriod(referenceMonth),
+        )
+
+        assertEquals("Comida", frequent.first().name)
+        assertEquals("Restaurantes", frequent.first().subcategoryName)
+    }
+
+    @Test
+    fun computeFrequentExpensesSinSubcategoriaDejaSubcategoryNameNulo() {
+        val db = freshDb()
+        db.accountQueries.insert("Efectivo", "CASH", "USD", 0, 0, 0)
+        val account = db.accountQueries.selectAll().executeAsList().first()
+        db.categoryQueries.insert(null, "Transporte", "", 0, "EXPENSE")
+        val cats = db.categoryQueries.selectAll().executeAsList()
+        val cat = cats.first { it.name == "Transporte" }
+
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        val referenceMonth = LocalDate(today.year, today.month, 1)
+        db.transactionQueries.insert(
+            account.id, cat.id, 100, "USD", referenceMonth.toEpochDays().toLong(), "bus", "EXPENSE", null, null, null, null,
+        )
+
+        val frequent = AnalysisViewModel.computeFrequentExpenses(
+            txs = db.transactionQueries.selectAll().executeAsList(),
+            cats = cats,
+            period = monthPeriod(referenceMonth),
+        )
+
+        assertEquals("Transporte", frequent.first().name)
+        assertEquals(null, frequent.first().subcategoryName)
+    }
 }

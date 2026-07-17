@@ -8,12 +8,15 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowDownward
 import androidx.compose.material.icons.outlined.ArrowUpward
 import androidx.compose.material.icons.outlined.Repeat
+import androidx.compose.material.icons.outlined.SmartToy
 import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material.icons.outlined.TrendingUp
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -21,8 +24,13 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -72,6 +80,7 @@ fun AppNav() {
     // El FAB desplegable crea movimientos/suscripciones; solo en Movimientos, para no competir con
     // las acciones propias de Resumen y Análisis.
     val showFab = currentRoute == TopDestination.Transactions.route
+    var fabExpanded by remember { mutableStateOf(false) }
 
     val onSelect: (TopDestination) -> Unit = { dest ->
         if (currentRoute != dest.route) {
@@ -123,7 +132,10 @@ fun AppNav() {
                         NavigationRailItem(
                             selected = selected,
                             onClick = { onSelect(dest) },
-                            icon = { Icon(if (selected) dest.selectedIcon else dest.icon, contentDescription = dest.label) },
+                            icon = {
+                                val iconModifier = if (dest == TopDestination.More) Modifier.size(20.dp) else Modifier
+                                Icon(if (selected) dest.selectedIcon else dest.icon, contentDescription = dest.label, modifier = iconModifier)
+                            },
                             label = {
                                 AutoSizeText(
                                     text = dest.label,
@@ -137,7 +149,28 @@ fun AppNav() {
                 }
                 Box(Modifier.weight(1f).fillMaxSize()) {
                     AppNavHost(navController)
-                    if (showFab) SpeedDialFab(speedDialActions, contentDescription = "Agregar movimiento")
+                    if (showFab) {
+                        SpeedDialFab(
+                            speedDialActions,
+                            expanded = fabExpanded,
+                            onExpandedChange = { fabExpanded = it },
+                            contentDescription = "Agregar movimiento",
+                        )
+                        if (!fabExpanded) {
+                            SmallFloatingActionButton(
+                                onClick = { navController.navigate("assistant") },
+                                elevation = FloatingActionButtonDefaults.elevation(
+                                    defaultElevation = 0.dp,
+                                    pressedElevation = 0.dp,
+                                    focusedElevation = 0.dp,
+                                    hoveredElevation = 0.dp,
+                                ),
+                                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 16.dp + 56.dp + 12.dp),
+                            ) {
+                                Icon(Icons.Outlined.SmartToy, contentDescription = "Asistente IA")
+                            }
+                        }
+                    }
                 }
             }
         } else {
@@ -155,7 +188,10 @@ fun AppNav() {
                                 NavigationBarItem(
                                     selected = selected,
                                     onClick = { onSelect(dest) },
-                                    icon = { Icon(if (selected) dest.selectedIcon else dest.icon, contentDescription = dest.label) },
+                                    icon = {
+                                        val iconModifier = if (dest == TopDestination.More) Modifier.size(20.dp) else Modifier
+                                        Icon(if (selected) dest.selectedIcon else dest.icon, contentDescription = dest.label, modifier = iconModifier)
+                                    },
                                     label = {
                                         AutoSizeText(
                                             text = dest.label,
@@ -174,7 +210,28 @@ fun AppNav() {
                 // las que tienen TopAppBar vía su barra; las "desnudas" vía windowInsetsPadding propio.
                 Box(Modifier.fillMaxSize().padding(bottom = inner.calculateBottomPadding())) {
                     AppNavHost(navController)
-                    if (showFab) SpeedDialFab(speedDialActions, contentDescription = "Agregar movimiento")
+                    if (showFab) {
+                        SpeedDialFab(
+                            speedDialActions,
+                            expanded = fabExpanded,
+                            onExpandedChange = { fabExpanded = it },
+                            contentDescription = "Agregar movimiento",
+                        )
+                        if (!fabExpanded) {
+                            SmallFloatingActionButton(
+                                onClick = { navController.navigate("assistant") },
+                                elevation = FloatingActionButtonDefaults.elevation(
+                                    defaultElevation = 0.dp,
+                                    pressedElevation = 0.dp,
+                                    focusedElevation = 0.dp,
+                                    hoveredElevation = 0.dp,
+                                ),
+                                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 16.dp + 56.dp + 12.dp),
+                            ) {
+                                Icon(Icons.Outlined.SmartToy, contentDescription = "Asistente IA")
+                            }
+                        }
+                    }
                 }
             }
         }

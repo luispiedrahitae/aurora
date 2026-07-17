@@ -727,6 +727,7 @@ fun accountTypeLabel(type: String): String = when (type) {
 fun kindLabel(kind: String): String = when (kind) {
     "INCOME" -> "Ingreso"
     "TRANSFER" -> "Transferencia"
+    "ADJUSTMENT" -> "Ajuste de saldo"
     else -> "Gasto"
 }
 
@@ -736,14 +737,14 @@ fun kindLabel(kind: String): String = when (kind) {
  * o ingreso/gasto sin categoría asignada); el tipo se distingue por el glifo, no por el color.
  */
 @Composable
-fun KindAvatar(kind: String, modifier: Modifier = Modifier, size: Dp = 40.dp) {
-    val icon = when (kind) {
+fun KindAvatar(kind: String, modifier: Modifier = Modifier, size: Dp = 40.dp, icon: ImageVector? = null) {
+    val resolvedIcon = icon ?: when (kind) {
         "INCOME" -> Icons.Outlined.ArrowUpward
         "TRANSFER" -> Icons.Outlined.SwapHoriz
         else -> Icons.Outlined.ArrowDownward
     }
     Box(modifier.size(size).clip(CircleShape).background(LocalAccentColor.current), contentAlignment = Alignment.Center) {
-        Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(size * 0.5f))
+        Icon(resolvedIcon, contentDescription = null, tint = Color.White, modifier = Modifier.size(size * 0.5f))
     }
 }
 

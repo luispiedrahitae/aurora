@@ -21,16 +21,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -54,11 +52,11 @@ data class SpeedDialAction(
 @Composable
 fun SpeedDialFab(
     actions: List<SpeedDialAction>,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     contentDescription: String = "Agregar",
 ) {
-    var expanded by remember { mutableStateOf(false) }
-
     Box(modifier.fillMaxSize()) {
         // Scrim: oscurece el fondo y cierra al tocar fuera.
         AnimatedVisibility(
@@ -74,7 +72,7 @@ fun SpeedDialFab(
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
-                    ) { expanded = false },
+                    ) { onExpandedChange(false) },
             )
         }
 
@@ -93,11 +91,19 @@ fun SpeedDialFab(
                         scaleIn(tween(160, delayMillis = delay), initialScale = 0.8f),
                     exit = fadeOut(tween(100)) + slideOutVertically(tween(120)) { it / 3 } + scaleOut(tween(100)),
                 ) {
-                    SpeedDialRow(action) { expanded = false }
+                    SpeedDialRow(action) { onExpandedChange(false) }
                 }
             }
 
-            FloatingActionButton(onClick = { expanded = !expanded }) {
+            FloatingActionButton(
+                onClick = { onExpandedChange(!expanded) },
+                elevation = FloatingActionButtonDefaults.elevation(
+                    defaultElevation = 0.dp,
+                    pressedElevation = 0.dp,
+                    focusedElevation = 0.dp,
+                    hoveredElevation = 0.dp,
+                ),
+            ) {
                 Icon(
                     if (expanded) Icons.Outlined.Close else Icons.Outlined.Add,
                     contentDescription = if (expanded) "Cerrar" else contentDescription,
@@ -130,6 +136,12 @@ private fun SpeedDialRow(action: SpeedDialAction, onChosen: () -> Unit) {
         SmallFloatingActionButton(
             onClick = click,
             containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+            elevation = FloatingActionButtonDefaults.elevation(
+                defaultElevation = 0.dp,
+                pressedElevation = 0.dp,
+                focusedElevation = 0.dp,
+                hoveredElevation = 0.dp,
+            ),
         ) {
             Icon(action.icon, contentDescription = action.label, tint = action.tint)
         }

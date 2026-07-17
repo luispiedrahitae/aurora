@@ -18,6 +18,7 @@ import com.finanzen.domain.InstallmentMath
 import com.finanzen.platform.NotificationScheduler
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.datetime.LocalDate
 
@@ -34,8 +35,11 @@ class TransactionsViewModel(
     private val subsRepo: SubscriptionRepository,
 ) : ViewModel() {
 
+    // Los movimientos ADJUSTMENT (saldo inicial/ajuste de cuenta) solo se muestran en el historial
+    // expandido de Cuentas (AccountsTabScreen), no en Movimientos.
     val transactions: StateFlow<List<TransactionRow>> =
-        txRepo.observeAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        txRepo.observeAll().map { list -> list.filter { it.kind != "ADJUSTMENT" } }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val accounts: StateFlow<List<Account>> =
         accountRepo.observeAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())

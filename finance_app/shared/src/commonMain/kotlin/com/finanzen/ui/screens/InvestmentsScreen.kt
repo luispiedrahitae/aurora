@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.dp
 import com.finanzen.db.Account
 import com.finanzen.db.Investment
 import com.finanzen.db.TransactionRow
+import com.finanzen.ui.components.DateField
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.KindAvatar
 import com.finanzen.ui.components.MoneyField
@@ -102,8 +103,8 @@ fun InvestmentsScreen(
             accounts = accounts,
             currencyCode = vm.baseCurrency,
             onDismiss = { showForm = false },
-            onConfirm = { name, amountMinor, accountId, periodic, frequency, interval ->
-                vm.addInvestment(name, amountMinor, accountId, periodic, frequency, interval, todayEpochDayInv())
+            onConfirm = { name, amountMinor, accountId, periodic, frequency, interval, startEpochDay ->
+                vm.addInvestment(name, amountMinor, accountId, periodic, frequency, interval, startEpochDay)
                 showForm = false
             },
         )
@@ -193,18 +194,20 @@ private fun todayEpochDayInv(): Long = Clock.System.todayIn(TimeZone.currentSyst
 
 /**
  * Alta de inversión. Igual que Suscripciones: nombre, monto, y — si es periódica — un segmented
- * control "Cada X días" (DAILY) / "Día del mes" (MONTHLY). El primer aporte se registra hoy.
+ * control "Cada X días" (DAILY) / "Día del mes" (MONTHLY). La fecha de inicio (por defecto hoy)
+ * puede ser distinta de hoy — el primer aporte se registra en esa fecha, no forzosamente hoy.
  */
 @Composable
 private fun InvestmentFormDialog(
     accounts: List<Account>,
     currencyCode: String,
     onDismiss: () -> Unit,
-    onConfirm: (name: String, amountMinor: Long, accountId: Long, periodic: Boolean, frequency: String?, interval: Long?) -> Unit,
+    onConfirm: (name: String, amountMinor: Long, accountId: Long, periodic: Boolean, frequency: String?, interval: Long?, startEpochDay: Long) -> Unit,
 ) {
     var name by remember { mutableStateOf("") }
     var amountMinor by remember { mutableStateOf(0L) }
     var selectedAccount by remember { mutableStateOf(accounts.firstOrNull()) }
+    var startEpochDay by remember { mutableStateOf(todayEpochDayInv()) }
     var periodic by remember { mutableStateOf(false) }
     var monthly by remember { mutableStateOf(true) } // true = Día del mes, false = Cada X días
     var dayOfMonth by remember { mutableStateOf("1") }
@@ -241,6 +244,11 @@ private fun InvestmentFormDialog(
                     optionLabel = { "${it.name} (${it.currency})" },
                     onSelect = { selectedAccount = it },
                     emptyHint = "Crea una cuenta primero (pestaña Cuentas).",
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                DateField(
+                    epochDay = startEpochDay,
+                    onEpochDayChange = { startEpochDay = it },
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -304,7 +312,7 @@ private fun InvestmentFormDialog(
                     } else {
                         everyDays.toLong()
                     }
-                    onConfirm(name.trim(), amountMinor, selectedAccount!!.id, periodic, frequency, interval)
+                    onConfirm(name.trim(), amountMinor, selectedAccount!!.id, periodic, frequency, interval, startEpochDay)
                 },
                 enabled = valid,
             ) { Text("Guardar") }

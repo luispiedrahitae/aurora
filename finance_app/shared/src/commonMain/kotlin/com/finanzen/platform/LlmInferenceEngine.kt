@@ -10,6 +10,6 @@ package com.finanzen.platform
 expect class LlmInferenceEngine {
     suspend fun load(modelPath: String): Result<Unit>
     fun isLoaded(): Boolean
-    suspend fun generate(prompt: String, onToken: (String) -> Unit): Result<String>
+    suspend fun generate(prompt: String, temperature: Double, onToken: (String) -> Unit): Result<String>
     fun close()
 }

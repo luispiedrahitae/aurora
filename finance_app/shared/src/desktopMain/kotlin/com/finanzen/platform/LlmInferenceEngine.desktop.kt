@@ -10,7 +10,7 @@ actual class LlmInferenceEngine {
 
     actual fun isLoaded(): Boolean = false
 
-    actual suspend fun generate(prompt: String, onToken: (String) -> Unit): Result<String> = Result.failure(UnsupportedOperationException("Asistente IA no disponible en el preview de Desktop"))
+    actual suspend fun generate(prompt: String, temperature: Double, onToken: (String) -> Unit): Result<String> = Result.failure(UnsupportedOperationException("Asistente IA no disponible en el preview de Desktop"))
 
     actual fun close() = Unit
 }

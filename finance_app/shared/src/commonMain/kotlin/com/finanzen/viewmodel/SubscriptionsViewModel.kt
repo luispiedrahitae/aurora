@@ -6,6 +6,7 @@ import com.finanzen.data.AccountRepository
 import com.finanzen.data.SettingsRepository
 import com.finanzen.data.SubscriptionRepository
 import com.finanzen.data.TransactionRepository
+import com.finanzen.db.Account
 import com.finanzen.db.Subscription
 import com.finanzen.domain.RecurrenceSchedule
 import com.finanzen.platform.NotificationScheduler
@@ -27,6 +28,9 @@ class SubscriptionsViewModel(
     val subscriptions: StateFlow<List<Subscription>> =
         subsRepo.observeActive().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    val accounts: StateFlow<List<Account>> =
+        accountRepo.observeAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     val baseCurrency: String get() = settingsRepo.baseCurrency()
 
     init {
@@ -35,14 +39,16 @@ class SubscriptionsViewModel(
     }
 
     /**
-     * Crea la suscripción, registra el cobro de **hoy** como gasto en Movimientos y programa el siguiente.
-     * [frequency] = "DAILY" (cada [interval] días) o "MONTHLY" (mismo día del mes).
+     * Crea la suscripción con [startEpochDay] como primer cobro programado (puede ser hoy, pasado o
+     * futuro) y una cuenta elegida por el usuario ([accountId], `null` cae a [ensureAccount]). El
+     * cobro inicial se resuelve reutilizando [postDueChargesFor] en vez de duplicar el "cobrar ahora":
+     * si [startEpochDay] es hoy o pasado, cobra de inmediato (y pone al día atrasos si aplica); si es
+     * futuro, no cobra nada todavía. [frequency] = "DAILY" (cada [interval] días) o "MONTHLY" (mismo
+     * día del mes).
      */
-    fun addSubscription(name: String, amountMinor: Long, frequency: String, interval: Long) {
-        val account = ensureAccount()
-        val today = todayEpochDay()
+    fun addSubscription(name: String, amountMinor: Long, frequency: String, interval: Long, accountId: Long?, startEpochDay: Long) {
+        val account = accountId?.let { id -> accountRepo.all().firstOrNull { it.id == id } } ?: ensureAccount()
         val remindDaysBefore = settingsRepo.reminderDaysBefore()
-        val nextCharge = RecurrenceSchedule.nextOccurrenceAfter(today, frequency, interval)
         val id = subsRepo.add(
             name = name,
             amountMinor = amountMinor,
@@ -51,26 +57,10 @@ class SubscriptionsViewModel(
             accountId = account.id,
             frequency = frequency,
             intervalCount = interval,
-            nextChargeDateEpochDay = nextCharge,
+            nextChargeDateEpochDay = startEpochDay,
             remindDaysBefore = remindDaysBefore,
         )
-        // Cobrar ahora: el gasto aparece de inmediato en Movimientos, vinculado a la suscripción.
-        txRepo.add(
-            accountId = account.id,
-            categoryId = null,
-            amountMinor = amountMinor,
-            currency = account.currency,
-            epochDay = today,
-            note = name,
-            kind = "EXPENSE",
-            subscriptionId = id,
-        )
-        scheduler.scheduleReminder(
-            id = id,
-            title = name,
-            body = "Próximo cobro en $remindDaysBefore día(s)",
-            atEpochDay = nextCharge - remindDaysBefore,
-        )
+        subsRepo.byId(id)?.let { postDueChargesFor(it) }
     }
 
     fun deleteSubscription(id: Long) {
@@ -80,30 +70,32 @@ class SubscriptionsViewModel(
 
     /** Registra como gasto cada cobro vencido y avanza la fecha hasta dejarla en el futuro. Idempotente. */
     private fun postDueCharges() {
+        subsRepo.activeNow().forEach { postDueChargesFor(it) }
+    }
+
+    private fun postDueChargesFor(s: Subscription) {
         val today = todayEpochDay()
-        subsRepo.activeNow().forEach { s ->
-            val due = RecurrenceSchedule.occurrencesDueUpTo(s.nextChargeDate, today, s.frequency, s.intervalCount)
-            due.dates.forEach { chargeDay ->
-                txRepo.add(
-                    accountId = s.accountId ?: ensureAccount().id,
-                    categoryId = s.categoryId,
-                    amountMinor = s.amountMinor,
-                    currency = s.currency,
-                    epochDay = chargeDay,
-                    note = s.name,
-                    kind = "EXPENSE",
-                    subscriptionId = s.id,
-                )
-            }
-            if (due.next != s.nextChargeDate) {
-                subsRepo.updateNextCharge(s.id, due.next)
-                scheduler.scheduleReminder(
-                    id = s.id,
-                    title = s.name,
-                    body = "Próximo cobro en ${s.remindDaysBefore} día(s)",
-                    atEpochDay = due.next - s.remindDaysBefore,
-                )
-            }
+        val due = RecurrenceSchedule.occurrencesDueUpTo(s.nextChargeDate, today, s.frequency, s.intervalCount)
+        due.dates.forEach { chargeDay ->
+            txRepo.add(
+                accountId = s.accountId ?: ensureAccount().id,
+                categoryId = s.categoryId,
+                amountMinor = s.amountMinor,
+                currency = s.currency,
+                epochDay = chargeDay,
+                note = s.name,
+                kind = "EXPENSE",
+                subscriptionId = s.id,
+            )
+        }
+        if (due.next != s.nextChargeDate) {
+            subsRepo.updateNextCharge(s.id, due.next)
+            scheduler.scheduleReminder(
+                id = s.id,
+                title = s.name,
+                body = "Próximo cobro en ${s.remindDaysBefore} día(s)",
+                atEpochDay = due.next - s.remindDaysBefore,
+            )
         }
     }
 

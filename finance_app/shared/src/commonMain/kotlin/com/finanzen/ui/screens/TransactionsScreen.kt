@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
+import androidx.compose.material.icons.outlined.Autorenew
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
@@ -386,6 +387,7 @@ private fun TransactionItem(
     modifier: Modifier = Modifier,
 ) {
     val isTransfer = row.kind == "TRANSFER"
+    val isSubscription = row.subscriptionId != null
     val isIncome = row.kind == "INCOME"
     val signedAmount = if (isIncome) row.amountMinor else -row.amountMinor
     val spacing = LocalSpacing.current
@@ -426,10 +428,12 @@ private fun TransactionItem(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(spacing.md),
         ) {
-            if (category != null) {
-                CategoryAvatar(icon = category.icon)
-            } else {
-                KindAvatar(kind = row.kind)
+            when {
+                // La suscripción se distingue aun si tiene categoría (igual que una transferencia
+                // nunca se pierde detrás de su categoría) — de ahí que vaya antes del chequeo de categoría.
+                isSubscription -> KindAvatar(kind = row.kind, icon = Icons.Outlined.Autorenew)
+                category != null -> CategoryAvatar(icon = category.icon)
+                else -> KindAvatar(kind = row.kind)
             }
             Column(Modifier.weight(1f)) {
                 Text(
@@ -459,6 +463,22 @@ private fun TransactionItem(
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                } else if (isSubscription) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Icon(
+                            Icons.Outlined.Autorenew,
+                            contentDescription = null,
+                            tint = finance.expense,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        MoneyText(
+                            amountMinor = signedAmount,
+                            currency = row.currency,
+                            style = MaterialTheme.typography.titleMedium,
+                            signed = true,
+                            colorOverride = finance.expense,
                         )
                     }
                 } else {

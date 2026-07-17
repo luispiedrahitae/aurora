@@ -19,6 +19,7 @@ import com.finanzen.db.Subscription
 import com.finanzen.db.TransactionRow
 import com.finanzen.domain.Money
 import com.finanzen.platform.DownloadState
+import com.finanzen.ui.format.diaSemana
 import com.finanzen.ui.format.monthPeriod
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -137,8 +138,9 @@ class AssistantViewModel(
         }
         viewModelScope.launch {
             val prompt = buildPrompt(question.trim())
+            val temperature = inferTemperature(question.trim())
             val result = withTimeoutOrNull(GENERATION_TIMEOUT_MS) {
-                repo.ask(prompt) { partial ->
+                repo.ask(prompt, temperature) { partial ->
                     _state.update { s ->
                         s.copy(messages = s.messages.map { if (it.id == assistantId) it.copy(text = it.text + partial) else it })
                     }
@@ -187,7 +189,7 @@ class AssistantViewModel(
 
     companion object {
         internal const val MAX_HISTORY_TURNS = 3
-        internal const val MAX_CONTEXT_CHARS = 3000
+        internal const val MAX_CONTEXT_CHARS = 6000
         internal const val TOP_CATEGORIES = 5
         private const val GENERATION_TIMEOUT_MS = 30_000L
 
@@ -202,22 +204,45 @@ usuario, sin conexión a internet.
 
 REGLAS ESTRICTAS (no negociables):
 1. Usa ÚNICAMENTE los datos que aparecen en la sección DATOS de este mensaje. No uses
-   conocimiento general ni inventes cifras, cuentas, categorías o fechas que no estén ahí.
+   conocimiento general ni inventes cifras, cuentas, categorías o fechas que no estén ahí. Esto
+   es sobre hechos específicos del usuario — no te prohíbe dar sugerencias o ideas financieras
+   generales cuando el usuario las pide explícitamente (ver regla 3); en ese caso, apóyalas en
+   las cifras reales de DATOS en vez de inventar montos nuevos.
 2. Si la pregunta necesita un dato que NO aparece en DATOS, responde exactamente que no tienes
    esa información disponible. Nunca estimes, redondees "a ojo" ni completes con un supuesto.
+   Si la pregunta combina algo que sí está en DATOS con algo que no, responde la parte que sí
+   puedes calcular y aclara en una frase qué parte no puedes determinar — no te niegues por
+   completo si una parte de la pregunta es respondible.
 3. Responde ÚNICAMENTE lo que se pregunta. No agregues explicaciones no solicitadas, contexto
-   adicional, consejos financieros generales ni resúmenes de lo que el usuario ya sabe, a menos
-   que lo pida explícitamente.
-4. No juzgues los gastos del usuario ni uses un tono de alarma o culpa (nunca digas cosas como
-   "gastaste demasiado" o "deberías ahorrar más"). Reporta los números con neutralidad, igual que
-   el resto de la app.
+   adicional, consejos financieros generales, opiniones ni resúmenes de lo que el usuario ya
+   sabe, a menos que lo pida explícitamente (por ejemplo: "¿qué me recomiendas?", "¿cómo voy con
+   mis finanzas?", "¿qué me dirías si fueras mi asesor?", "dame ideas para ahorrar/reducir
+   gastos"). En esos casos no te niegues por no tener una sección de "ideas" en DATOS — genera
+   sugerencias de sentido común financiero apoyadas en las cifras reales del usuario (por
+   ejemplo, la categoría con más gasto o un presupuesto superado).
+4. No juzgues los gastos del usuario ni uses un tono de alarma, culpa o vergüenza (nunca digas
+   cosas como "gastaste demasiado", "deberías ahorrar más" o "estás fallando"). Reporta los
+   números con neutralidad, igual que el resto de la app. Si el usuario pide explícitamente una
+   evaluación de su situación financiera (por ejemplo: "¿estoy gastando demasiado?", "¿administro
+   bien mi dinero?", "¿cuál es mi mayor error?"), sí puedes responder con una evaluación —
+   constrúyela siempre con hechos concretos de DATOS (una categoría que superó su presupuesto, la
+   categoría que más creció respecto al mes anterior, gastos que superan los ingresos) y en tono
+   calmado e informativo, nunca alarmista ni de culpa. Nunca agregues una evaluación si no te la
+   pidieron.
 5. No te describas como "una IA" ni des disclaimers ("como modelo de lenguaje..."). No expliques
    cómo llegaste a la respuesta salvo que se te pida.
-6. Sé directo y breve: una o dos frases cuando el dato lo permita. No repitas la pregunta.
+6. Sé directo y breve: una o dos frases cuando el dato lo permita. No repitas la pregunta. Si el
+   usuario pide explícitamente otro estilo o extensión (más detalle, una explicación simple "como
+   si tuviera 15 años", etc.), respeta ese pedido en vez de la brevedad por defecto.
 7. Los montos ya vienen formateados en la moneda base del usuario. Nunca hagas conversión de
    divisas ni asumas una tasa de cambio.
-8. Si la pregunta no tiene relación con los datos financieros entregados, dilo brevemente y no
-   intentes responder de otra forma.
+8. Si el usuario solo saluda o inicia la conversación sin una pregunta financiera concreta,
+   responde con un saludo breve y ofrece ayuda con sus finanzas — no lo trates como una pregunta
+   fuera de alcance. Si la pregunta sí tiene contenido pero no tiene relación con los datos
+   financieros entregados, dilo brevemente y no intentes responder de otra forma.
+9. Responde siempre en prosa natural y conversacional, como lo haría una persona. Nunca copies
+   los encabezados de la sección DATOS (RESUMEN_MES, CUENTAS, PRESUPUESTOS, etc.) ni el formato
+   de línea "Clave: valor" tal cual — integra las cifras en frases legibles para un humano.
 
 FORMATO DE LOS DATOS
 Los datos llegan en secciones con encabezados en mayúsculas, por ejemplo:
@@ -225,6 +250,9 @@ RESUMEN_MES: ingresos, gastos, ahorro del mes actual
 CUENTAS: nombre y saldo de cada cuenta
 PRESUPUESTOS: límite y gasto por categoría
 SUSCRIPCIONES: próximos cobros
+GASTO_CATEGORIA_MES_ACTUAL, GASTO_CATEGORIA_MES_ANTERIOR_VS_ACTUAL, GASTO_CATEGORIA_ULTIMOS_3_MESES,
+GASTO_PROMEDIO_MENSUAL, TOP_10_COMPRAS_ANIO, GASTO_POR_DIA_SEMANA: agregados ya calculados, listados
+de mayor a menor cuando aplica
 MOVIMIENTOS: transacciones específicas que coinciden con la pregunta (si aplica)
 Trata cada valor como el único registro válido de esa cifra.
 """
@@ -287,8 +315,73 @@ Trata cada valor como el único registro válido de esa cifra.
                 dashboard.donut.take(TOP_CATEGORIES).forEach { sb.appendLine("${it.name}: ${money(it.amountMinor)} (${(it.pct * 100).toInt()}%)") }
             }
 
+            val todayEpoch = today.toEpochDays().toLong()
+            val monthStartEpoch = firstOfMonth.toEpochDays().toLong()
+            val prevMonthNumber = if (today.monthNumber == 1) 12 else today.monthNumber - 1
+            val prevMonthYear = if (today.monthNumber == 1) today.year - 1 else today.year
+            val prevMonthStart = LocalDate(prevMonthYear, prevMonthNumber, 1)
+            val prevMonthStartEpoch = prevMonthStart.toEpochDays().toLong()
+            val prevMonthEndEpoch = monthStartEpoch - 1
+
+            val spendThisMonth = categorySpendBetween(txs, cats, monthStartEpoch, todayEpoch)
+            if (spendThisMonth.isNotEmpty()) {
+                sb.appendLine("GASTO_CATEGORIA_MES_ACTUAL")
+                spendThisMonth.take(TOP_CATEGORIES).forEach { (name, amount) -> sb.appendLine("$name: ${money(amount)}") }
+            }
+
+            val spendPrevMonth = categorySpendBetween(txs, cats, prevMonthStartEpoch, prevMonthEndEpoch)
+            val prevByName = spendPrevMonth.toMap()
+            val increases = spendThisMonth
+                .map { (name, amount) -> Triple(name, amount, amount - (prevByName[name] ?: 0L)) }
+                .filter { (_, _, delta) -> delta > 0 }
+                .sortedByDescending { (_, _, delta) -> delta }
+            if (increases.isNotEmpty()) {
+                sb.appendLine("GASTO_CATEGORIA_MES_ANTERIOR_VS_ACTUAL")
+                increases.take(TOP_CATEGORIES).forEach { (name, amount, delta) ->
+                    val prev = prevByName[name] ?: 0L
+                    sb.appendLine("$name: mes anterior ${money(prev)}, mes actual ${money(amount)} (+${money(delta)})")
+                }
+            }
+
+            val last3MonthsStartEpoch = todayEpoch - 90
+            val spendLast3Months = categorySpendBetween(txs, cats, last3MonthsStartEpoch, todayEpoch)
+            if (spendLast3Months.isNotEmpty()) {
+                sb.appendLine("GASTO_CATEGORIA_ULTIMOS_3_MESES")
+                spendLast3Months.take(TOP_CATEGORIES).forEach { (name, amount) -> sb.appendLine("$name: ${money(amount)}") }
+            }
+
+            val monthsElapsed = today.monthNumber
+            val avgMonthlyExpense = dashboard.expenseByMonth.take(monthsElapsed).sumOf { it.amountMinor } / monthsElapsed
+            sb.appendLine("GASTO_PROMEDIO_MENSUAL")
+            sb.appendLine("Promedio mensual ($monthsElapsed meses transcurridos de ${today.year}): ${money(avgMonthlyExpense)}")
+
+            val yearStartEpoch = LocalDate(today.year, 1, 1).toEpochDays().toLong()
+            val catNameById = cats.associate { it.id to it.name }
+            val topPurchases = txs.asSequence()
+                .filter { it.kind == "EXPENSE" && it.date in yearStartEpoch..todayEpoch }
+                .sortedByDescending { it.amountMinor }
+                .take(10)
+                .toList()
+            if (topPurchases.isNotEmpty()) {
+                sb.appendLine("TOP_10_COMPRAS_ANIO")
+                topPurchases.forEach { tx ->
+                    val cat = catNameById[tx.categoryId] ?: "Sin categoría"
+                    val note = tx.note.ifBlank { "(sin nota)" }
+                    sb.appendLine("${LocalDate.fromEpochDays(tx.date.toInt())} · $cat · $note: ${money(tx.amountMinor)}")
+                }
+            }
+
+            val spendByWeekday = txs.asSequence()
+                .filter { it.kind == "EXPENSE" && it.date in last3MonthsStartEpoch..todayEpoch }
+                .groupBy { diaSemana(it.date) }
+                .map { (day, list) -> day to list.sumOf { it.amountMinor } }
+                .sortedByDescending { it.second }
+            if (spendByWeekday.isNotEmpty()) {
+                sb.appendLine("GASTO_POR_DIA_SEMANA")
+                spendByWeekday.forEach { (day, amount) -> sb.appendLine("${day.replaceFirstChar { it.uppercase() }}: ${money(amount)}") }
+            }
+
             if (keyword != null) {
-                val catNameById = cats.associate { it.id to it.name }
                 val matches = findMatchingTransactions(txs, cats, keyword)
                 if (matches.isNotEmpty()) {
                     sb.appendLine("MOVIMIENTOS")
@@ -302,6 +395,22 @@ Trata cada valor como el único registro válido de esa cifra.
 
             val text = sb.toString()
             return if (text.length > MAX_CONTEXT_CHARS) text.take(MAX_CONTEXT_CHARS) + "\n[...contexto truncado...]" else text
+        }
+
+        /** Gasto total por categoría entre dos epoch-days (inclusive), solo EXPENSE, orden desc. */
+        internal fun categorySpendBetween(
+            txs: List<TransactionRow>,
+            cats: List<Category>,
+            startEpochDay: Long,
+            endEpochDay: Long,
+        ): List<Pair<String, Long>> {
+            val catNameById = cats.associate { it.id to it.name }
+            return txs.asSequence()
+                .filter { it.kind == "EXPENSE" && it.date in startEpochDay..endEpochDay }
+                .groupBy { catNameById[it.categoryId] ?: "Sin categoría" }
+                .map { (name, list) -> name to list.sumOf { it.amountMinor } }
+                .sortedByDescending { it.second }
+                .toList()
         }
 
         /** Filtro determinístico por palabra clave — no es un sistema de recuperación general. */
@@ -329,6 +438,20 @@ Trata cada valor como el único registro válido de esa cifra.
             "el", "la", "los", "las", "de", "del", "en", "mes", "pasado", "este", "que", "qué",
             "mi", "mis", "tengo", "cuenta", "cuentas", "cuál", "cual", "cómo", "como", "es",
         )
+
+        /** Heurístico de substring (sin NLP, igual que [extractKeyword]): preguntas más abiertas/
+         * creativas usan temperatura más alta; preguntas de cifras exactas se quedan en 0.0 para
+         * máxima consistencia. Default 0.0 si no matchea nada — más preguntas reales son de este tipo. */
+        internal fun inferTemperature(question: String): Double {
+            val q = question.lowercase()
+            return when {
+                listOf("idea", "sugerencia", "tip", "truco", "forma de", "manera de").any { q.contains(it) } -> 0.6
+                listOf("recomien", "consejo", "asesor", "podría", "podria", "debería", "deberia").any { q.contains(it) } -> 0.4
+                listOf("hábito", "habito", "patrón", "patron", "detect", "error", "administr", "evalú", "evalu").any { q.contains(it) } -> 0.2
+                listOf("compar", "compár", "respecto", "diferencia", "versus", " vs ", "aumentó", "aumento", "creció", "crecio").any { q.contains(it) } -> 0.1
+                else -> 0.0
+            }
+        }
 
         /** Heurístico simple de substring (sin NLP): prioriza nombres de categoría existentes;
          * si no hay coincidencia, la palabra más larga de la pregunta que no sea una palabra vacía. */

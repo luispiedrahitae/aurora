@@ -1,10 +1,12 @@
 package com.finanzen.platform
 
 import com.google.ai.edge.litertlm.Backend
+import com.google.ai.edge.litertlm.ConversationConfig
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
 import com.google.ai.edge.litertlm.Message
 import com.google.ai.edge.litertlm.MessageCallback
+import com.google.ai.edge.litertlm.SamplerConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -29,10 +31,11 @@ actual class LlmInferenceEngine {
 
     actual fun isLoaded(): Boolean = engine != null
 
-    actual suspend fun generate(prompt: String, onToken: (String) -> Unit): Result<String> {
+    actual suspend fun generate(prompt: String, temperature: Double, onToken: (String) -> Unit): Result<String> {
         val activeEngine = engine ?: return Result.failure(IllegalStateException("Modelo no cargado"))
         return runCatching {
-            activeEngine.createConversation().use { conversation ->
+            val config = ConversationConfig(samplerConfig = SamplerConfig(topK = 40, topP = 0.95, temperature = temperature, seed = 0))
+            activeEngine.createConversation(config).use { conversation ->
                 suspendCancellableCoroutine { cont ->
                     val full = StringBuilder()
                     conversation.sendMessageAsync(

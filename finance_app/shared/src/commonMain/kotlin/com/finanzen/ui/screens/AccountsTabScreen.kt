@@ -24,6 +24,7 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.HelpOutline
+import androidx.compose.material.icons.outlined.PriceChange
 import androidx.compose.material.icons.outlined.Unarchive
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -147,6 +148,11 @@ fun AccountsTabScreen(vm: AccountsViewModel = koinViewModel()) {
             existing = editing,
             existingCard = editing?.let { cards[it.id] },
             existingNames = existingNames,
+            currentAmountMinor = editing?.let { acc ->
+                acc.openingBalanceMinor + transactionsByAccount[acc.id].orEmpty()
+                    .filter { it.kind == "ADJUSTMENT" }
+                    .sumOf { it.amountMinor }
+            } ?: 0L,
             onDismiss = {
                 showForm = false
                 editingAccount = null
@@ -495,14 +501,26 @@ private fun AccountMovementRow(row: TransactionRow, cuotaLabel: String? = null) 
     val dateLocale = LocalDateLocale.current
     val finance = LocalFinanceColors.current
     val isIncome = row.kind == "INCOME"
-    val signedAmount = if (isIncome) row.amountMinor else -row.amountMinor
+    val isAdjustment = row.kind == "ADJUSTMENT"
+    // ADJUSTMENT ya trae el signo correcto en amountMinor (positivo = sube el saldo, negativo =
+    // lo baja) — a diferencia de EXPENSE, que se niega aquí para mostrarse en rojo.
+    val signedAmount = if (isIncome || isAdjustment) row.amountMinor else -row.amountMinor
+    val amountColor = when {
+        isAdjustment -> if (row.amountMinor >= 0) finance.income else finance.expense
+        isIncome -> finance.income
+        else -> finance.expense
+    }
     val dateLine = formatDiaMes(row.date, dateLocale) + (cuotaLabel?.let { " · $it" } ?: "")
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(LocalSpacing.current.sm),
     ) {
-        KindAvatar(kind = row.kind, size = 32.dp)
+        if (isAdjustment) {
+            KindAvatar(kind = row.kind, size = 32.dp, icon = Icons.Outlined.PriceChange)
+        } else {
+            KindAvatar(kind = row.kind, size = 32.dp)
+        }
         Column(Modifier.weight(1f)) {
             Text(row.note.ifBlank { kindLabel(row.kind) }, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
             Text(dateLine, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -512,7 +530,7 @@ private fun AccountMovementRow(row: TransactionRow, cuotaLabel: String? = null) 
             currency = row.currency,
             style = MaterialTheme.typography.bodyMedium,
             signed = true,
-            colorOverride = if (isIncome) finance.income else finance.expense,
+            colorOverride = amountColor,
         )
     }
 }
@@ -691,13 +709,17 @@ private fun AccountFormDialog(
     existing: Account? = null,
     existingCard: Card? = null,
     existingNames: Set<String> = emptySet(),
+    // Monto actualmente asignado a la cuenta: openingBalanceMinor (seed, nunca reescrito) + suma de
+    // los movimientos ADJUSTMENT ya registrados (ver AccountsViewModel.updateAccount) — no solo
+    // `existing.openingBalanceMinor`, que para cuentas creadas después de este cambio queda en 0.
+    currentAmountMinor: Long = existing?.openingBalanceMinor ?: 0L,
     onDismiss: () -> Unit,
     onConfirm: (type: String, name: String, amountMinor: Long, limit: Long?, cutoff: Long?, due: Long?, interest: Double?) -> Unit,
 ) {
     val isEditing = existing != null
     var type by remember { mutableStateOf(existing?.type ?: types.first()) }
     var name by remember { mutableStateOf(existing?.name ?: "") }
-    var amountMinor by remember { mutableStateOf(existing?.openingBalanceMinor ?: 0L) }
+    var amountMinor by remember { mutableStateOf(currentAmountMinor) }
     var limitMinor by remember { mutableStateOf(existingCard?.creditLimitMinor ?: 0L) }
     var cutoff by remember { mutableStateOf(existingCard?.cutoffDay?.toString() ?: "") }
     var due by remember { mutableStateOf(existingCard?.dueDay?.toString() ?: "") }

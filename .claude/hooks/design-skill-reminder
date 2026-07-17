@@ -1,0 +1,12 @@
+#!/bin/bash
+# SessionStart hook: remind agent to use design skills for any UI/design work
+# in this project. Fires on startup/resume/clear/compact.
+cat << 'REMINDER'
+CRITICAL - Design/UI Work Protocol (finance_app / aurora):
+For ANY design or UI task (new screens, components, redesigns, colors,
+layout, charts, accessibility, styling) ALWAYS invoke, before writing code:
+1. Skill "impeccable" - frontend design critique/build guidance for this repo.
+2. Skill "ui-ux-pro-max" - UI/UX pattern library (styles, palettes, charts).
+Do this even mid-task, not just at the start of a design request - don't
+default back to freehand Compose/UI code without checking these skills first.
+REMINDER

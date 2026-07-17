@@ -33,7 +33,7 @@ class AssistantRepository(
         return engine.load(path)
     }
 
-    suspend fun ask(prompt: String, onToken: (String) -> Unit): Result<String> = engine.generate(prompt, onToken)
+    suspend fun ask(prompt: String, temperature: Double, onToken: (String) -> Unit): Result<String> = engine.generate(prompt, temperature, onToken)
 
     fun release() = engine.close()
 }

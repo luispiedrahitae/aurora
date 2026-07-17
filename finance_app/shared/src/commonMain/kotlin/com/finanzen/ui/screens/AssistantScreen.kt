@@ -201,12 +201,13 @@ private fun ChatBody(state: AssistantUiState, onSend: (String) -> Unit) {
 
     Column(Modifier.fillMaxSize()) {
         if (state.messages.isEmpty()) {
-            CenteredEmpty(
-                icon = Icons.Outlined.SmartToy,
-                title = "Pregúntale a tu asistente",
-                subtitle = "Responde solo con tus datos financieros, 100% en tu dispositivo.",
-            )
-            Box(Modifier.weight(1f))
+            Box(Modifier.weight(1f).padding(spacing.xl), contentAlignment = Alignment.Center) {
+                EmptyState(
+                    icon = Icons.Outlined.SmartToy,
+                    title = "Pregúntale a tu asistente",
+                    subtitle = "Responde solo con tus datos financieros, 100% en tu dispositivo.",
+                )
+            }
         } else {
             LazyColumn(
                 state = listState,
@@ -275,7 +276,7 @@ private fun Composer(enabled: Boolean, onSend: (String) -> Unit) {
             .fillMaxWidth()
             .padding(spacing.lg)
             .glassSurface()
-            .padding(spacing.sm),
+            .padding(start = spacing.lg, top = spacing.sm, end = spacing.sm, bottom = spacing.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         OutlinedTextField(

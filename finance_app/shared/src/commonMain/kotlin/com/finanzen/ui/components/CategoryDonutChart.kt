@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
+import com.finanzen.viewmodel.AnalysisViewModel
 import com.finanzen.viewmodel.CategorySlice
 import kotlin.math.roundToInt
 
@@ -43,7 +44,8 @@ fun CategoryDonutChart(slices: List<CategorySlice>, currency: String, modifier: 
     val fmt = LocalMoneyFormat.current
     val gapColor = MaterialTheme.colorScheme.surfaceContainer
 
-    // Colapsa a <=6 porciones: 5 mayores + "Otros". otrosIndex marca la sintética para colorearla.
+    // Colapsa a <=6 porciones: 5 mayores + "Otros". "Otros" se reordena junto al resto por su
+    // propio pct agregado, en vez de fijarse siempre al final — puede ser la porción más grande.
     val (display, otrosIndex) = remember(slices) {
         val sorted = slices.sortedByDescending { it.pct }
         if (sorted.size > 6) {
@@ -54,7 +56,8 @@ fun CategoryDonutChart(slices: List<CategorySlice>, currency: String, modifier: 
                 amountMinor = rest.sumOf { it.amountMinor },
                 pct = rest.map { it.pct }.sum(),
             )
-            (top + otros) to 5
+            val merged = AnalysisViewModel.mergeOthersByPct(top, otros)
+            merged to merged.indexOfFirst { it === otros }
         } else {
             sorted to -1
         }

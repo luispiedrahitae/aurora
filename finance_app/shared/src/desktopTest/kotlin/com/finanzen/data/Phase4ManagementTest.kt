@@ -233,6 +233,23 @@ class Phase4ManagementTest {
     }
 
     @Test
+    fun computeBalancesSumaAjustesDeSaldoIncluidosNegativos() {
+        val db = freshDb()
+        db.currencyQueries.upsert("USD", "$", 2, 1.0, "US Dollar", ".", ",")
+        val accountRepo = AccountRepository(db)
+        val a = accountRepo.add("A", "CASH", "USD", openingBalanceMinor = 0)
+        val tx = TransactionRepository(db)
+        tx.add(a, null, 10_000, "USD", 0, "Saldo inicial", "ADJUSTMENT") // A: +10000
+        tx.add(a, null, -1_500, "USD", 0, "Ajuste de saldo", "ADJUSTMENT") // A: -1500
+
+        val balances = com.finanzen.viewmodel.AccountsViewModel.computeBalances(
+            accounts = db.accountQueries.selectAll().executeAsList(),
+            txs = db.transactionQueries.selectAll().executeAsList(),
+        )
+        assertEquals(8_500L, balances[a]) // 0 + 10000 - 1500
+    }
+
+    @Test
     fun computeBudgetsCalculaGastoYLimiteDelMes() {
         val db = freshDb()
         seedIfEmpty(db)

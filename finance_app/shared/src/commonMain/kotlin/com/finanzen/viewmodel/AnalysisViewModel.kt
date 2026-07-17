@@ -29,8 +29,10 @@ data class CategorySlice(val name: String, val amountMinor: Long, val pct: Float
 /** Un día del gráfico de flujo (mes seleccionado): ingreso y gasto en paralelo. */
 data class DayPoint(val label: String, val incomeMinor: Long, val expenseMinor: Long)
 
-/** Categoría de gasto ordenada por frecuencia (gasto hormiga). */
-data class FrequentExpense(val name: String, val count: Int, val amountMinor: Long)
+/** Categoría de gasto ordenada por frecuencia (gasto hormiga). [subcategoryName] solo si el
+ * movimiento está etiquetado con una subcategoría (categoría con parentId); en ese caso [name] es
+ * la categoría padre. */
+data class FrequentExpense(val name: String, val count: Int, val amountMinor: Long, val subcategoryName: String? = null)
 
 data class AnalysisData(
     val totalIncomeMinor: Long,
@@ -83,6 +85,11 @@ class AnalysisViewModel(
     companion object {
         private const val FREQUENT_TOP = 5
 
+        /** Fusiona las categorías mayores con la porción sintética "Otros" (ver `CategoryDonutChart`),
+         * reordenando el conjunto final por pct descendente — "Otros" es la suma de todo lo que no
+         * entró en el top y puede ser la porción más grande, así que no debe quedar fija al final. */
+        internal fun mergeOthersByPct(top: List<CategorySlice>, otros: CategorySlice?): List<CategorySlice> = if (otros == null) top else (top + otros).sortedByDescending { it.pct }
+
         private fun daysInMonth(firstOfMonth: LocalDate): Int = firstOfMonth.plus(DatePeriod(months = 1)).toEpochDays() - firstOfMonth.toEpochDays()
 
         /** Ingreso y gasto de cada día del mes de [referenceMonth] (equivalente táctil de "hover": cada
@@ -104,14 +111,17 @@ class AnalysisViewModel(
 
         /** Gasto hormiga: categorías de gasto del [period] ordenadas por número de movimientos. */
         internal fun computeFrequentExpenses(txs: List<TransactionRow>, cats: List<Category>, period: Long, topN: Int = FREQUENT_TOP): List<FrequentExpense> {
-            val catNameById = cats.associate { it.id to it.name }
+            val catById = cats.associateBy { it.id }
             return txs.filter { it.kind == "EXPENSE" && periodOfEpochDay(it.date) == period }
                 .groupBy { it.categoryId }
                 .map { (catId, list) ->
+                    val leaf = catById[catId]
+                    val parent = leaf?.parentId?.let { catById[it] }
                     FrequentExpense(
-                        name = catNameById[catId] ?: "Sin categoría",
+                        name = parent?.name ?: leaf?.name ?: "Sin categoría",
                         count = list.size,
                         amountMinor = list.sumOf { it.amountMinor },
+                        subcategoryName = if (parent != null) leaf?.name else null,
                     )
                 }
                 .sortedByDescending { it.count }
