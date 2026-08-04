@@ -124,14 +124,12 @@ class AccountsViewModel(
             val currency = settingsRepo.baseCurrency()
             val accountId = accountRepo.add(name.trim(), type, currency, openingBalanceMinor = 0)
             if (amountMinor != 0L) {
-                txRepo.add(
+                txRepo.addAdjustment(
                     accountId = accountId,
-                    categoryId = null,
                     amountMinor = amountMinor,
                     currency = currency,
                     epochDay = todayEpochDay(),
                     note = "Saldo inicial",
-                    kind = "ADJUSTMENT",
                 )
             }
             accountId
@@ -203,14 +201,12 @@ class AccountsViewModel(
         val delta = newAmountMinor - currentTotal
         accountRepo.updateBasics(id, name.trim(), account.openingBalanceMinor)
         if (delta != 0L) {
-            txRepo.add(
+            txRepo.addAdjustment(
                 accountId = id,
-                categoryId = null,
                 amountMinor = delta,
                 currency = account.currency,
                 epochDay = todayEpochDay(),
                 note = "Ajuste de saldo",
-                kind = "ADJUSTMENT",
             )
         }
     }

@@ -72,7 +72,7 @@ class TransactionsViewModel(
     fun save(
         id: Long?,
         accountId: Long,
-        categoryId: Long?,
+        categoryId: Long,
         amountMinor: Long,
         kind: String,
         note: String,
@@ -96,8 +96,8 @@ class TransactionsViewModel(
      * Si el toggle está activo y este gasto hace que la categoría cruce su límite del mes, notifica.
      * Solo al cruzar (antes < límite, ahora ≥ límite) para no repetir el aviso en cada gasto.
      */
-    private fun maybeNotifyBudget(categoryId: Long?, kind: String, amountMinor: Long, dateEpochDay: Long) {
-        if (kind != "EXPENSE" || categoryId == null || !settingsRepo.budgetNotificationsEnabled()) return
+    private fun maybeNotifyBudget(categoryId: Long, kind: String, amountMinor: Long, dateEpochDay: Long) {
+        if (kind != "EXPENSE" || !settingsRepo.budgetNotificationsEnabled()) return
         val period = BudgetsViewModel.currentPeriodMonth()
         if (monthOf(dateEpochDay) != period) return
         val limit = budgetRepo.limitFor(categoryId, period)
@@ -118,7 +118,7 @@ class TransactionsViewModel(
     private fun maybeCreatePlan(
         account: Account?,
         kind: String,
-        categoryId: Long?,
+        categoryId: Long,
         amountMinor: Long,
         installments: Long,
         dateEpochDay: Long,

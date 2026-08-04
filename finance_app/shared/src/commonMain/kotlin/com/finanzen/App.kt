@@ -28,6 +28,7 @@ fun App() {
     val dynamicColor by settingsVm.dynamicColor.collectAsState()
     val symbolPos by settingsVm.symbolPosition.collectAsState()
     val baseCurrency by settingsVm.baseCurrency.collectAsState()
+    val reduceMotion by settingsVm.reduceMotion.collectAsState()
     val darkTheme = when (theme) {
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
@@ -41,7 +42,7 @@ fun App() {
     val dateLocale = remember(baseCurrency) {
         CURRENCY_LOCALE_INFO[baseCurrency] ?: DEFAULT_LOCALE_INFO
     }
-    FinanZenTheme(darkTheme = darkTheme, accent = accent, useDynamic = dynamicColor) {
+    FinanZenTheme(darkTheme = darkTheme, accent = accent, useDynamic = dynamicColor, reduceMotion = reduceMotion) {
         CompositionLocalProvider(LocalMoneyFormat provides moneyFormat, LocalDateLocale provides dateLocale) {
             val securityVm: SecurityViewModel = koinInject()
             val lockState by securityVm.state.collectAsState()

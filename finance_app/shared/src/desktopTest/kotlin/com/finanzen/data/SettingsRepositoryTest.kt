@@ -45,7 +45,9 @@ class SettingsRepositoryTest {
         db.currencyQueries.upsert("COP", "$", 0, 1.0, "Colombian Peso", ",", ".")
         val accountRepo = AccountRepository(db)
         val accId = accountRepo.add(name = "Efectivo", type = "CASH", currency = "USD")
-        db.transactionQueries.insert(accId, null, 1000, "USD", 0, "", "EXPENSE", null, null, null, null)
+        db.categoryQueries.insert(parentId = null, name = "Gastos", icon = "", color = 0, kind = "EXPENSE")
+        val categoryId = db.categoryQueries.selectAll().executeAsList().single().id
+        db.transactionQueries.insert(accId, categoryId, 1000, "USD", 0, "", "EXPENSE", null, null, null, null)
 
         val repo = SettingsRepository(db)
         assertEquals(SettingsRepository.DEFAULT_CURRENCY, repo.baseCurrency())
@@ -68,13 +70,13 @@ class SettingsRepositoryTest {
 
         val accountRepo = AccountRepository(db)
         val accId = accountRepo.add(name = "Efectivo", type = "CREDIT", currency = "COP", openingBalanceMinor = 40000)
-        db.transactionQueries.insert(accId, null, 5000, "COP", 0, "", "EXPENSE", null, null, null, null)
         db.categoryQueries.insert(parentId = null, name = "Gastos", icon = "", color = 0, kind = "EXPENSE")
         val categoryId = db.categoryQueries.selectAll().executeAsList().single().id
+        db.transactionQueries.insert(accId, categoryId, 5000, "COP", 0, "", "EXPENSE", null, null, null, null)
         db.budgetQueries.upsert(categoryId = categoryId, periodMonth = 202607, limitMinor = 100000)
         db.cardQueries.insert(accId, "", "OTRA", 200000, null, null, null)
         val cardId = db.cardQueries.selectByAccount(accId).executeAsList().single().id
-        db.installmentPlanQueries.insert(cardId, null, 300000, 3, 0.0, 0, "", 0)
+        db.installmentPlanQueries.insert(cardId, categoryId, 300000, 3, 0.0, 0, "", 0)
 
         SettingsRepository(db).setBaseCurrency("USD")
 

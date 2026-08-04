@@ -35,7 +35,7 @@ class Phase4ManagementTest {
         val cat = db.categoryQueries.selectByKind("EXPENSE").executeAsList().first { it.name == "Mascotas" }
         assertEquals("EXPENSE", cat.kind)
 
-        repo.delete(cat.id)
+        repo.deleteCascade(cat.id)
         assertNull(db.categoryQueries.selectById(cat.id).executeAsOneOrNull())
     }
 
@@ -45,10 +45,11 @@ class Phase4ManagementTest {
         seedIfEmpty(db)
         val tx = TransactionRepository(db)
         val account = db.accountQueries.selectAll().executeAsList().first()
-        tx.add(account.id, null, 1000, account.currency, 20000, "café", "EXPENSE")
+        val cat = db.categoryQueries.selectByKind("EXPENSE").executeAsList().first()
+        tx.add(account.id, cat.id, 1000, account.currency, 20000, "café", "EXPENSE")
         val id = db.transactionQueries.selectAll().executeAsList().first().id
 
-        tx.update(id, account.id, null, 2500, account.currency, 20000, "café grande", "EXPENSE")
+        tx.update(id, account.id, cat.id, 2500, account.currency, 20000, "café grande", "EXPENSE")
         val updated = db.transactionQueries.selectById(id).executeAsOne()
         assertEquals(2500, updated.amountMinor)
         assertEquals("café grande", updated.note)
@@ -105,7 +106,7 @@ class Phase4ManagementTest {
         txVm.save(
             id = null,
             accountId = accId,
-            categoryId = null,
+            categoryId = db.categoryQueries.selectByKind("EXPENSE").executeAsList().first().id,
             amountMinor = 120_000,
             kind = "EXPENSE",
             note = "TV",
@@ -145,7 +146,7 @@ class Phase4ManagementTest {
             SubscriptionRepository(db),
         )
 
-        txVm.save(id = null, accountId = accId, categoryId = null, amountMinor = 50_000, kind = "EXPENSE", note = "Cena", dateEpochDay = 20_000, installments = 1)
+        txVm.save(id = null, accountId = accId, categoryId = db.categoryQueries.selectByKind("EXPENSE").executeAsList().first().id, amountMinor = 50_000, kind = "EXPENSE", note = "Cena", dateEpochDay = 20_000, installments = 1)
 
         assertEquals(0, db.installmentPlanQueries.selectAll().executeAsList().size)
         val tx = db.transactionQueries.selectAll().executeAsList().first { it.note == "Cena" }
@@ -169,10 +170,11 @@ class Phase4ManagementTest {
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
         val start = today.minus(DatePeriod(months = 3))
         val startEpoch = start.toEpochDays().toLong()
-        val planId = planRepo.add(card.id, categoryId = null, totalAmountMinor = 120_000, installments = 12, interestRate = 0.0, startDateEpochDay = startEpoch, description = "TV")
+        val cat = db.categoryQueries.selectByKind("EXPENSE").executeAsList().first()
+        val planId = planRepo.add(card.id, categoryId = cat.id, totalAmountMinor = 120_000, installments = 12, interestRate = 0.0, startDateEpochDay = startEpoch, description = "TV")
         // La cuota 1 ya se registra al crear el plan (lo hace TransactionsViewModel.save en producción).
         val cuota = InstallmentMath.monthlyPaymentMinor(120_000, 12, 0.0)
-        txRepo.add(accId, null, cuota, "USD", startEpoch, "TV", "EXPENSE", installmentPlanId = planId)
+        txRepo.add(accId, cat.id, cuota, "USD", startEpoch, "TV", "EXPENSE", installmentPlanId = planId)
 
         // Construir el ViewModel dispara el catch-up en su init.
         AccountsViewModel(accountRepo, txRepo, cardRepo, planRepo, SettingsRepository(db), NotificationScheduler())
@@ -199,8 +201,9 @@ class Phase4ManagementTest {
         val creditId = vm.addAccount(type = "CREDIT", name = "Visa", creditLimitMinor = 1_000_000L, interestRate = 0.0)!!
         val card = cardRepo.byAccount(creditId)!!
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault()).toEpochDays().toLong()
-        val planId = planRepo.add(card.id, categoryId = null, totalAmountMinor = 120_000, installments = 12, interestRate = 0.0, startDateEpochDay = today, description = "TV")
-        txRepo.add(creditId, null, InstallmentMath.monthlyPaymentMinor(120_000, 12, 0.0), "USD", today, "TV", "EXPENSE", installmentPlanId = planId)
+        val cat = db.categoryQueries.selectByKind("EXPENSE").executeAsList().first()
+        val planId = planRepo.add(card.id, categoryId = cat.id, totalAmountMinor = 120_000, installments = 12, interestRate = 0.0, startDateEpochDay = today, description = "TV")
+        txRepo.add(creditId, cat.id, InstallmentMath.monthlyPaymentMinor(120_000, 12, 0.0), "USD", today, "TV", "EXPENSE", installmentPlanId = planId)
 
         vm.payOffCard(card.id, savingsId, 10_000)
 
@@ -215,13 +218,15 @@ class Phase4ManagementTest {
     @Test
     fun computeBalancesIncluyeIngresosGastosYTransferencias() {
         val db = freshDb()
-        db.currencyQueries.upsert("USD", "$", 2, 1.0, "US Dollar", ".", ",")
+        seedIfEmpty(db)
         val accountRepo = AccountRepository(db)
         val a = accountRepo.add("A", "CASH", "USD", openingBalanceMinor = 10_000)
         val b = accountRepo.add("B", "DEBIT", "USD", openingBalanceMinor = 0)
+        val incomeCat = db.categoryQueries.selectByKind("INCOME").executeAsList().first()
+        val expenseCat = db.categoryQueries.selectByKind("EXPENSE").executeAsList().first()
         val tx = TransactionRepository(db)
-        tx.add(a, null, 5_000, "USD", 0, "sueldo", "INCOME") // A: +5000
-        tx.add(a, null, 2_000, "USD", 0, "café", "EXPENSE") // A: -2000
+        tx.add(a, incomeCat.id, 5_000, "USD", 0, "sueldo", "INCOME") // A: +5000
+        tx.add(a, expenseCat.id, 2_000, "USD", 0, "café", "EXPENSE") // A: -2000
         tx.addTransfer(a, b, 3_000, "USD", 0, "ahorro") // A: -3000, B: +3000
 
         val balances = com.finanzen.viewmodel.AccountsViewModel.computeBalances(
@@ -235,12 +240,12 @@ class Phase4ManagementTest {
     @Test
     fun computeBalancesSumaAjustesDeSaldoIncluidosNegativos() {
         val db = freshDb()
-        db.currencyQueries.upsert("USD", "$", 2, 1.0, "US Dollar", ".", ",")
+        seedIfEmpty(db)
         val accountRepo = AccountRepository(db)
         val a = accountRepo.add("A", "CASH", "USD", openingBalanceMinor = 0)
         val tx = TransactionRepository(db)
-        tx.add(a, null, 10_000, "USD", 0, "Saldo inicial", "ADJUSTMENT") // A: +10000
-        tx.add(a, null, -1_500, "USD", 0, "Ajuste de saldo", "ADJUSTMENT") // A: -1500
+        tx.addAdjustment(a, 10_000, "USD", 0, "Saldo inicial") // A: +10000
+        tx.addAdjustment(a, -1_500, "USD", 0, "Ajuste de saldo") // A: -1500
 
         val balances = com.finanzen.viewmodel.AccountsViewModel.computeBalances(
             accounts = db.accountQueries.selectAll().executeAsList(),

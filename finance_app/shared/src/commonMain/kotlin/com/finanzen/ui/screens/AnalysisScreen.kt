@@ -28,12 +28,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.finanzen.ui.components.BentoTileSize
+import com.finanzen.ui.components.CategoryBreakdownSection
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.IncomeExpenseBarChart
+import com.finanzen.ui.components.KpiDelta
+import com.finanzen.ui.components.KpiDeltaLine
 import com.finanzen.ui.components.MonthSelector
 import com.finanzen.ui.components.SavingsRateGauge
 import com.finanzen.ui.components.SectionHeader
 import com.finanzen.ui.components.TopFrequentExpensesList
+import com.finanzen.ui.components.kpiDelta
 import com.finanzen.ui.format.formatMesAnio
 import com.finanzen.ui.theme.LocalDateLocale
 import com.finanzen.ui.theme.LocalFinanceColors
@@ -41,8 +45,12 @@ import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.viewmodel.AnalysisViewModel
 import com.finanzen.viewmodel.SettingsViewModel
+import kotlinx.datetime.Clock
 import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
+import kotlinx.datetime.todayIn
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -78,6 +86,10 @@ fun AnalysisScreen(
                 onPrev = { vm.setMonth(month.plus(DatePeriod(months = -1))) },
                 onNext = { vm.setMonth(month.plus(DatePeriod(months = 1))) },
                 modifier = Modifier.padding(horizontal = spacing.lg),
+                onLabelClick = {
+                    val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+                    vm.setMonth(LocalDate(today.year, today.month, 1))
+                },
             )
             val fullSpan: LazyGridItemSpanScope.() -> GridItemSpan = { GridItemSpan(maxLineSpan) }
             LazyVerticalGrid(
@@ -89,18 +101,35 @@ fun AnalysisScreen(
                 horizontalArrangement = Arrangement.spacedBy(spacing.sm),
             ) {
                 item(span = fullSpan) {
-                    TotalsCard(income = data.totalIncomeMinor, expense = data.totalExpenseMinor, currency = data.currency)
+                    TotalsCard(
+                        income = data.totalIncomeMinor,
+                        expense = data.totalExpenseMinor,
+                        currency = data.currency,
+                        projectedExpenseMinor = data.projectedExpenseMinor,
+                    )
                 }
                 item {
-                    StatTile("Ingresos", data.totalIncomeMinor, data.currency, LocalFinanceColors.current.income)
+                    StatTile(
+                        "Ingresos",
+                        data.totalIncomeMinor,
+                        data.currency,
+                        LocalFinanceColors.current.income,
+                        delta = kpiDelta(data.totalIncomeMinor, data.prevMonthIncomeMinor, "mes anterior", upIsGood = true),
+                    )
                 }
                 item {
-                    StatTile("Gastos", data.totalExpenseMinor, data.currency, LocalFinanceColors.current.expense)
+                    StatTile(
+                        "Gastos",
+                        data.totalExpenseMinor,
+                        data.currency,
+                        LocalFinanceColors.current.expense,
+                        delta = kpiDelta(data.totalExpenseMinor, data.prevMonthExpenseMinor, "mes anterior", upIsGood = false),
+                    )
                 }
 
                 item(span = fullSpan) {
                     StatTile(
-                        "Suscripciones activas",
+                        "Suscripciones (costo mensual)",
                         data.subscriptionMonthlyCostMinor,
                         data.currency,
                         MaterialTheme.colorScheme.onSurface,
@@ -118,16 +147,23 @@ fun AnalysisScreen(
                 item(span = fullSpan) { SectionHeader("Ingresos vs gastos") }
                 item(span = fullSpan) { IncomeExpenseBarChart(data.cashflow, data.currency) }
 
-                item(span = fullSpan) { SectionHeader("Gastos más frecuentes") }
-                item(span = fullSpan) { TopFrequentExpensesList(data.frequent, data.currency) }
+                item(span = fullSpan) { SectionHeader("Gastos por categoría") }
+                item(span = fullSpan) { CategoryBreakdownSection(data.categoryBreakdown, data.currency) }
+
+                if (data.frequent.isNotEmpty()) {
+                    item(span = fullSpan) { SectionHeader("Gastos más frecuentes") }
+                    item(span = fullSpan) { TopFrequentExpensesList(data.frequent, data.currency) }
+                }
             }
         }
     }
 }
 
-/** Hero de vidrio (DESIGN.md, "The One Glass Tile Rule"): el único número que importa por pantalla. */
+/** Hero de vidrio (DESIGN.md, "The One Glass Tile Rule"): el único número que importa por pantalla.
+ * [projectedExpenseMinor] solo llega para el mes en curso: "a este ritmo" es la única proyección
+ * de la app, deliberadamente simple (regla de tres por días transcurridos). */
 @Composable
-private fun TotalsCard(income: Long, expense: Long, currency: String) {
+private fun TotalsCard(income: Long, expense: Long, currency: String, projectedExpenseMinor: Long?) {
     val finance = LocalFinanceColors.current
     val fmt = LocalMoneyFormat.current
     val net = income - expense
@@ -152,13 +188,20 @@ private fun TotalsCard(income: Long, expense: Long, currency: String) {
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            if (projectedExpenseMinor != null && expense > 0) {
+                Text(
+                    "A este ritmo: ~${fmt.format(projectedExpenseMinor, currency)} de gasto a fin de mes",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
 
-/** Tile de estadística del periodo (ingresos o gastos totales). */
+/** Tile de estadística del periodo (ingresos o gastos totales), con delta opcional vs mes anterior. */
 @Composable
-private fun StatTile(label: String, amountMinor: Long, currency: String, color: Color) {
+private fun StatTile(label: String, amountMinor: Long, currency: String, color: Color, delta: KpiDelta? = null) {
     val fmt = LocalMoneyFormat.current
     FinanceCard(modifier = Modifier.fillMaxWidth()) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -170,6 +213,7 @@ private fun StatTile(label: String, amountMinor: Long, currency: String, color: 
                 color = color,
                 maxLines = 1,
             )
+            delta?.let { KpiDeltaLine(it) }
         }
     }
 }

@@ -36,12 +36,17 @@ data class DashboardData(
     val netMinor: Long,
     val savingsRate: Float,
     val accounts: List<AccountBar>,
-    val donut: List<CategorySlice>,
     val budgets: List<BudgetRow>,
     val netWorthByMonth: List<MonthNetWorth>,
     val incomeByMonth: List<MonthAmount>,
     val expenseByMonth: List<MonthAmount>,
     val subscriptionSpendMinor: Long,
+    val categoryBreakdown: List<CategorySpend>,
+    val frequent: List<FrequentExpense>,
+    // Totales del año anterior, para los deltas "vs 20XX" de los KPI. Con default para no romper
+    // los constructores posicionales existentes (estado inicial y tests).
+    val prevYearIncomeMinor: Long = 0,
+    val prevYearExpenseMinor: Long = 0,
 )
 
 /** Una cuenta con su saldo actual, para la fila de barras del inicio. */
@@ -57,8 +62,8 @@ data class MonthNetWorth(val label: String, val netWorthMinor: Long)
 /**
  * Pantalla de inicio: revisión anual. Balance general (saldos iniciales + ingresos − gastos de todo
  * el histórico, sin acotar al año), ingreso/gasto/tasa de ahorro/patrimonio neto/gasto en
- * suscripciones del año seleccionado, saldos por cuenta (foto actual) y rosca de gasto por
- * categoría del año. Reusa `CategorySlice` de [AnalysisViewModel]. El cálculo vive en
+ * suscripciones del año seleccionado, saldos por cuenta (foto actual) y gasto por categoría del
+ * año (con subcategorías — ver [AnalysisViewModel.computeCategoryBreakdown]). El cálculo vive en
  * [computeDashboard] (testeable); nada se calcula en la UI.
  */
 class DashboardViewModel(
@@ -98,7 +103,7 @@ class DashboardViewModel(
         }.stateIn(
             viewModelScope,
             SharingStarted.WhileSubscribed(5_000),
-            DashboardData(0, 0, 0, DEFAULT_CURRENCY, 0L, 0f, emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), 0L),
+            DashboardData(0, 0, 0, DEFAULT_CURRENCY, 0L, 0f, emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), 0L, emptyList(), emptyList()),
         )
 
     companion object {
@@ -108,11 +113,13 @@ class DashboardViewModel(
         private fun monthKey(year: Int, monthNumber: Int): Int = year * 100 + monthNumber
         private fun monthKeyOf(epochDay: Long): Int = LocalDate.fromEpochDays(epochDay.toInt()).let { monthKey(it.year, it.monthNumber) }
 
-        /** (ingreso − gasto) ÷ ingreso, recortado a 0-100%; sin ingresos, 0% (no divide por cero). */
+        /** (ingreso − gasto) ÷ ingreso, tope 100%; sin ingresos, 0% (no divide por cero). Puede ser
+         * negativa: gastar más de lo ingresado es un déficit y la UI debe poder mostrarlo, no
+         * aplanarlo a 0%. */
         internal fun computeSavingsRate(income: Long, expense: Long): Float = if (income == 0L) {
             0f
         } else {
-            ((income - expense).toFloat() / income.toFloat()).coerceIn(0f, 1f)
+            ((income - expense).toFloat() / income.toFloat()).coerceAtMost(1f)
         }
 
         /** Agregación pura. `firstOfMonth` alimenta solo el presupuesto (mensual); `year` alimenta
@@ -144,8 +151,10 @@ class DashboardViewModel(
             val yearIncome = yearTx.filter { it.kind == "INCOME" }.sumOf { it.amountMinor }
             val yearExpense = yearTx.filter { it.kind == "EXPENSE" }.sumOf { it.amountMinor }
 
-            val catNameById = cats.associate { it.id to it.name }
-            val catColorById = cats.associate { it.id to it.color }
+            // Año anterior, para los deltas "vs 20XX" de los KPI de ingresos/gastos.
+            val prevYearTx = baseTxs.filter { monthKeyOf(it.date) / 100 == year - 1 }
+            val prevYearIncome = prevYearTx.filter { it.kind == "INCOME" }.sumOf { it.amountMinor }
+            val prevYearExpense = prevYearTx.filter { it.kind == "EXPENSE" }.sumOf { it.amountMinor }
 
             val netMinor = yearIncome - yearExpense
             val savingsRate = computeSavingsRate(yearIncome, yearExpense)
@@ -155,20 +164,8 @@ class DashboardViewModel(
                 AccountBar(name = it.name, type = it.type, balanceMinor = balanceByAccountId[it.id] ?: 0L)
             }
 
-            val yearExpenseFloor = yearExpense.coerceAtLeast(1L).toFloat()
-            val donut = yearTx.filter { it.kind == "EXPENSE" }
-                .groupBy { it.categoryId }
-                .mapValues { (_, list) -> list.sumOf { it.amountMinor } }
-                .entries
-                .sortedByDescending { it.value }
-                .map { (catId, amount) ->
-                    CategorySlice(
-                        name = catNameById[catId] ?: "Sin categoría",
-                        amountMinor = amount,
-                        pct = amount.toFloat() / yearExpenseFloor,
-                        color = catColorById[catId] ?: 0L,
-                    )
-                }
+            val categoryBreakdown = AnalysisViewModel.computeCategoryBreakdown(yearTx.filter { it.kind == "EXPENSE" }, cats)
+            val frequent = AnalysisViewModel.computeFrequentExpenses(yearTx.filter { it.kind == "EXPENSE" }, cats)
 
             val budgetRows = BudgetsViewModel.computeBudgets(budgets, cats, baseTxs, monthPeriod(firstOfMonth))
                 .rows.filter { it.limitMinor > 0 }
@@ -184,8 +181,10 @@ class DashboardViewModel(
 
             return DashboardData(
                 totalBalance, yearIncome, yearExpense, currency,
-                netMinor, savingsRate, accountBars, donut, budgetRows,
+                netMinor, savingsRate, accountBars, budgetRows,
                 netWorthByMonth, incomeByMonth, expenseByMonth, subscriptionSpend,
+                categoryBreakdown, frequent,
+                prevYearIncomeMinor = prevYearIncome, prevYearExpenseMinor = prevYearExpense,
             )
         }
 

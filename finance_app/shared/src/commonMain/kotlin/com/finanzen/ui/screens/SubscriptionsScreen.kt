@@ -1,6 +1,5 @@
 package com.finanzen.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,10 +8,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -46,25 +43,28 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.finanzen.db.Account
+import com.finanzen.db.Category
+import com.finanzen.db.Subscription
+import com.finanzen.ui.components.BentoTileSize
+import com.finanzen.ui.components.CategoryAvatar
 import com.finanzen.ui.components.DateField
+import com.finanzen.ui.components.EmptyState
 import com.finanzen.ui.components.FinanceCard
+import com.finanzen.ui.components.IconAvatar
 import com.finanzen.ui.components.MoneyField
 import com.finanzen.ui.components.MoneyText
 import com.finanzen.ui.components.PickerField
 import com.finanzen.ui.components.SectionHeader
+import com.finanzen.ui.components.flatFabElevation
+import com.finanzen.ui.format.formatDiaMes
+import com.finanzen.ui.theme.LocalDateLocale
+import com.finanzen.ui.theme.LocalFinanceColors
+import com.finanzen.viewmodel.AnalysisViewModel
 import com.finanzen.viewmodel.SubscriptionsViewModel
 import kotlinx.datetime.Clock
-import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 import org.koin.compose.viewmodel.koinViewModel
-
-private val MESES_SUB = listOf("ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic")
-
-private fun fechaCorta(epochDay: Long): String {
-    val d = LocalDate.fromEpochDays(epochDay.toInt())
-    return "${d.dayOfMonth} ${MESES_SUB[d.monthNumber - 1]}"
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,15 +75,33 @@ fun SubscriptionsScreen(
 ) {
     val subs by vm.subscriptions.collectAsState()
     val accounts by vm.accounts.collectAsState()
+    val categories by vm.categories.collectAsState()
     var showForm by remember { mutableStateOf(openAddInitially) }
+    var pendingDelete by remember { mutableStateOf<Subscription?>(null) }
+
+    pendingDelete?.let { sub ->
+        AlertDialog(
+            onDismissRequest = { pendingDelete = null },
+            title = { Text("¿Eliminar \"${sub.name}\"?") },
+            text = { Text("Se dejarán de generar cobros. Los movimientos ya registrados se conservan.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.deleteSubscription(sub.id)
+                    pendingDelete = null
+                }) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text("Cancelar") } },
+        )
+    }
 
     if (showForm) {
         SubscriptionFormDialog(
             accounts = accounts,
+            categories = categories,
             currencyCode = vm.baseCurrency,
             onDismiss = { showForm = false },
-            onConfirm = { name, amountMinor, frequency, interval, accountId, startEpochDay ->
-                vm.addSubscription(name, amountMinor, frequency, interval, accountId, startEpochDay)
+            onConfirm = { name, amountMinor, frequency, interval, accountId, startEpochDay, categoryId ->
+                vm.addSubscription(name, amountMinor, frequency, interval, accountId, startEpochDay, categoryId)
                 showForm = false
             },
         )
@@ -105,6 +123,7 @@ fun SubscriptionsScreen(
                 onClick = { showForm = true },
                 icon = { Icon(Icons.Outlined.Add, null) },
                 text = { Text("Suscripción") },
+                elevation = flatFabElevation(),
             )
         },
     ) { inner ->
@@ -115,15 +134,43 @@ fun SubscriptionsScreen(
         ) {
             item { SectionHeader("Activas (${subs.size})") }
             if (subs.isEmpty()) {
-                item { EmptyText("Sin suscripciones. Usa + para añadir una; el cobro se registrará en Movimientos.") }
+                item {
+                    Box(Modifier.fillMaxWidth().padding(top = 48.dp), contentAlignment = Alignment.Center) {
+                        EmptyState(
+                            icon = Icons.Outlined.Subscriptions,
+                            title = "Sin suscripciones",
+                            subtitle = "Usa + para añadir una; el cobro se registrará en Movimientos.",
+                            modifier = Modifier.padding(32.dp),
+                        )
+                    }
+                }
             } else {
+                item {
+                    // Total mensual comprometido: la cifra que responde "¿cuánto me cuestan al mes?".
+                    val monthlyCost = remember(subs) { AnalysisViewModel.computeSubscriptionMonthlyCost(subs) }
+                    FinanceCard(modifier = Modifier.fillMaxWidth(), size = BentoTileSize.Small) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Text("Costo mensual equivalente", style = MaterialTheme.typography.labelLarge)
+                            MoneyText(
+                                amountMinor = monthlyCost,
+                                currency = vm.baseCurrency,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                    }
+                }
                 items(subs, key = { it.id }) { s ->
                     SubscriptionItem(
                         name = s.name,
                         amountMinor = s.amountMinor,
                         currency = s.currency,
                         nextChargeEpochDay = s.nextChargeDate,
-                        onDelete = { vm.deleteSubscription(s.id) },
+                        onDelete = { pendingDelete = s },
                     )
                 }
             }
@@ -144,22 +191,27 @@ fun SubscriptionsScreen(
 @Composable
 private fun SubscriptionFormDialog(
     accounts: List<Account>,
+    categories: List<Category>,
     currencyCode: String,
     onDismiss: () -> Unit,
-    onConfirm: (name: String, amountMinor: Long, frequency: String, interval: Long, accountId: Long?, startEpochDay: Long) -> Unit,
+    onConfirm: (name: String, amountMinor: Long, frequency: String, interval: Long, accountId: Long?, startEpochDay: Long, categoryId: Long?) -> Unit,
 ) {
+    val categoryOptions = categories.filter { it.kind == "EXPENSE" && it.parentId == null }
     var name by remember { mutableStateOf("") }
     var amountMinor by remember { mutableStateOf(0L) }
     var selectedAccount by remember { mutableStateOf(accounts.firstOrNull()) }
+    var selectedCategory by remember { mutableStateOf<Category?>(null) }
+    var selectedSubcategory by remember { mutableStateOf<Category?>(null) }
     var startEpochDay by remember { mutableStateOf(Clock.System.todayIn(TimeZone.currentSystemDefault()).toEpochDays().toLong()) }
     var monthly by remember { mutableStateOf(true) } // true = Día del mes, false = Cada X días
     var dayOfMonth by remember { mutableStateOf("1") }
     var everyDays by remember { mutableStateOf("30") }
+    val subcategoryOptions = categories.filter { it.parentId == selectedCategory?.id }
 
     val dayValid = dayOfMonth.toIntOrNull()?.let { it in 1..31 } == true
     val everyValid = everyDays.toLongOrNull()?.let { it >= 1 } == true
     val recurValid = if (monthly) dayValid else everyValid
-    val valid = name.isNotBlank() && amountMinor > 0 && recurValid
+    val valid = name.isNotBlank() && amountMinor > 0 && recurValid && (selectedCategory == null || selectedSubcategory != null)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -189,6 +241,32 @@ private fun SubscriptionFormDialog(
                     emptyHint = "Crea una cuenta primero (pestaña Cuentas).",
                     modifier = Modifier.fillMaxWidth(),
                 )
+                PickerField(
+                    label = "Categoría (opcional)",
+                    options = categoryOptions,
+                    selected = selectedCategory,
+                    optionLabel = { it.name },
+                    onSelect = {
+                        selectedCategory = it
+                        selectedSubcategory = null
+                    },
+                    placeholder = "Usar categoría \"Suscripciones\"",
+                    emptyHint = "No hay categorías de gasto.",
+                    leadingContent = { cat -> CategoryAvatar(cat.icon) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                if (selectedCategory != null) {
+                    PickerField(
+                        label = "Subcategoría",
+                        options = subcategoryOptions,
+                        selected = selectedSubcategory,
+                        optionLabel = { it.name },
+                        onSelect = { selectedSubcategory = it },
+                        placeholder = "Selecciona subcategoría",
+                        emptyHint = "Aún no hay subcategorías en ${selectedCategory?.name}.",
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
                 DateField(
                     epochDay = startEpochDay,
                     onEpochDayChange = { startEpochDay = it },
@@ -201,13 +279,13 @@ private fun SubscriptionFormDialog(
                         onClick = { monthly = true },
                         shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
                         icon = {},
-                    ) { Text("DÍA DEL MES") }
+                    ) { Text("Día del mes") }
                     SegmentedButton(
                         selected = !monthly,
                         onClick = { monthly = false },
                         shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
                         icon = {},
-                    ) { Text("CADA X DÍAS") }
+                    ) { Text("Cada X días") }
                 }
                 if (monthly) {
                     OutlinedTextField(
@@ -237,24 +315,13 @@ private fun SubscriptionFormDialog(
                 onClick = {
                     val frequency = if (monthly) "MONTHLY" else "DAILY"
                     val interval = if (monthly) dayOfMonth.toLong() else everyDays.toLong()
-                    onConfirm(name.trim(), amountMinor, frequency, interval, selectedAccount?.id, startEpochDay)
+                    onConfirm(name.trim(), amountMinor, frequency, interval, selectedAccount?.id, startEpochDay, selectedSubcategory?.id)
                 },
                 enabled = valid,
             ) { Text("Guardar") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },
     )
-}
-
-@Composable
-private fun EmptyText(text: String) {
-    Box(Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) {
-        Text(
-            text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
 }
 
 /** Tarjeta de suscripción: icono · nombre + próxima fecha · monto (héroe) · borrar discreto. */
@@ -266,33 +333,25 @@ private fun SubscriptionItem(
     nextChargeEpochDay: Long,
     onDelete: () -> Unit,
 ) {
-    FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(14.dp)) {
+    val dateLocale = LocalDateLocale.current
+    val finance = LocalFinanceColors.current
+    FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHighest, CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    Icons.Outlined.Subscriptions,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(22.dp),
-                )
-            }
+            IconAvatar(Icons.Outlined.Subscriptions)
             Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
                 Text(name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text(
-                    "Próximo: ${fechaCorta(nextChargeEpochDay)}",
+                    "Próximo: ${formatDiaMes(nextChargeEpochDay, dateLocale)}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             MoneyText(
-                amountMinor = amountMinor,
+                amountMinor = -amountMinor,
                 currency = currency,
                 style = MaterialTheme.typography.titleMedium,
+                signed = true,
+                colorOverride = finance.expense,
             )
             IconButton(onClick = onDelete) {
                 Icon(

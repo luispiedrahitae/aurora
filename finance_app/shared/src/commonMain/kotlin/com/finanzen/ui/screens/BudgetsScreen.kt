@@ -21,7 +21,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -34,24 +33,25 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.finanzen.ui.components.CategoryAvatar
+import com.finanzen.ui.components.BudgetProgressCard
 import com.finanzen.ui.components.EmptyState
-import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.LabeledDropdown
 import com.finanzen.ui.components.MainTabHeader
 import com.finanzen.ui.components.MoneyField
 import com.finanzen.ui.components.MonthSelector
+import com.finanzen.ui.components.flatFabElevation
 import com.finanzen.ui.format.formatMesAnio
 import com.finanzen.ui.theme.LocalDateLocale
-import com.finanzen.ui.theme.LocalFinanceColors
-import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.viewmodel.BudgetRow
 import com.finanzen.viewmodel.BudgetsViewModel
+import kotlinx.datetime.Clock
 import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
+import kotlinx.datetime.todayIn
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -119,6 +119,7 @@ fun BudgetsScreen(
                     onClick = { showAdd = true },
                     icon = { Icon(Icons.Outlined.Add, null) },
                     text = { Text("Presupuesto") },
+                    elevation = flatFabElevation(),
                 )
             }
         },
@@ -141,6 +142,10 @@ fun BudgetsScreen(
                 onPrev = { vm.setMonth(month.plus(DatePeriod(months = -1))) },
                 onNext = { vm.setMonth(month.plus(DatePeriod(months = 1))) },
                 modifier = Modifier.padding(horizontal = spacing.lg),
+                onLabelClick = {
+                    val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+                    vm.setMonth(LocalDate(today.year, today.month, 1))
+                },
             )
             when {
                 data.rows.isEmpty() ->
@@ -154,7 +159,7 @@ fun BudgetsScreen(
                         verticalArrangement = Arrangement.spacedBy(spacing.md),
                     ) {
                         items(budgeted, key = { it.categoryId }) { row ->
-                            BudgetRowCard(row, data.currency, onClick = { editing = row })
+                            BudgetProgressCard(row, data.currency, onClick = { editing = row })
                         }
                     }
             }
@@ -171,42 +176,6 @@ private fun EmptyMessage(title: String, subtitle: String) {
             subtitle = subtitle,
             modifier = Modifier.padding(32.dp),
         )
-    }
-}
-
-@Composable
-private fun BudgetRowCard(row: BudgetRow, currency: String, onClick: () -> Unit) {
-    val fraction = (row.spentMinor.toFloat() / row.limitMinor.toFloat()).coerceIn(0f, 1f)
-    val pct = (row.spentMinor * 100 / row.limitMinor).toInt()
-    val over = row.spentMinor > row.limitMinor
-    val finance = LocalFinanceColors.current
-    val spacing = LocalSpacing.current
-    val barColor = if (over) finance.expense else MaterialTheme.colorScheme.primary
-    val fmt = LocalMoneyFormat.current
-
-    FinanceCard(modifier = Modifier.fillMaxWidth(), onClick = onClick) {
-        Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(spacing.md)) {
-                CategoryAvatar(icon = row.icon, size = 36.dp)
-                Text(row.categoryName, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                Text(
-                    "$pct%",
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (over) finance.expense else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            LinearProgressIndicator(
-                progress = { fraction },
-                modifier = Modifier.fillMaxWidth(),
-                color = barColor,
-                drawStopIndicator = {},
-            )
-            Text(
-                "Gastado ${fmt.format(row.spentMinor, currency)} de ${fmt.format(row.limitMinor, currency)}",
-                style = MaterialTheme.typography.bodySmall,
-                color = if (over) finance.expense else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
     }
 }
 

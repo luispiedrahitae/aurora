@@ -1,19 +1,18 @@
 package com.finanzen.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
@@ -53,15 +52,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.finanzen.db.Account
+import com.finanzen.db.Category
 import com.finanzen.db.Investment
 import com.finanzen.db.TransactionRow
+import com.finanzen.ui.components.CategoryAvatar
 import com.finanzen.ui.components.DateField
+import com.finanzen.ui.components.EmptyState
 import com.finanzen.ui.components.FinanceCard
+import com.finanzen.ui.components.IconAvatar
 import com.finanzen.ui.components.KindAvatar
 import com.finanzen.ui.components.MoneyField
 import com.finanzen.ui.components.MoneyText
 import com.finanzen.ui.components.PickerField
 import com.finanzen.ui.components.SectionHeader
+import com.finanzen.ui.components.flatFabElevation
 import com.finanzen.ui.components.kindLabel
 import com.finanzen.ui.format.formatDiaMes
 import com.finanzen.ui.theme.LocalDateLocale
@@ -69,17 +73,9 @@ import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.viewmodel.InvestmentsViewModel
 import kotlinx.datetime.Clock
-import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 import org.koin.compose.viewmodel.koinViewModel
-
-private val MESES_INV = listOf("ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic")
-
-private fun fechaCortaInv(epochDay: Long): String {
-    val d = LocalDate.fromEpochDays(epochDay.toInt())
-    return "${d.dayOfMonth} ${MESES_INV[d.monthNumber - 1]}"
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -91,9 +87,11 @@ fun InvestmentsScreen(
     val open by vm.openInvestments.collectAsState()
     val closed by vm.closedInvestments.collectAsState()
     val accounts by vm.accounts.collectAsState()
+    val categories by vm.categories.collectAsState()
     val contributionsByInvestment by vm.contributionsByInvestment.collectAsState()
     var showForm by remember { mutableStateOf(openAddInitially) }
     var withdrawingInvestment by remember { mutableStateOf<Investment?>(null) }
+    var pendingDelete by remember { mutableStateOf<Investment?>(null) }
     var closedExpanded by remember { mutableStateOf(false) }
     val expandedIds = remember { mutableStateMapOf<Long, Boolean>() }
     val accountNameById = remember(accounts) { accounts.associate { it.id to it.name } }
@@ -101,12 +99,28 @@ fun InvestmentsScreen(
     if (showForm) {
         InvestmentFormDialog(
             accounts = accounts,
+            categories = categories,
             currencyCode = vm.baseCurrency,
             onDismiss = { showForm = false },
-            onConfirm = { name, amountMinor, accountId, periodic, frequency, interval, startEpochDay ->
-                vm.addInvestment(name, amountMinor, accountId, periodic, frequency, interval, startEpochDay)
+            onConfirm = { name, amountMinor, accountId, categoryId, periodic, frequency, interval, startEpochDay ->
+                vm.addInvestment(name, amountMinor, accountId, categoryId, periodic, frequency, interval, startEpochDay)
                 showForm = false
             },
+        )
+    }
+
+    pendingDelete?.let { inv ->
+        AlertDialog(
+            onDismissRequest = { pendingDelete = null },
+            title = { Text("¿Eliminar \"${inv.name}\"?") },
+            text = { Text("Se elimina la inversión y se dejan de generar aportes. Los movimientos ya registrados se conservan.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.deleteInvestment(inv.id)
+                    pendingDelete = null
+                }) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text("Cancelar") } },
         )
     }
 
@@ -140,6 +154,7 @@ fun InvestmentsScreen(
                 onClick = { showForm = true },
                 icon = { Icon(Icons.Outlined.Add, null) },
                 text = { Text("Inversión") },
+                elevation = flatFabElevation(),
             )
         },
     ) { inner ->
@@ -150,7 +165,16 @@ fun InvestmentsScreen(
         ) {
             item { SectionHeader("Abiertas (${open.size})") }
             if (open.isEmpty()) {
-                item { EmptyTextInv("Sin inversiones abiertas. Usa + para añadir una.") }
+                item {
+                    Box(Modifier.fillMaxWidth().padding(top = 48.dp), contentAlignment = Alignment.Center) {
+                        EmptyState(
+                            icon = Icons.Outlined.TrendingUp,
+                            title = "Sin inversiones abiertas",
+                            subtitle = "Usa + para añadir una; los aportes se registran en Movimientos.",
+                            modifier = Modifier.padding(32.dp),
+                        )
+                    }
+                }
             } else {
                 items(open, key = { it.id }) { inv ->
                     InvestmentItem(
@@ -160,7 +184,7 @@ fun InvestmentsScreen(
                         expanded = expandedIds[inv.id] == true,
                         onToggleExpand = { expandedIds[inv.id] = !(expandedIds[inv.id] == true) },
                         onWithdraw = { withdrawingInvestment = inv },
-                        onDelete = { vm.deleteInvestment(inv.id) },
+                        onDelete = { pendingDelete = inv },
                     )
                 }
             }
@@ -200,23 +224,37 @@ private fun todayEpochDayInv(): Long = Clock.System.todayIn(TimeZone.currentSyst
 @Composable
 private fun InvestmentFormDialog(
     accounts: List<Account>,
+    categories: List<Category>,
     currencyCode: String,
     onDismiss: () -> Unit,
-    onConfirm: (name: String, amountMinor: Long, accountId: Long, periodic: Boolean, frequency: String?, interval: Long?, startEpochDay: Long) -> Unit,
+    onConfirm: (
+        name: String,
+        amountMinor: Long,
+        accountId: Long,
+        categoryId: Long,
+        periodic: Boolean,
+        frequency: String?,
+        interval: Long?,
+        startEpochDay: Long,
+    ) -> Unit,
 ) {
+    val categoryOptions = categories.filter { it.kind == "EXPENSE" && it.parentId == null }
     var name by remember { mutableStateOf("") }
     var amountMinor by remember { mutableStateOf(0L) }
     var selectedAccount by remember { mutableStateOf(accounts.firstOrNull()) }
+    var selectedCategory by remember { mutableStateOf<Category?>(null) }
+    var selectedSubcategory by remember { mutableStateOf<Category?>(null) }
     var startEpochDay by remember { mutableStateOf(todayEpochDayInv()) }
     var periodic by remember { mutableStateOf(false) }
     var monthly by remember { mutableStateOf(true) } // true = Día del mes, false = Cada X días
     var dayOfMonth by remember { mutableStateOf("1") }
     var everyDays by remember { mutableStateOf("30") }
+    val subcategoryOptions = categories.filter { it.parentId == selectedCategory?.id }
 
     val dayValid = dayOfMonth.toIntOrNull()?.let { it in 1..31 } == true
     val everyValid = everyDays.toLongOrNull()?.let { it >= 1 } == true
     val recurValid = if (monthly) dayValid else everyValid
-    val valid = name.isNotBlank() && amountMinor > 0 && selectedAccount != null && (!periodic || recurValid)
+    val valid = name.isNotBlank() && amountMinor > 0 && selectedAccount != null && selectedSubcategory != null && (!periodic || recurValid)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -246,6 +284,32 @@ private fun InvestmentFormDialog(
                     emptyHint = "Crea una cuenta primero (pestaña Cuentas).",
                     modifier = Modifier.fillMaxWidth(),
                 )
+                PickerField(
+                    label = "Categoría",
+                    options = categoryOptions,
+                    selected = selectedCategory,
+                    optionLabel = { it.name },
+                    onSelect = {
+                        selectedCategory = it
+                        selectedSubcategory = null
+                    },
+                    placeholder = "Selecciona categoría",
+                    emptyHint = "No hay categorías de gasto.",
+                    leadingContent = { cat -> CategoryAvatar(cat.icon) },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                if (selectedCategory != null) {
+                    PickerField(
+                        label = "Subcategoría",
+                        options = subcategoryOptions,
+                        selected = selectedSubcategory,
+                        optionLabel = { it.name },
+                        onSelect = { selectedSubcategory = it },
+                        placeholder = "Selecciona subcategoría",
+                        emptyHint = "Aún no hay subcategorías en ${selectedCategory?.name}.",
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
                 DateField(
                     epochDay = startEpochDay,
                     onEpochDayChange = { startEpochDay = it },
@@ -263,13 +327,13 @@ private fun InvestmentFormDialog(
                             onClick = { monthly = true },
                             shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
                             icon = {},
-                        ) { Text("DÍA DEL MES") }
+                        ) { Text("Día del mes") }
                         SegmentedButton(
                             selected = !monthly,
                             onClick = { monthly = false },
                             shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
                             icon = {},
-                        ) { Text("CADA X DÍAS") }
+                        ) { Text("Cada X días") }
                     }
                     if (monthly) {
                         OutlinedTextField(
@@ -312,7 +376,7 @@ private fun InvestmentFormDialog(
                     } else {
                         everyDays.toLong()
                     }
-                    onConfirm(name.trim(), amountMinor, selectedAccount!!.id, periodic, frequency, interval, startEpochDay)
+                    onConfirm(name.trim(), amountMinor, selectedAccount!!.id, selectedSubcategory!!.id, periodic, frequency, interval, startEpochDay)
                 },
                 enabled = valid,
             ) { Text("Guardar") }
@@ -367,17 +431,6 @@ private fun WithdrawDialog(
     )
 }
 
-@Composable
-private fun EmptyTextInv(text: String) {
-    Box(Modifier.fillMaxWidth().padding(12.dp), contentAlignment = Alignment.Center) {
-        Text(
-            text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
 /** Tarjeta de inversión abierta: icono · nombre + subtítulo (cuenta, periodicidad) · monto por aporte
  * · expandir/contraer historial · retirar/eliminar. */
 @Composable
@@ -394,7 +447,7 @@ private fun InvestmentItem(
     val dateLocale = LocalDateLocale.current
     val finance = LocalFinanceColors.current
     val subtitle = if (investment.periodic == 1L) {
-        val next = investment.nextContributionDate?.let { " · próximo ${fechaCortaInv(it)}" } ?: ""
+        val next = investment.nextContributionDate?.let { " · próximo ${formatDiaMes(it, dateLocale)}" } ?: ""
         "$accountName$next"
     } else {
         "$accountName · puntual"
@@ -403,17 +456,7 @@ private fun InvestmentItem(
     FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(14.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier.size(40.dp).background(MaterialTheme.colorScheme.surfaceContainerHighest, CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        Icons.Outlined.TrendingUp,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
+                IconAvatar(Icons.Outlined.TrendingUp)
                 Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
                     Text(investment.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -429,8 +472,11 @@ private fun InvestmentItem(
             }
             Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
                 TextButton(onClick = onWithdraw) { Text("Retirar / Cerrar") }
+                // Botón con texto, no icono suelto: misma affordance que su vecino "Retirar / Cerrar".
                 TextButton(onClick = onDelete) {
-                    Icon(Icons.Outlined.DeleteOutline, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(Icons.Outlined.DeleteOutline, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(Modifier.width(4.dp))
+                    Text("Eliminar", color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             if (expanded) {

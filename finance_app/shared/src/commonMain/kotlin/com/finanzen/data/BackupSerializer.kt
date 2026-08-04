@@ -113,6 +113,29 @@ object BackupSerializer {
                 db.categoryQueries.update(newParentId, dto.name, dto.icon, dto.color, dto.kind, categoryIdMap.getValue(dto.id))
             }
 
+            // Backups viejos (pre categoryId-obligatorio, o de antes de que existieran las
+            // categorías de sistema) pueden traer categoryId = null, o no incluir "Transferencias/
+            // Ajustes/Suscripciones" entre snap.categories — se aseguran aquí y se reasignan las
+            // filas huérfanas ahí en vez de fallar el import (ver DefaultSeed.kt).
+            fun ensureSystemCategory(kind: String, parentName: String, childName: String) {
+                val kindCats = db.categoryQueries.selectByKind(kind).executeAsList()
+                val parent = kindCats.firstOrNull { it.parentId == null && it.name == parentName }
+                val childExists = parent != null && kindCats.any { it.parentId == parent.id && it.name == childName }
+                if (childExists) return
+                val parentId = parent?.id ?: run {
+                    db.categoryQueries.insert(null, parentName, "other", 0, kind)
+                    db.categoryQueries.lastInsertRowId().executeAsOne()
+                }
+                db.categoryQueries.insert(parentId, childName, "other", 0, kind)
+            }
+            ensureSystemCategory("TRANSFER", "Transferencias", "Transferencia entre cuentas")
+            ensureSystemCategory("ADJUSTMENT", "Ajustes", "Ajuste de saldo")
+            ensureSystemCategory("EXPENSE", "Suscripciones", "Suscripción")
+            val transferFallback = systemCategoryLeaf(db, "TRANSFER", "Transferencias", "Transferencia entre cuentas")
+            val adjustmentFallback = systemCategoryLeaf(db, "ADJUSTMENT", "Ajustes", "Ajuste de saldo")
+            val expenseFallback = systemCategoryLeaf(db, "EXPENSE", "Suscripciones", "Suscripción")
+            fun resolvedCategoryId(oldId: Long?, fallback: Long): Long = oldId?.let { categoryIdMap[it] } ?: fallback
+
             val cardIdMap = mutableMapOf<Long, Long>()
             snap.cards.forEach {
                 db.cardQueries.insert(accountIdMap.getValue(it.accountId), it.last4, it.network, it.creditLimitMinor, it.cutoffDay, it.dueDay, it.interestRate)
@@ -123,7 +146,7 @@ object BackupSerializer {
             snap.installmentPlans.forEach {
                 db.installmentPlanQueries.insert(
                     cardIdMap.getValue(it.cardId),
-                    it.categoryId?.let { c -> categoryIdMap[c] },
+                    resolvedCategoryId(it.categoryId, expenseFallback),
                     it.totalAmountMinor,
                     it.installments,
                     it.interestRate,
@@ -137,7 +160,7 @@ object BackupSerializer {
             val investmentIdMap = mutableMapOf<Long, Long>()
             snap.investments.forEach {
                 db.investmentQueries.insertFull(
-                    it.name, it.amountMinor, it.currency, it.accountId?.let { a -> accountIdMap[a] }, it.categoryId?.let { c -> categoryIdMap[c] },
+                    it.name, it.amountMinor, it.currency, it.accountId?.let { a -> accountIdMap[a] }, resolvedCategoryId(it.categoryId, expenseFallback),
                     it.periodic, it.frequency, it.intervalCount, it.nextContributionDate, it.startDate,
                     it.status, it.withdrawnAmountMinor, it.closedDate, it.yieldMinor,
                 )
@@ -147,16 +170,21 @@ object BackupSerializer {
             val subscriptionIdMap = mutableMapOf<Long, Long>()
             snap.subscriptions.forEach {
                 db.subscriptionQueries.insert(
-                    it.name, it.amountMinor, it.currency, it.categoryId?.let { c -> categoryIdMap[c] }, it.accountId?.let { a -> accountIdMap[a] },
+                    it.name, it.amountMinor, it.currency, resolvedCategoryId(it.categoryId, expenseFallback), it.accountId?.let { a -> accountIdMap[a] },
                     it.frequency, it.intervalCount, it.nextChargeDate, it.remindDaysBefore, it.active,
                 )
                 subscriptionIdMap[it.id] = db.subscriptionQueries.lastInsertRowId().executeAsOne()
             }
 
             snap.transactions.forEach {
+                val fallback = when (it.kind) {
+                    "TRANSFER" -> transferFallback
+                    "ADJUSTMENT" -> adjustmentFallback
+                    else -> expenseFallback
+                }
                 db.transactionQueries.insert(
                     accountIdMap.getValue(it.accountId),
-                    it.categoryId?.let { c -> categoryIdMap[c] },
+                    resolvedCategoryId(it.categoryId, fallback),
                     it.amountMinor, it.currency, it.date, it.note, it.kind,
                     it.transferAccountId?.let { a -> accountIdMap[a] },
                     it.installmentPlanId?.let { p -> planIdMap[p] },

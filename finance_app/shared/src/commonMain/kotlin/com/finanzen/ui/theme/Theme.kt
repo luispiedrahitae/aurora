@@ -14,6 +14,7 @@ fun FinanZenTheme(
     darkTheme: Boolean = false,
     accent: AccentPreset = AccentPreset.Teal,
     useDynamic: Boolean = true,
+    reduceMotion: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val dynamicScheme = if (useDynamic) platformColorScheme(darkTheme) else null
@@ -25,6 +26,7 @@ fun FinanZenTheme(
         LocalFinanceColors provides financeColors,
         LocalSpacing provides Spacing(),
         LocalAccentColor provides accentColor,
+        LocalReduceMotion provides reduceMotion,
     ) {
         MaterialTheme(
             colorScheme = colorScheme,

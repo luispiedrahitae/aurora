@@ -1,7 +1,6 @@
 package com.finanzen.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -35,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.finanzen.ui.theme.motionTween
 
 /** Una acción del FAB desplegable: etiqueta, ícono y color del ícono. */
 data class SpeedDialAction(
@@ -61,8 +61,8 @@ fun SpeedDialFab(
         // Scrim: oscurece el fondo y cierra al tocar fuera.
         AnimatedVisibility(
             visible = expanded,
-            enter = fadeIn(tween(150)),
-            exit = fadeOut(tween(150)),
+            enter = fadeIn(motionTween(150)),
+            exit = fadeOut(motionTween(150)),
             modifier = Modifier.matchParentSize(),
         ) {
             Box(
@@ -86,10 +86,10 @@ fun SpeedDialFab(
                 val delay = (actions.size - 1 - index) * 35
                 AnimatedVisibility(
                     visible = expanded,
-                    enter = fadeIn(tween(160, delayMillis = delay)) +
-                        slideInVertically(tween(180, delayMillis = delay)) { it / 3 } +
-                        scaleIn(tween(160, delayMillis = delay), initialScale = 0.8f),
-                    exit = fadeOut(tween(100)) + slideOutVertically(tween(120)) { it / 3 } + scaleOut(tween(100)),
+                    enter = fadeIn(motionTween(160, delay)) +
+                        slideInVertically(motionTween(180, delay)) { it / 3 } +
+                        scaleIn(motionTween(160, delay), initialScale = 0.8f),
+                    exit = fadeOut(motionTween(100)) + slideOutVertically(motionTween(120)) { it / 3 } + scaleOut(motionTween(100)),
                 ) {
                     SpeedDialRow(action) { onExpandedChange(false) }
                 }

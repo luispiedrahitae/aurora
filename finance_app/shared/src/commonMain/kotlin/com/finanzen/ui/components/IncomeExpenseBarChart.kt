@@ -147,7 +147,7 @@ fun IncomeExpenseBarChart(points: List<DayPoint>, currency: String, modifier: Mo
             Row(Modifier.fillMaxWidth()) {
                 points.forEachIndexed { i, p ->
                     Text(
-                        if (i % 5 == 0 || i == selectedIndex) p.label else "",
+                        if (i % 5 == 0 || i == selectedIndex) p.dayNumber.toString() else "",
                         modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.labelSmall,
                         color = if (i == selectedIndex) {

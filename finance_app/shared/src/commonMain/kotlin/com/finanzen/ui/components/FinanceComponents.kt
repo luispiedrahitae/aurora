@@ -1,8 +1,8 @@
 package com.finanzen.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -63,6 +63,7 @@ import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Payments
 import androidx.compose.material.icons.outlined.PedalBike
 import androidx.compose.material.icons.outlined.Pets
+import androidx.compose.material.icons.outlined.PriceChange
 import androidx.compose.material.icons.outlined.RamenDining
 import androidx.compose.material.icons.outlined.Receipt
 import androidx.compose.material.icons.outlined.Redeem
@@ -90,6 +91,8 @@ import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material.icons.outlined.WineBar
 import androidx.compose.material.icons.outlined.Work
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.FloatingActionButtonElevation
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -108,6 +111,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -118,12 +122,14 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.finanzen.domain.Money
+import com.finanzen.ui.theme.FinanceColors
 import com.finanzen.ui.theme.LocalAccentColor
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.ui.theme.PillShape
 import com.finanzen.ui.theme.glassSurface
+import com.finanzen.ui.theme.motionTween
 import finanzen.shared.generated.resources.Res
 import finanzen.shared.generated.resources.brand_airbnb
 import finanzen.shared.generated.resources.brand_aliexpress
@@ -201,6 +207,7 @@ import finanzen.shared.generated.resources.brand_youtube
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
+import kotlin.math.roundToInt
 
 /** Los tres tamaños de tile bento (DESIGN.md, sección "Bento Tiles"). Fija radio/padding/tono por defecto. */
 enum class BentoTileSize { Hero, Medium, Small }
@@ -326,9 +333,16 @@ fun SectionHeader(text: String, modifier: Modifier = Modifier) {
     )
 }
 
-/** Selector de mes con flechas prev/next, reutilizado por las pantallas que filtran por periodo. */
+/** Selector de mes con flechas prev/next, reutilizado por las pantallas que filtran por periodo.
+ * Con [onLabelClick], la etiqueta central es tocable y vuelve al periodo actual ("hoy"). */
 @Composable
-fun MonthSelector(label: String, onPrev: () -> Unit, onNext: () -> Unit, modifier: Modifier = Modifier) {
+fun MonthSelector(
+    label: String,
+    onPrev: () -> Unit,
+    onNext: () -> Unit,
+    modifier: Modifier = Modifier,
+    onLabelClick: (() -> Unit)? = null,
+) {
     Row(
         modifier = modifier.fillMaxWidth().padding(vertical = LocalSpacing.current.sm),
         verticalAlignment = Alignment.CenterVertically,
@@ -337,7 +351,7 @@ fun MonthSelector(label: String, onPrev: () -> Unit, onNext: () -> Unit, modifie
         IconButton(onClick = onPrev) {
             Icon(Icons.Outlined.ChevronLeft, contentDescription = "Mes anterior")
         }
-        Text(label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        SelectorLabel(label, onLabelClick, onClickLabel = "Volver al mes actual")
         IconButton(onClick = onNext) {
             Icon(Icons.Outlined.ChevronRight, contentDescription = "Mes siguiente")
         }
@@ -347,7 +361,13 @@ fun MonthSelector(label: String, onPrev: () -> Unit, onNext: () -> Unit, modifie
 /** Selector de anio con flechas prev/next, mismo patron que [MonthSelector] pero para pantallas
  * anuales (Resumen). */
 @Composable
-fun YearSelector(label: String, onPrev: () -> Unit, onNext: () -> Unit, modifier: Modifier = Modifier) {
+fun YearSelector(
+    label: String,
+    onPrev: () -> Unit,
+    onNext: () -> Unit,
+    modifier: Modifier = Modifier,
+    onLabelClick: (() -> Unit)? = null,
+) {
     Row(
         modifier = modifier.fillMaxWidth().padding(vertical = LocalSpacing.current.sm),
         verticalAlignment = Alignment.CenterVertically,
@@ -356,11 +376,25 @@ fun YearSelector(label: String, onPrev: () -> Unit, onNext: () -> Unit, modifier
         IconButton(onClick = onPrev) {
             Icon(Icons.Outlined.ChevronLeft, contentDescription = "Anio anterior")
         }
-        Text(label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        SelectorLabel(label, onLabelClick, onClickLabel = "Volver al anio actual")
         IconButton(onClick = onNext) {
             Icon(Icons.Outlined.ChevronRight, contentDescription = "Anio siguiente")
         }
     }
+}
+
+/** Etiqueta central de los selectores de periodo; tocable como boton cuando hay accion "hoy". */
+@Composable
+private fun SelectorLabel(label: String, onClick: (() -> Unit)?, onClickLabel: String) {
+    val clickable = if (onClick != null) {
+        Modifier
+            .clip(PillShape)
+            .clickable(onClickLabel = onClickLabel, role = Role.Button, onClick = onClick)
+            .padding(horizontal = LocalSpacing.current.md, vertical = LocalSpacing.current.xs)
+    } else {
+        Modifier
+    }
+    Text(label, modifier = clickable, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
 }
 
 /**
@@ -398,7 +432,7 @@ fun CategoryProgressRow(
     color: Color,
     modifier: Modifier = Modifier,
 ) {
-    val animatedPct by animateFloatAsState(targetValue = pct.coerceIn(0f, 1f), animationSpec = tween(400))
+    val animatedPct by animateFloatAsState(targetValue = pct.coerceIn(0f, 1f), animationSpec = motionTween(400))
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -427,16 +461,27 @@ fun CategoryProgressRow(
 }
 
 /**
- * Paleta amplia para los círculos de categoría y oferta del selector de color. Tonos saturados
- * repartidos por la rueda de color, todos legibles con el glifo blanco encima (≥3:1 en glifo grande).
+ * Paleta de codificación de datos para los charts de categoría (donut, desglose). Misma familia
+ * tonal que los colores semánticos del design system (fila 600 de Tailwind: saturación y
+ * luminosidad consistentes), repartida por la rueda de color y legible con glifo blanco (≥3:1).
+ *
+ * Deliberadamente distinta del rol de [CategoryAvatar]/[KindAvatar], que usan el acento de
+ * Apariencia: el avatar identifica de forma uniforme (la categoría se distingue por el icono),
+ * el chart codifica series de datos y sí necesita un color por categoría.
  */
 val categoryColors = listOf(
-    Color(0xFFE53935), Color(0xFFD81B60), Color(0xFFAD1457), Color(0xFF8E24AA),
-    Color(0xFF6A1B9A), Color(0xFF5E35B1), Color(0xFF3949AB), Color(0xFF1E88E5),
-    Color(0xFF1565C0), Color(0xFF0277BD), Color(0xFF00838F), Color(0xFF00897B),
-    Color(0xFF2E7D32), Color(0xFF43A047), Color(0xFF558B2F), Color(0xFF827717),
-    Color(0xFFEF6C00), Color(0xFFFB8C00), Color(0xFFF4511E), Color(0xFF6D4C41),
-    Color(0xFF8D6E63), Color(0xFF546E7A), Color(0xFF455A64), Color(0xFF757575),
+    Color(0xFFE11D48), // rose
+    Color(0xFFEA580C), // orange
+    Color(0xFFD97706), // amber
+    Color(0xFF65A30D), // lime
+    Color(0xFF059669), // emerald
+    Color(0xFF0D9488), // teal
+    Color(0xFF0891B2), // cyan
+    Color(0xFF2563EB), // blue
+    Color(0xFF4F46E5), // indigo
+    Color(0xFF7C3AED), // violet
+    Color(0xFFC026D3), // fuchsia
+    Color(0xFFDB2777), // pink
 )
 
 /** Color por hash del nombre, fallback cuando la categoría no tiene color propio (color = 0). */
@@ -741,11 +786,30 @@ fun KindAvatar(kind: String, modifier: Modifier = Modifier, size: Dp = 40.dp, ic
     val resolvedIcon = icon ?: when (kind) {
         "INCOME" -> Icons.Outlined.ArrowUpward
         "TRANSFER" -> Icons.Outlined.SwapHoriz
+        "ADJUSTMENT" -> Icons.Outlined.PriceChange
         else -> Icons.Outlined.ArrowDownward
     }
     Box(modifier.size(size).clip(CircleShape).background(LocalAccentColor.current), contentAlignment = Alignment.Center) {
         Icon(resolvedIcon, contentDescription = null, tint = Color.White, modifier = Modifier.size(size * 0.5f))
     }
+}
+
+/**
+ * Monto con signo correcto y color semántico según el tipo de movimiento, para filas de solo
+ * lectura (Movimientos, Calendario, detalle de cuenta). ADJUSTMENT ya trae el signo correcto en
+ * `amountMinor` (positivo = sube el saldo, negativo = lo baja) — a diferencia de EXPENSE, que se
+ * niega aquí para mostrarse en rojo.
+ */
+fun signedAmountAndColor(kind: String, amountMinor: Long, finance: FinanceColors): Pair<Long, Color> {
+    val isIncome = kind == "INCOME"
+    val isAdjustment = kind == "ADJUSTMENT"
+    val signedAmount = if (isIncome || isAdjustment) amountMinor else -amountMinor
+    val color = when {
+        isAdjustment -> if (amountMinor >= 0) finance.income else finance.expense
+        isIncome -> finance.income
+        else -> finance.expense
+    }
+    return signedAmount to color
 }
 
 /** Avatar por tipo de cuenta: círculo con el contenedor primario + icono del tipo. */
@@ -763,6 +827,68 @@ fun AccountTypeAvatar(type: String, modifier: Modifier = Modifier, size: Dp = 40
         )
     }
 }
+
+/** Variación relativa de un KPI frente al período anterior ("+12% vs 2025"). [isGood] decide el
+ * color semántico: subir es bueno en ingresos y malo en gastos. */
+data class KpiDelta(val pct: Int, val isGood: Boolean, val vsLabel: String)
+
+/** Delta porcentual [current] vs [previous]; null sin base de comparación (período anterior en 0). */
+fun kpiDelta(current: Long, previous: Long, vsLabel: String, upIsGood: Boolean): KpiDelta? {
+    if (previous <= 0L) return null
+    val pct = ((current - previous) * 100.0 / previous).roundToInt()
+    val isGood = if (pct >= 0) upIsGood else !upIsGood
+    return KpiDelta(pct = pct, isGood = isGood, vsLabel = vsLabel)
+}
+
+/** Línea secundaria de variación: flecha + "+X% vs <período>". Flecha e importe firmado juntos —
+ * el color nunca es la única señal. */
+@Composable
+fun KpiDeltaLine(delta: KpiDelta, modifier: Modifier = Modifier) {
+    val finance = LocalFinanceColors.current
+    val color = if (delta.isGood) finance.income else finance.expense
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Icon(
+            if (delta.pct >= 0) Icons.Outlined.ArrowUpward else Icons.Outlined.ArrowDownward,
+            contentDescription = null,
+            tint = color,
+            modifier = Modifier.size(12.dp),
+        )
+        Text(
+            "${if (delta.pct >= 0) "+" else ""}${delta.pct}% vs ${delta.vsLabel}",
+            style = MaterialTheme.typography.labelSmall,
+            color = color,
+            maxLines = 1,
+        )
+    }
+}
+
+/**
+ * Avatar genérico neutro (círculo `surfaceContainerHighest` + icono), para filas cuyo icono no es
+ * una categoría ni un tipo de cuenta (suscripciones, inversiones). Un solo lugar en vez de un Box
+ * ad-hoc copiado por pantalla.
+ */
+@Composable
+fun IconAvatar(icon: ImageVector, modifier: Modifier = Modifier, size: Dp = 40.dp) {
+    Box(
+        modifier.size(size).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHighest),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(size * 0.55f),
+        )
+    }
+}
+
+/** Elevación cero para todo FAB: la regla Flat-By-Default no admite sombras en reposo. */
+@Composable
+fun flatFabElevation(): FloatingActionButtonElevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp)
 
 /** Estado vacío reutilizable: icono + título + subtítulo. */
 @Composable

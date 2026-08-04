@@ -37,6 +37,11 @@ class SettingsRepository(private val db: FinanzenDb) {
 
     fun setHideAmountsEnabled(enabled: Boolean) = db.settingQueries.put(KEY_HIDE_AMOUNTS, enabled.toString())
 
+    /** Reduce/omite animaciones de la UI (accesibilidad). Apagado por defecto. */
+    fun reduceMotionEnabled(): Boolean = db.settingQueries.get(KEY_REDUCE_MOTION).executeAsOneOrNull()?.toBooleanStrictOrNull() ?: false
+
+    fun setReduceMotionEnabled(enabled: Boolean) = db.settingQueries.put(KEY_REDUCE_MOTION, enabled.toString())
+
     /** Posición del símbolo de moneda en los montos: auto (default, según CLDR) | prefix | suffix | none. */
     fun symbolPosition(): String = db.settingQueries.get(KEY_SYMBOL_POS).executeAsOneOrNull() ?: "auto"
 
@@ -115,6 +120,7 @@ class SettingsRepository(private val db: FinanzenDb) {
         const val KEY_NOTIFY_REMIND_DAYS = "notif.remind_days"
         const val KEY_SAVINGS_GOAL_PCT = "ui.savings_goal_pct"
         const val KEY_HIDE_AMOUNTS = "ui.hide_amounts"
+        const val KEY_REDUCE_MOTION = "ui.reduce_motion"
         const val KEY_SYMBOL_POS = "ui.symbol_pos"
         const val KEY_ASSISTANT_OPT_IN = "assistant.opt_in"
         const val KEY_ASSISTANT_MODEL_STATE = "assistant.model_state"

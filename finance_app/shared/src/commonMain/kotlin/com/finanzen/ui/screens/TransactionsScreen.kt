@@ -67,6 +67,7 @@ import com.finanzen.ui.components.MainTabHeader
 import com.finanzen.ui.components.MoneyText
 import com.finanzen.ui.components.MonthSelector
 import com.finanzen.ui.components.kindLabel
+import com.finanzen.ui.components.signedAmountAndColor
 import com.finanzen.ui.format.diaSemana
 import com.finanzen.ui.format.formatMesAnio
 import com.finanzen.ui.format.monthPeriod
@@ -388,10 +389,9 @@ private fun TransactionItem(
 ) {
     val isTransfer = row.kind == "TRANSFER"
     val isSubscription = row.subscriptionId != null
-    val isIncome = row.kind == "INCOME"
-    val signedAmount = if (isIncome) row.amountMinor else -row.amountMinor
     val spacing = LocalSpacing.current
     val finance = LocalFinanceColors.current
+    val (signedAmount, amountColor) = signedAmountAndColor(row.kind, row.amountMinor, finance)
 
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = {
@@ -487,7 +487,7 @@ private fun TransactionItem(
                         currency = row.currency,
                         style = MaterialTheme.typography.titleMedium,
                         signed = true,
-                        colorOverride = if (isIncome) finance.income else finance.expense,
+                        colorOverride = amountColor,
                     )
                 }
                 if (account != null) {

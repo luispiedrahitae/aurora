@@ -49,8 +49,8 @@ fun finanZenTypography(): Typography {
         bodyLarge = b.bodyLarge.copy(fontFamily = inter, fontFeatureSettings = TNUM),
         bodyMedium = b.bodyMedium.copy(fontFamily = inter, fontFeatureSettings = TNUM),
         bodySmall = b.bodySmall.copy(fontFamily = inter, fontFeatureSettings = TNUM),
-        labelLarge = b.labelLarge.copy(fontFamily = inter, fontWeight = FontWeight.Medium),
-        labelMedium = b.labelMedium.copy(fontFamily = inter),
-        labelSmall = b.labelSmall.copy(fontFamily = inter),
+        labelLarge = b.labelLarge.copy(fontFamily = inter, fontWeight = FontWeight.Medium, fontFeatureSettings = TNUM),
+        labelMedium = b.labelMedium.copy(fontFamily = inter, fontFeatureSettings = TNUM),
+        labelSmall = b.labelSmall.copy(fontFamily = inter, fontFeatureSettings = TNUM),
     )
 }

@@ -23,6 +23,7 @@ import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -34,6 +35,7 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -70,6 +72,29 @@ fun CategoriesScreen(
     val parents = categories.filter { it.parentId == null }
     val existingNames = categories.filter { it.kind == kind }.map { it.name.trim().lowercase() }.toSet()
     val nameTaken = name.isNotBlank() && name.trim().lowercase() in existingNames
+    var pendingDelete by remember { mutableStateOf<Category?>(null) }
+
+    pendingDelete?.let { cat ->
+        AlertDialog(
+            onDismissRequest = { pendingDelete = null },
+            title = { Text("¿Eliminar \"${cat.name}\"?") },
+            text = {
+                Text(
+                    "Se elimina la categoría" +
+                        (if (cat.parentId == null) " junto con sus subcategorías" else "") +
+                        " y todo lo que la use: movimientos, presupuestos, suscripciones, " +
+                        "inversiones y planes de cuotas. Esta acción no se puede deshacer.",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.delete(cat.id)
+                    pendingDelete = null
+                }) { Text("Eliminar", color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { pendingDelete = null }) { Text("Cancelar") } },
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -147,8 +172,9 @@ fun CategoriesScreen(
                     vm.add(subName, parent.kind, parentId = parent.id, icon = "")
                 }
             }
-            categoryGroup(parents.filter { it.kind == "EXPENSE" }, "Gastos", categories, vm::delete, addSubcategory)
-            categoryGroup(parents.filter { it.kind == "INCOME" }, "Ingresos", categories, vm::delete, addSubcategory)
+            val requestDelete: (Long) -> Unit = { id -> pendingDelete = categories.firstOrNull { it.id == id } }
+            categoryGroup(parents.filter { it.kind == "EXPENSE" }, "Gastos", categories, requestDelete, addSubcategory)
+            categoryGroup(parents.filter { it.kind == "INCOME" }, "Ingresos", categories, requestDelete, addSubcategory)
         }
     }
 }

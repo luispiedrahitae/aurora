@@ -366,11 +366,45 @@ class DashboardViewModelTest {
     // ---- Edge cases QA (ver reporte de hallazgos) ----
 
     @Test
-    fun computeSavingsRateConGastoMayorAIngresoQuedaEnCeroNoNegativo() {
-        // coerceIn(0f,1f): un mes donde se gastó más de lo que entró no debe reportar una tasa
-        // negativa (que rompería el gauge), pero esto también "esconde" que el mes fue malo:
-        // se ve igual que un mes con ahorro exactamente en 0%.
-        assertEquals(0f, DashboardViewModel.computeSavingsRate(income = 1_000L, expense = 5_000L))
+    fun computeSavingsRateConGastoMayorAIngresoEsNegativa() {
+        // Gastar más de lo ingresado es un déficit y la tasa debe reflejarlo (-400% aquí); la UI
+        // decide cómo pintarlo (el gauge recorta el arco a 0 pero muestra el número real).
+        assertEquals(-4f, DashboardViewModel.computeSavingsRate(income = 1_000L, expense = 5_000L))
+    }
+
+    @Test
+    fun computeSavingsRateConAhorroTotalTopaEnCienPorCiento() {
+        assertEquals(1f, DashboardViewModel.computeSavingsRate(income = 1_000L, expense = 0L))
+    }
+
+    @Test
+    fun computeDashboardIncluyeTotalesDelAnioAnteriorParaDeltas() {
+        val db = freshDb()
+        seedIfEmpty(db)
+        val account = db.accountQueries.selectAll().executeAsList().first()
+        val incomeCat = db.categoryQueries.selectByKind("INCOME").executeAsList().first()
+        val expenseCat = db.categoryQueries.selectByKind("EXPENSE").executeAsList().first()
+
+        // 2025: ingreso 8_000, gasto 2_000. 2026: ingreso 10_000.
+        val in2025 = LocalDate(2025, 6, 15).toEpochDays().toLong()
+        val in2026 = LocalDate(2026, 6, 15).toEpochDays().toLong()
+        db.transactionQueries.insert(account.id, incomeCat.id, 8_000, account.currency, in2025, "salario 25", "INCOME", null, null, null, null)
+        db.transactionQueries.insert(account.id, expenseCat.id, 2_000, account.currency, in2025, "gasto 25", "EXPENSE", null, null, null, null)
+        db.transactionQueries.insert(account.id, incomeCat.id, 10_000, account.currency, in2026, "salario 26", "INCOME", null, null, null, null)
+
+        val data = DashboardViewModel.computeDashboard(
+            accounts = db.accountQueries.selectAll().executeAsList(),
+            txs = db.transactionQueries.selectAll().executeAsList(),
+            cats = db.categoryQueries.selectAll().executeAsList(),
+            budgets = emptyList(),
+            firstOfMonth = LocalDate(2026, 6, 1),
+            year = 2026,
+            baseCurrency = account.currency,
+        )
+
+        assertEquals(10_000, data.yearIncomeMinor)
+        assertEquals(8_000, data.prevYearIncomeMinor)
+        assertEquals(2_000, data.prevYearExpenseMinor)
     }
 
     @Test
@@ -398,7 +432,7 @@ class DashboardViewModelTest {
             baseCurrency = account.currency,
         )
 
-        assertEquals(emptyList(), data.donut)
+        assertEquals(emptyList(), data.categoryBreakdown)
     }
 
     @Test
@@ -425,7 +459,43 @@ class DashboardViewModelTest {
             baseCurrency = account.currency,
         )
 
-        assertEquals(0xFF00FF00L, data.donut.single { it.name == "Mascotas" }.color)
+        assertEquals(0xFF00FF00L, data.categoryBreakdown.single { it.name == "Mascotas" }.color)
+    }
+
+    @Test
+    fun categoryBreakdownAnnualSubeSubcategoriaAPadreEnVezDeMostrarlaComoPorcionSeparada() {
+        // FIX: computeDashboard agrupaba por categoryId crudo, así que una transacción etiquetada
+        // con una subcategoría aparecía como su propia porción del donut en vez de sumarse a la
+        // categoría padre (inconsistente con AnalysisViewModel.computeFrequentExpenses, que sí
+        // resuelve parentId).
+        val db = freshDb()
+        seedIfEmpty(db)
+        val account = db.accountQueries.selectAll().executeAsList().first()
+        db.categoryQueries.insert(null, "Comida", "", 0, "EXPENSE")
+        val parent = db.categoryQueries.selectAll().executeAsList().first { it.name == "Comida" }
+        db.categoryQueries.insert(parent.id, "Restaurantes", "", 0, "EXPENSE")
+        val child = db.categoryQueries.selectAll().executeAsList().first { it.name == "Restaurantes" }
+
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        db.transactionQueries.insert(
+            account.id, child.id, 3_000, account.currency, today.toEpochDays().toLong(), "cena", "EXPENSE", null, null, null, null,
+        )
+
+        val data = DashboardViewModel.computeDashboard(
+            accounts = db.accountQueries.selectAll().executeAsList(),
+            txs = db.transactionQueries.selectAll().executeAsList(),
+            cats = db.categoryQueries.selectAll().executeAsList(),
+            budgets = emptyList(),
+            firstOfMonth = LocalDate(today.year, today.month, 1),
+            year = today.year,
+            baseCurrency = account.currency,
+        )
+
+        assertEquals(1, data.categoryBreakdown.size)
+        val comida = data.categoryBreakdown.first()
+        assertEquals("Comida", comida.name)
+        assertEquals(3_000, comida.amountMinor)
+        assertEquals("Restaurantes", comida.subcategories.single().name)
     }
 
     @Test

@@ -1,9 +1,12 @@
+-- ponytail: categoryId pasó a NOT NULL sin migración (proyecto pre-release). Si el usuario no
+-- elige categoría explícita al crear la suscripción, se usa la categoría de sistema
+-- "Suscripciones/Suscripción" (ver DefaultSeed.kt). Reinstala/limpia la BD de desarrollo.
 CREATE TABLE Subscription (
     id                INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     name              TEXT NOT NULL,
     amountMinor       INTEGER NOT NULL,
     currency          TEXT NOT NULL REFERENCES Currency(code),
-    categoryId        INTEGER REFERENCES Category(id),
+    categoryId        INTEGER NOT NULL REFERENCES Category(id),
     accountId         INTEGER REFERENCES Account(id),
     frequency         TEXT NOT NULL,                    -- WEEKLY | MONTHLY | YEARLY | CUSTOM
     intervalCount     INTEGER NOT NULL DEFAULT 1,
@@ -39,3 +42,6 @@ UPDATE Subscription SET nextChargeDate = ? WHERE id = ?;
 
 delete:
 DELETE FROM Subscription WHERE id = ?;
+
+deleteByCategory:
+DELETE FROM Subscription WHERE categoryId = ?;

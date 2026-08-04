@@ -3,7 +3,6 @@ package com.finanzen.viewmodel
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.finanzen.data.seedIfEmpty
 import com.finanzen.db.FinanzenDb
-import com.finanzen.ui.format.monthPeriod
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
@@ -52,8 +51,10 @@ class AnalysisViewModelTest {
         )
 
         assertEquals(expectedDays, cashflow.size)
+        assertEquals(1, cashflow.first().dayNumber)
         assertEquals(5_000, cashflow.first().incomeMinor)
         assertEquals(2_000, cashflow.first().expenseMinor)
+        assertEquals(15, cashflow[14].dayNumber)
         assertEquals(3_000, cashflow[14].incomeMinor)
         assertEquals(0, cashflow[14].expenseMinor)
     }
@@ -84,24 +85,51 @@ class AnalysisViewModelTest {
         )
 
         val frequent = AnalysisViewModel.computeFrequentExpenses(
-            txs = db.transactionQueries.selectAll().executeAsList(),
+            expenseTxs = db.transactionQueries.selectAll().executeAsList(),
             cats = cats,
-            period = monthPeriod(referenceMonth),
         )
 
         // ordena por conteo, no por monto: A (3 veces) va primero pese a que B es más caro
         assertEquals("Café", frequent.first().name)
         assertEquals(3, frequent.first().count)
+        // pero cada fila acumula su monto total, que es lo que la UI muestra junto al conteo
         assertEquals(300, frequent.first().amountMinor)
+        assertEquals(10_000, frequent[1].amountMinor)
+    }
+
+    @Test
+    fun projectMonthEndExpenseExtrapolaSoloElMesEnCurso() {
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        val firstOfMonth = LocalDate(today.year, today.month, 1)
+        val daysInMonth = firstOfMonth.plus(DatePeriod(months = 1)).toEpochDays() - firstOfMonth.toEpochDays()
+
+        // 100 por día transcurrido -> proyección = 100 por día del mes completo.
+        val projected = AnalysisViewModel.projectMonthEndExpense(
+            expenseSoFarMinor = today.dayOfMonth * 100L,
+            today = today,
+            month = firstOfMonth,
+        )
+        assertEquals(daysInMonth * 100L, projected)
+    }
+
+    @Test
+    fun projectMonthEndExpenseDevuelveNullParaMesesPasadosOFuturos() {
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        val prevMonth = LocalDate(today.year, today.month, 1).plus(DatePeriod(months = -1))
+        val nextMonth = LocalDate(today.year, today.month, 1).plus(DatePeriod(months = 1))
+        assertEquals(null, AnalysisViewModel.projectMonthEndExpense(5_000, today, prevMonth))
+        assertEquals(null, AnalysisViewModel.projectMonthEndExpense(5_000, today, nextMonth))
     }
 
     @Test
     fun costoMensualDeSuscripcionesSumaEquivalenteDeCadaUna() {
         val db = freshDb()
+        db.categoryQueries.insert(null, "Suscripciones", "", 0, "EXPENSE")
+        val catId = db.categoryQueries.lastInsertRowId().executeAsOne()
         // MONTHLY: cobra 5_000 tal cual (interval = día 15 del mes, no multiplica).
-        db.subscriptionQueries.insert("Streaming", 5_000, "USD", null, null, "MONTHLY", 15, 0, 3, 1)
+        db.subscriptionQueries.insert("Streaming", 5_000, "USD", catId, null, "MONTHLY", 15, 0, 3, 1)
         // DAILY cada 7 días: 700 x 30.437 / 7 = 3043.7... -> 3_044.
-        db.subscriptionQueries.insert("Café diario", 700, "USD", null, null, "DAILY", 7, 0, 0, 1)
+        db.subscriptionQueries.insert("Café diario", 700, "USD", catId, null, "DAILY", 7, 0, 0, 1)
 
         val subscriptions = db.subscriptionQueries.selectAll().executeAsList()
 
@@ -118,7 +146,6 @@ class AnalysisViewModelTest {
 
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
         val referenceMonth = LocalDate(today.year, today.month, 1)
-        val period = monthPeriod(referenceMonth)
 
         // 6 categorías con conteos distintos y decrecientes: 6,5,4,3,2,1.
         val counts = listOf(6, 5, 4, 3, 2, 1)
@@ -133,9 +160,8 @@ class AnalysisViewModelTest {
         }
 
         val frequent = AnalysisViewModel.computeFrequentExpenses(
-            txs = db.transactionQueries.selectAll().executeAsList(),
+            expenseTxs = db.transactionQueries.selectAll().executeAsList(),
             cats = db.categoryQueries.selectAll().executeAsList(),
-            period = period,
         )
 
         // topN=5 por defecto: la categoría de menor conteo (Cat5, count=1) queda fuera.
@@ -146,7 +172,7 @@ class AnalysisViewModelTest {
 
     @Test
     fun computeFrequentExpensesConListaVaciaDevuelveVacio() {
-        val frequent = AnalysisViewModel.computeFrequentExpenses(txs = emptyList(), cats = emptyList(), period = 202607)
+        val frequent = AnalysisViewModel.computeFrequentExpenses(expenseTxs = emptyList(), cats = emptyList())
         assertEquals(emptyList(), frequent)
     }
 
@@ -179,9 +205,8 @@ class AnalysisViewModelTest {
         }
 
         val frequent = AnalysisViewModel.computeFrequentExpenses(
-            txs = db.transactionQueries.selectAll().executeAsList(),
+            expenseTxs = db.transactionQueries.selectAll().executeAsList(),
             cats = cats,
-            period = monthPeriod(referenceMonth),
         )
 
         assertEquals(listOf("Segunda", "Primera"), frequent.map { it.name })
@@ -232,13 +257,104 @@ class AnalysisViewModelTest {
         )
 
         val frequent = AnalysisViewModel.computeFrequentExpenses(
-            txs = db.transactionQueries.selectAll().executeAsList(),
+            expenseTxs = db.transactionQueries.selectAll().executeAsList(),
             cats = cats,
-            period = monthPeriod(referenceMonth),
         )
 
         assertEquals("Comida", frequent.first().name)
         assertEquals("Restaurantes", frequent.first().subcategoryName)
+    }
+
+    @Test
+    fun computeCategoryBreakdownSubeSubcategoriaAPadreYSumaMonto() {
+        val db = freshDb()
+        db.accountQueries.insert("Efectivo", "CASH", "USD", 0, 0, 0)
+        val account = db.accountQueries.selectAll().executeAsList().first()
+        db.categoryQueries.insert(null, "Comida", "", 0, "EXPENSE")
+        val parent = db.categoryQueries.selectAll().executeAsList().first { it.name == "Comida" }
+        db.categoryQueries.insert(parent.id, "Restaurantes", "", 0xFF00FF00L, "EXPENSE")
+        val cats = db.categoryQueries.selectAll().executeAsList()
+        val child = cats.first { it.name == "Restaurantes" }
+
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        db.transactionQueries.insert(
+            account.id, child.id, 100, "USD", today.toEpochDays().toLong(), "cena", "EXPENSE", null, null, null, null,
+        )
+
+        val breakdown = AnalysisViewModel.computeCategoryBreakdown(
+            expenseTxs = db.transactionQueries.selectAll().executeAsList(),
+            cats = cats,
+        )
+
+        assertEquals(1, breakdown.size)
+        val comida = breakdown.first()
+        assertEquals("Comida", comida.name)
+        assertEquals(100, comida.amountMinor)
+        assertEquals(1, comida.subcategories.size)
+        assertEquals("Restaurantes", comida.subcategories.first().name)
+        assertEquals(100, comida.subcategories.first().amountMinor)
+        assertEquals(1f, comida.subcategories.first().pct)
+    }
+
+    @Test
+    fun computeCategoryBreakdownPctDeSubcategoriaEsRelativoAlTotalDelPadre() {
+        val db = freshDb()
+        db.accountQueries.insert("Efectivo", "CASH", "USD", 0, 0, 0)
+        val account = db.accountQueries.selectAll().executeAsList().first()
+        db.categoryQueries.insert(null, "Comida", "", 0, "EXPENSE")
+        val parent = db.categoryQueries.selectAll().executeAsList().first { it.name == "Comida" }
+        db.categoryQueries.insert(parent.id, "Restaurantes", "", 0, "EXPENSE")
+        db.categoryQueries.insert(parent.id, "Cafe", "", 0, "EXPENSE")
+        db.categoryQueries.insert(null, "Transporte", "", 0, "EXPENSE")
+        val cats = db.categoryQueries.selectAll().executeAsList()
+        val restaurantes = cats.first { it.name == "Restaurantes" }
+        val cafe = cats.first { it.name == "Cafe" }
+        val transporte = cats.first { it.name == "Transporte" }
+
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        val epoch = today.toEpochDays().toLong()
+        db.transactionQueries.insert(account.id, restaurantes.id, 300, "USD", epoch, "cena", "EXPENSE", null, null, null, null)
+        db.transactionQueries.insert(account.id, cafe.id, 100, "USD", epoch, "cafe", "EXPENSE", null, null, null, null)
+        db.transactionQueries.insert(account.id, transporte.id, 400, "USD", epoch, "bus", "EXPENSE", null, null, null, null)
+
+        val breakdown = AnalysisViewModel.computeCategoryBreakdown(
+            expenseTxs = db.transactionQueries.selectAll().executeAsList(),
+            cats = cats,
+        )
+
+        val comida = breakdown.first { it.name == "Comida" }
+        // 400 de 800 total general = 0.5
+        assertEquals(0.5f, comida.pct)
+        // dentro de Comida (400): Restaurantes 300/400=0.75, Cafe 100/400=0.25
+        assertEquals(0.75f, comida.subcategories.first { it.name == "Restaurantes" }.pct)
+        assertEquals(0.25f, comida.subcategories.first { it.name == "Cafe" }.pct)
+    }
+
+    @Test
+    fun computeCategoryBreakdownCategoriaSinSubcategoriasDevuelveListaVacia() {
+        val db = freshDb()
+        db.accountQueries.insert("Efectivo", "CASH", "USD", 0, 0, 0)
+        val account = db.accountQueries.selectAll().executeAsList().first()
+        db.categoryQueries.insert(null, "Transporte", "", 0, "EXPENSE")
+        val cats = db.categoryQueries.selectAll().executeAsList()
+        val cat = cats.first { it.name == "Transporte" }
+
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+        db.transactionQueries.insert(
+            account.id, cat.id, 100, "USD", today.toEpochDays().toLong(), "bus", "EXPENSE", null, null, null, null,
+        )
+
+        val breakdown = AnalysisViewModel.computeCategoryBreakdown(
+            expenseTxs = db.transactionQueries.selectAll().executeAsList(),
+            cats = cats,
+        )
+
+        assertEquals(emptyList(), breakdown.first().subcategories)
+    }
+
+    @Test
+    fun computeCategoryBreakdownConListaVaciaDevuelveVacio() {
+        assertEquals(emptyList(), AnalysisViewModel.computeCategoryBreakdown(expenseTxs = emptyList(), cats = emptyList()))
     }
 
     @Test
@@ -257,9 +373,8 @@ class AnalysisViewModelTest {
         )
 
         val frequent = AnalysisViewModel.computeFrequentExpenses(
-            txs = db.transactionQueries.selectAll().executeAsList(),
+            expenseTxs = db.transactionQueries.selectAll().executeAsList(),
             cats = cats,
-            period = monthPeriod(referenceMonth),
         )
 
         assertEquals("Transporte", frequent.first().name)

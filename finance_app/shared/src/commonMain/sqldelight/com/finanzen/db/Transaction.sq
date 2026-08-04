@@ -1,7 +1,11 @@
+-- ponytail: categoryId pasó a NOT NULL sin migración (proyecto pre-release) — todo movimiento
+-- debe apuntar siempre a una subcategoría (hoja de Category.parentId); ver DefaultSeed.kt para
+-- las categorías de sistema (Transferencias/Ajustes/Suscripciones) usadas cuando no hay una
+-- categoría explícita. Reinstala/limpia la BD de desarrollo tras este cambio.
 CREATE TABLE TransactionRow (
     id                  INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     accountId           INTEGER NOT NULL REFERENCES Account(id),
-    categoryId          INTEGER REFERENCES Category(id),
+    categoryId          INTEGER NOT NULL REFERENCES Category(id),
     amountMinor         INTEGER NOT NULL,
     currency            TEXT NOT NULL REFERENCES Currency(code),
     date                INTEGER NOT NULL,                     -- epoch day
@@ -59,6 +63,9 @@ DELETE FROM TransactionRow WHERE id = ?;
 
 deleteByAccount:
 DELETE FROM TransactionRow WHERE accountId = ?;
+
+deleteByCategory:
+DELETE FROM TransactionRow WHERE categoryId = ?;
 
 countByInstallmentPlan:
 SELECT COUNT(*) FROM TransactionRow WHERE installmentPlanId = ?;

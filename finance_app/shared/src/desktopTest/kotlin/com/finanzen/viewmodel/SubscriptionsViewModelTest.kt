@@ -2,6 +2,7 @@ package com.finanzen.viewmodel
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.finanzen.data.AccountRepository
+import com.finanzen.data.CategoryRepository
 import com.finanzen.data.SettingsRepository
 import com.finanzen.data.SubscriptionRepository
 import com.finanzen.data.TransactionRepository
@@ -21,13 +22,22 @@ class SubscriptionsViewModelTest {
         return FinanzenDb(driver)
     }
 
-    private fun buildVm(db: FinanzenDb) = SubscriptionsViewModel(
-        SubscriptionRepository(db),
-        AccountRepository(db),
-        TransactionRepository(db),
-        SettingsRepository(db),
-        NotificationScheduler(),
-    )
+    /** Siembra la categoría de sistema "Suscripciones/Suscripción" que DefaultSeed.kt crea en la
+     * app real — addSubscription() cae en ella cuando no se pasa categoryId explícito. */
+    private fun buildVm(db: FinanzenDb): SubscriptionsViewModel {
+        val scheduler = NotificationScheduler()
+        db.categoryQueries.insert(parentId = null, name = "Suscripciones", icon = "", color = 0, kind = "EXPENSE")
+        val sysParentId = db.categoryQueries.lastInsertRowId().executeAsOne()
+        db.categoryQueries.insert(parentId = sysParentId, name = "Suscripción", icon = "", color = 0, kind = "EXPENSE")
+        return SubscriptionsViewModel(
+            SubscriptionRepository(db),
+            AccountRepository(db),
+            SettingsRepository(db),
+            scheduler,
+            SubscriptionCatchUp(SubscriptionRepository(db), AccountRepository(db), TransactionRepository(db), scheduler),
+            CategoryRepository(db),
+        )
+    }
 
     private fun todayEpochDay(): Long = Clock.System.todayIn(TimeZone.currentSystemDefault()).toEpochDays().toLong()
 
@@ -38,7 +48,7 @@ class SubscriptionsViewModelTest {
         val accountId = AccountRepository(db).add("Efectivo", "CASH", "USD")
         val future = todayEpochDay() + 10
 
-        buildVm(db).addSubscription("Streaming", 5_000, "DAILY", 30, accountId, future)
+        buildVm(db).addSubscription("Streaming", 5_000, "DAILY", 30, accountId, future, categoryId = null)
 
         assertTrue(db.transactionQueries.selectAll().executeAsList().isEmpty())
         val sub = db.subscriptionQueries.selectActive().executeAsList().first()
@@ -52,7 +62,7 @@ class SubscriptionsViewModelTest {
         val accountId = AccountRepository(db).add("Efectivo", "CASH", "USD")
         val past = todayEpochDay() - 5
 
-        buildVm(db).addSubscription("Streaming", 5_000, "DAILY", 1, accountId, past)
+        buildVm(db).addSubscription("Streaming", 5_000, "DAILY", 1, accountId, past, categoryId = null)
 
         val txs = db.transactionQueries.selectAll().executeAsList()
         assertTrue(txs.isNotEmpty())
@@ -69,7 +79,7 @@ class SubscriptionsViewModelTest {
         accountRepo.add("Efectivo", "CASH", "USD")
         val creditId = accountRepo.add("Tarjeta", "CREDIT", "USD")
 
-        buildVm(db).addSubscription("Streaming", 5_000, "DAILY", 30, creditId, todayEpochDay())
+        buildVm(db).addSubscription("Streaming", 5_000, "DAILY", 30, creditId, todayEpochDay(), categoryId = null)
 
         val sub = db.subscriptionQueries.selectActive().executeAsList().first()
         assertEquals(creditId, sub.accountId)

@@ -3,7 +3,7 @@
 CREATE TABLE InstallmentPlan (
     id                INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     cardId            INTEGER NOT NULL REFERENCES Card(id) ON DELETE CASCADE,
-    categoryId        INTEGER REFERENCES Category(id),     -- para replicar la categoría en cada cuota generada
+    categoryId        INTEGER NOT NULL REFERENCES Category(id), -- para replicar la categoría en cada cuota generada
     totalAmountMinor  INTEGER NOT NULL,
     installments      INTEGER NOT NULL,
     interestRate      REAL NOT NULL DEFAULT 0.0,
@@ -41,6 +41,9 @@ DELETE FROM InstallmentPlan WHERE id = ?;
 
 deleteByCard:
 DELETE FROM InstallmentPlan WHERE cardId = ?;
+
+deleteByCategory:
+DELETE FROM InstallmentPlan WHERE categoryId = ?;
 
 rescaleAllTotals:
 UPDATE InstallmentPlan SET totalAmountMinor = (totalAmountMinor * ?) / ?;

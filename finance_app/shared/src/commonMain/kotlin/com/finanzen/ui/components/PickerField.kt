@@ -31,6 +31,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.finanzen.ui.theme.LocalSpacing
@@ -72,12 +76,18 @@ fun <T> PickerField(
             modifier = Modifier.fillMaxWidth(),
         )
         // Overlay transparente: el OutlinedTextField readOnly no expone onClick, así que capturamos
-        // el toque encima de él.
+        // el toque encima de él. clearAndSetSemantics: sin él, TalkBack anuncia el TextField como
+        // "campo de solo lectura" y el overlay no existe como control — este picker era invisible
+        // para lectores de pantalla en todo el flujo de captura.
         androidx.compose.foundation.layout.Box(
             Modifier
                 .matchParentSize()
                 .clip(MaterialTheme.shapes.extraSmall)
-                .clickable { open = true },
+                .clickable(onClickLabel = "Abrir opciones") { open = true }
+                .clearAndSetSemantics {
+                    role = Role.Button
+                    contentDescription = "$label: ${selected?.let(optionLabel) ?: placeholder}"
+                },
         )
     }
 

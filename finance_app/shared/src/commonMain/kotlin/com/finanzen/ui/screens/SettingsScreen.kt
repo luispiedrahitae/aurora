@@ -2,7 +2,6 @@ package com.finanzen.ui.screens
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -52,6 +51,7 @@ import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.InfoTooltip
 import com.finanzen.ui.components.SectionHeader
 import com.finanzen.ui.theme.AccentPreset
+import com.finanzen.ui.theme.motionTween
 import com.finanzen.viewmodel.SettingsViewModel
 import com.finanzen.viewmodel.ThemeMode
 import org.koin.compose.koinInject
@@ -65,6 +65,7 @@ fun SettingsScreen(
     val theme by vm.theme.collectAsState()
     val accent by vm.accent.collectAsState()
     val dynamicColor by vm.dynamicColor.collectAsState()
+    val reduceMotion by vm.reduceMotion.collectAsState()
 
     Scaffold(
         topBar = {
@@ -147,6 +148,26 @@ fun SettingsScreen(
                     }
                 }
             }
+
+            item { SectionHeader("Animaciones") }
+            item {
+                FinanceCard(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text("Reducir animaciones", fontWeight = FontWeight.SemiBold)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Switch(checked = reduceMotion, onCheckedChange = vm::setReduceMotion)
+                            InfoTooltip(
+                                "Sustituye las animaciones por cambios instantáneos.",
+                                contentDescription = "Qué hace reducir animaciones",
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -162,7 +183,7 @@ private fun AccentSwatch(
     enabled: Boolean,
     onClick: () -> Unit,
 ) {
-    val ring by animateDpAsState(if (selected) 2.dp else 0.dp, tween(180), label = "accentRing")
+    val ring by animateDpAsState(if (selected) 2.dp else 0.dp, motionTween(180), label = "accentRing")
     Box(
         modifier = Modifier
             .size(56.dp)
@@ -179,8 +200,8 @@ private fun AccentSwatch(
         ) {
             AnimatedVisibility(
                 visible = selected,
-                enter = fadeIn(tween(150)) + scaleIn(tween(150), initialScale = 0.6f),
-                exit = fadeOut(tween(120)) + scaleOut(tween(120), targetScale = 0.6f),
+                enter = fadeIn(motionTween(150)) + scaleIn(motionTween(150), initialScale = 0.6f),
+                exit = fadeOut(motionTween(120)) + scaleOut(motionTween(120), targetScale = 0.6f),
             ) {
                 Icon(Icons.Outlined.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
             }

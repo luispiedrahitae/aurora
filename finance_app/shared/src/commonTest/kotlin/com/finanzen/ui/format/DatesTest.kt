@@ -27,32 +27,35 @@ class DatesTest {
 
     @Test
     fun formatDiaMesOrdenDMY() {
+        // mesCorto()/mesLargo() ignoran locale.shortMonths/longMonths a propósito (ver comentario
+        // ponytail en Dates.kt: la UI es 100% español, solo el orden día/mes/año varía por moneda)
+        // y usan siempre MESES_CORTOS, que lleva punto ("jul.").
         val epochDay = LocalDate(2026, 7, 1).toEpochDays().toLong()
-        assertEquals("1 jul", formatDiaMes(epochDay, locale(DateOrder.DMY)))
+        assertEquals("1 jul.", formatDiaMes(epochDay, locale(DateOrder.DMY)))
     }
 
     @Test
     fun formatDiaMesOrdenMDY() {
         val epochDay = LocalDate(2026, 7, 1).toEpochDays().toLong()
-        assertEquals("jul 1", formatDiaMes(epochDay, locale(DateOrder.MDY)))
+        assertEquals("jul. 1", formatDiaMes(epochDay, locale(DateOrder.MDY)))
     }
 
     @Test
     fun formatFechaCortaOrdenDMY() {
         val epochDay = LocalDate(2026, 7, 1).toEpochDays().toLong()
-        assertEquals("1 jul 2026", formatFechaCorta(epochDay, locale(DateOrder.DMY)))
+        assertEquals("1 jul. 2026", formatFechaCorta(epochDay, locale(DateOrder.DMY)))
     }
 
     @Test
     fun formatFechaCortaOrdenMDY() {
         val epochDay = LocalDate(2026, 7, 1).toEpochDays().toLong()
-        assertEquals("jul 1, 2026", formatFechaCorta(epochDay, locale(DateOrder.MDY)))
+        assertEquals("jul. 1, 2026", formatFechaCorta(epochDay, locale(DateOrder.MDY)))
     }
 
     @Test
     fun formatFechaCortaOrdenYMD() {
         val epochDay = LocalDate(2026, 7, 1).toEpochDays().toLong()
-        assertEquals("2026 jul 1", formatFechaCorta(epochDay, locale(DateOrder.YMD)))
+        assertEquals("2026 jul. 1", formatFechaCorta(epochDay, locale(DateOrder.YMD)))
     }
 
     @Test
@@ -62,8 +65,10 @@ class DatesTest {
 
     @Test
     fun sinLocaleExplicitoUsaElDefaultDeUsd() {
-        // Sin pasar `locale`, el parámetro por defecto es DEFAULT_LOCALE_INFO (= USD): inglés, MDY.
-        assertEquals("July 2026", formatMesAnio(LocalDate(2026, 7, 1)))
+        // Sin pasar `locale`, el parámetro por defecto es DEFAULT_LOCALE_INFO -- pero mesLargo()
+        // ignora shortMonths/longMonths a propósito (ver Dates.kt), así que el mes sigue en español
+        // igual que con cualquier otro locale; DEFAULT_LOCALE_INFO solo afecta symbolPosition/dateOrder.
+        assertEquals("Julio 2026", formatMesAnio(LocalDate(2026, 7, 1)))
     }
 
     @Test

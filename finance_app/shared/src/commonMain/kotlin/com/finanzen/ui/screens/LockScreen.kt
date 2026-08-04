@@ -31,6 +31,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -81,7 +85,15 @@ fun LockScreen(vm: SecurityViewModel) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             PinDots(entered.length, max = PIN_MAX)
-            error?.let { Text(it, color = finance.expense, style = MaterialTheme.typography.bodyMedium) }
+            error?.let {
+                Text(
+                    it,
+                    color = finance.expense,
+                    style = MaterialTheme.typography.bodyMedium,
+                    // liveRegion: el lector de pantalla anuncia el error al fallar el PIN.
+                    modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                )
+            }
             Keypad(
                 onDigit = { d -> if (entered.length < PIN_MAX) entered += d },
                 onBackspace = { entered = entered.dropLast(1) },
@@ -104,7 +116,10 @@ fun LockScreen(vm: SecurityViewModel) {
 
 @Composable
 private fun PinDots(count: Int, max: Int) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.semantics { contentDescription = "$count de $max dígitos introducidos" },
+    ) {
         repeat(max) { i ->
             Box(
                 modifier = Modifier
@@ -163,7 +178,7 @@ private fun KeypadCell(label: String, modifier: Modifier, onClick: () -> Unit) {
     ) {
         Box(contentAlignment = Alignment.Center) {
             when (label) {
-                "←" -> Icon(Icons.AutoMirrored.Outlined.Backspace, null)
+                "←" -> Icon(Icons.AutoMirrored.Outlined.Backspace, contentDescription = "Borrar dígito")
                 else -> Text(label, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
             }
         }

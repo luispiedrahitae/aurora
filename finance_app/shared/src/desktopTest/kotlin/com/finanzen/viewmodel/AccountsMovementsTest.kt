@@ -26,9 +26,10 @@ class AccountsMovementsTest {
         accountRepo.add("Zetacuenta", "SAVINGS", a.currency, openingBalanceMinor = 0)
         val b = accountRepo.all().first { it.name == "Zetacuenta" }.id
 
+        val expenseCat = db.categoryQueries.selectByKind("EXPENSE").executeAsList().first()
         val tx = TransactionRepository(db)
-        tx.add(a.id, null, 1000, a.currency, 20000, "café", "EXPENSE")
-        tx.add(b, null, 2000, a.currency, 20001, "taxi", "EXPENSE")
+        tx.add(a.id, expenseCat.id, 1000, a.currency, 20000, "café", "EXPENSE")
+        tx.add(b, expenseCat.id, 2000, a.currency, 20001, "taxi", "EXPENSE")
 
         val grouped = AccountsViewModel.groupByAccount(db.transactionQueries.selectAll().executeAsList())
 
@@ -50,15 +51,16 @@ class AccountsMovementsTest {
         cardRepo.add(accId, "", "OTRA", 1_000_000L, null, null, 0.0)
         val cardId = cardRepo.byAccount(accId)!!.id
 
-        val plan1 = planRepo.add(cardId, null, 90_000, 3, 0.0, startDateEpochDay = 100, description = "Plan1")
-        val plan2 = planRepo.add(cardId, null, 60_000, 2, 0.0, startDateEpochDay = 105, description = "Plan2")
+        val expenseCat = db.categoryQueries.selectByKind("EXPENSE").executeAsList().first()
+        val plan1 = planRepo.add(cardId, expenseCat.id, 90_000, 3, 0.0, startDateEpochDay = 100, description = "Plan1")
+        val plan2 = planRepo.add(cardId, expenseCat.id, 60_000, 2, 0.0, startDateEpochDay = 105, description = "Plan2")
 
         // Fechas intercaladas entre los dos planes a propósito: cada uno debe numerarse solo, sin cruzarse.
-        txRepo.add(accId, null, 30_000, "USD", 100, "Plan1", "EXPENSE", installmentPlanId = plan1)
-        txRepo.add(accId, null, 30_000, "USD", 105, "Plan2", "EXPENSE", installmentPlanId = plan2)
-        txRepo.add(accId, null, 30_000, "USD", 130, "Plan1", "EXPENSE", installmentPlanId = plan1)
-        txRepo.add(accId, null, 30_000, "USD", 135, "Plan2", "EXPENSE", installmentPlanId = plan2)
-        txRepo.add(accId, null, 30_000, "USD", 160, "Plan1", "EXPENSE", installmentPlanId = plan1)
+        txRepo.add(accId, expenseCat.id, 30_000, "USD", 100, "Plan1", "EXPENSE", installmentPlanId = plan1)
+        txRepo.add(accId, expenseCat.id, 30_000, "USD", 105, "Plan2", "EXPENSE", installmentPlanId = plan2)
+        txRepo.add(accId, expenseCat.id, 30_000, "USD", 130, "Plan1", "EXPENSE", installmentPlanId = plan1)
+        txRepo.add(accId, expenseCat.id, 30_000, "USD", 135, "Plan2", "EXPENSE", installmentPlanId = plan2)
+        txRepo.add(accId, expenseCat.id, 30_000, "USD", 160, "Plan1", "EXPENSE", installmentPlanId = plan1)
 
         val movements = db.transactionQueries.selectAll().executeAsList()
         val index = AccountsViewModel.installmentIndexByTransaction(movements)

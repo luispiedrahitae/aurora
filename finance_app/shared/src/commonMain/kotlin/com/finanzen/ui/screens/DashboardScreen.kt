@@ -1,7 +1,6 @@
 package com.finanzen.ui.screens
 
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -15,7 +14,6 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.PieChart
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.Icon
@@ -30,24 +28,34 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.finanzen.ui.components.AccountBalanceBars
 import com.finanzen.ui.components.AutoSizeText
 import com.finanzen.ui.components.BentoTileSize
-import com.finanzen.ui.components.CategoryDonutChart
-import com.finanzen.ui.components.EmptyState
+import com.finanzen.ui.components.BudgetProgressCard
+import com.finanzen.ui.components.CategoryBreakdownSection
 import com.finanzen.ui.components.FinanceCard
+import com.finanzen.ui.components.KpiDelta
+import com.finanzen.ui.components.KpiDeltaLine
 import com.finanzen.ui.components.MainTabHeader
 import com.finanzen.ui.components.MonthlyBarChart
 import com.finanzen.ui.components.NetWorthAreaChart
 import com.finanzen.ui.components.SectionHeader
+import com.finanzen.ui.components.TopFrequentExpensesList
 import com.finanzen.ui.components.YearSelector
+import com.finanzen.ui.components.kpiDelta
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.ui.theme.LocalSpacing
+import com.finanzen.ui.theme.motionTween
 import com.finanzen.viewmodel.DashboardViewModel
 import com.finanzen.viewmodel.SettingsViewModel
+import kotlinx.datetime.Clock
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.math.roundToInt
@@ -77,6 +85,7 @@ fun DashboardScreen(
             onPrev = { vm.setYear(year - 1) },
             onNext = { vm.setYear(year + 1) },
             modifier = Modifier.padding(horizontal = spacing.lg),
+            onLabelClick = { vm.setYear(Clock.System.todayIn(TimeZone.currentSystemDefault()).year) },
         )
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
@@ -100,6 +109,8 @@ fun DashboardScreen(
                     "Ingresos",
                     if (hideAmounts) MASK else fmt.format(data.yearIncomeMinor, data.currency),
                     finance.income,
+                    masked = hideAmounts,
+                    delta = kpiDelta(data.yearIncomeMinor, data.prevYearIncomeMinor, "${year - 1}", upIsGood = true),
                 )
             }
             item {
@@ -107,48 +118,67 @@ fun DashboardScreen(
                     "Gastos",
                     if (hideAmounts) MASK else fmt.format(data.yearExpenseMinor, data.currency),
                     finance.expense,
+                    masked = hideAmounts,
+                    delta = kpiDelta(data.yearExpenseMinor, data.prevYearExpenseMinor, "${year - 1}", upIsGood = false),
                 )
             }
 
             item {
+                val ratePct = (data.savingsRate * 100).roundToInt()
                 KpiCard(
                     "Tasa de ahorro anual",
-                    "${(data.savingsRate * 100).roundToInt()}%",
-                    MaterialTheme.colorScheme.onSurface,
+                    "$ratePct%",
+                    // Déficit (negativa): rosa informativo, nunca alarma (No-Shame Rule).
+                    if (ratePct < 0) finance.expense else MaterialTheme.colorScheme.onSurface,
                 )
             }
             item {
                 KpiCard(
-                    "Suscripciones",
+                    "Suscripciones (gastado)",
                     if (hideAmounts) MASK else fmt.format(data.subscriptionSpendMinor, data.currency),
                     MaterialTheme.colorScheme.onSurface,
+                    masked = hideAmounts,
                 )
             }
 
-            item(span = fullSpan) { SectionHeader("Saldos por cuenta") }
-            item(span = fullSpan) { AccountBalanceBars(data.accounts, data.currency) }
+            // Presupuesto vs gasto real del mes en curso (los presupuestos son mensuales, no
+            // anuales): el top de categorías más consumidas, para actuar sin ir a la pestaña.
+            if (data.budgets.isNotEmpty()) {
+                item(span = fullSpan) { SectionHeader("Presupuestos del mes") }
+                val topBudgets = data.budgets
+                    .sortedByDescending { it.spentMinor.toFloat() / it.limitMinor.toFloat() }
+                    .take(3)
+                topBudgets.forEach { row ->
+                    item(span = fullSpan) { BudgetProgressCard(row, data.currency) }
+                }
+            }
 
-            item(span = fullSpan) { SectionHeader("Patrimonio neto") }
-            item(span = fullSpan) { NetWorthAreaChart(data.netWorthByMonth, data.currency) }
+            if (data.accounts.isNotEmpty()) {
+                item(span = fullSpan) { SectionHeader("Saldos por cuenta") }
+                item(span = fullSpan) { AccountBalanceBars(data.accounts, data.currency) }
+            }
 
-            item(span = fullSpan) { SectionHeader("Ingresos por mes") }
-            item(span = fullSpan) { MonthlyBarChart(data.incomeByMonth, data.currency, finance.income, "Ingresos") }
+            if (data.accounts.any { it.type in DashboardViewModel.NET_WORTH_TYPES }) {
+                item(span = fullSpan) { SectionHeader("Patrimonio neto") }
+                item(span = fullSpan) { NetWorthAreaChart(data.netWorthByMonth, data.currency) }
+            }
 
-            item(span = fullSpan) { SectionHeader("Gastos por mes") }
-            item(span = fullSpan) { MonthlyBarChart(data.expenseByMonth, data.currency, finance.expense, "Gastos") }
+            if (data.incomeByMonth.any { it.amountMinor > 0 }) {
+                item(span = fullSpan) { SectionHeader("Ingresos por mes") }
+                item(span = fullSpan) { MonthlyBarChart(data.incomeByMonth, data.currency, finance.income, "Ingresos") }
+            }
+
+            if (data.expenseByMonth.any { it.amountMinor > 0 }) {
+                item(span = fullSpan) { SectionHeader("Gastos por mes") }
+                item(span = fullSpan) { MonthlyBarChart(data.expenseByMonth, data.currency, finance.expense, "Gastos") }
+            }
 
             item(span = fullSpan) { SectionHeader("Gastos por categoría") }
-            if (data.donut.isEmpty()) {
-                item(span = fullSpan) {
-                    EmptyState(
-                        icon = Icons.Outlined.PieChart,
-                        title = "Sin gastos este año",
-                        subtitle = "Añade movimientos desde la pestaña Movimientos.",
-                        modifier = Modifier.padding(spacing.xl),
-                    )
-                }
-            } else {
-                item(span = fullSpan) { CategoryDonutChart(data.donut, data.currency) }
+            item(span = fullSpan) { CategoryBreakdownSection(data.categoryBreakdown, data.currency) }
+
+            if (data.frequent.isNotEmpty()) {
+                item(span = fullSpan) { SectionHeader("Gastos más frecuentes") }
+                item(span = fullSpan) { TopFrequentExpensesList(data.frequent, data.currency) }
             }
         }
     }
@@ -177,7 +207,7 @@ private fun BalanceHeroCard(
     val fmt = LocalMoneyFormat.current
     val haptic = LocalHapticFeedback.current
     val balanceColor = if (totalBalance >= 0) onSurface else expenseRed
-    val animatedBalance by animateFloatAsState(targetValue = totalBalance.toFloat(), animationSpec = tween(400))
+    val animatedBalance by animateFloatAsState(targetValue = totalBalance.toFloat(), animationSpec = motionTween(400))
     val balanceText = if (hidden) MASK else fmt.format(animatedBalance.toLong(), currency)
 
     FinanceCard(size = BentoTileSize.Hero, glass = true, contentPadding = PaddingValues(spacing.xl)) {
@@ -202,7 +232,8 @@ private fun BalanceHeroCard(
             }
             AutoSizeText(
                 text = balanceText,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth()
+                    .then(if (hidden) Modifier.semantics { contentDescription = "Monto oculto" } else Modifier),
                 maxFontSize = MaterialTheme.typography.displayLarge.fontSize,
                 color = balanceColor,
                 fontWeight = FontWeight.SemiBold,
@@ -213,13 +244,16 @@ private fun BalanceHeroCard(
 }
 
 /** Tile de KPI del año seleccionado: recibe el valor ya formateado (dinero u otra unidad, p. ej.
- * un porcentaje) para servir tanto montos como tasas sin duplicar el componente. */
+ * un porcentaje) para servir tanto montos como tasas sin duplicar el componente. [delta] añade la
+ * línea "vs año anterior"; [masked] marca semánticamente el valor oculto por privacidad. */
 @Composable
 private fun KpiCard(
     label: String,
     valueText: String,
     accent: Color,
     modifier: Modifier = Modifier,
+    masked: Boolean = false,
+    delta: KpiDelta? = null,
 ) {
     val spacing = LocalSpacing.current
     FinanceCard(modifier = modifier, contentPadding = PaddingValues(spacing.md)) {
@@ -231,7 +265,9 @@ private fun KpiCard(
                 fontWeight = FontWeight.SemiBold,
                 color = accent,
                 maxLines = 1,
+                modifier = if (masked) Modifier.semantics { contentDescription = "Monto oculto" } else Modifier,
             )
+            delta?.let { KpiDeltaLine(it) }
         }
     }
 }

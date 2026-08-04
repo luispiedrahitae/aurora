@@ -45,12 +45,30 @@ class AccountRepositoryTest {
         val planRepo = InstallmentPlanRepository(db)
         val vm = AccountsViewModel(accountRepo, txRepo, cardRepo, planRepo, SettingsRepository(db), NotificationScheduler())
         val accId = accountRepo.add(name = "Efectivo", type = "CASH", currency = "USD")
-        txRepo.add(accountId = accId, categoryId = null, amountMinor = 1_000, currency = "USD", epochDay = 0, note = "super", kind = "EXPENSE")
+        val catId = CategoryRepository(db).addAndGetId("Comida", "EXPENSE", null)
+        txRepo.add(accountId = accId, categoryId = catId, amountMinor = 1_000, currency = "USD", epochDay = 0, note = "super", kind = "EXPENSE")
 
         vm.delete(accId)
 
         assertEquals(0, accountRepo.all().size) // la cuenta desapareció
         assertEquals(0, txRepo.all().size) // y su transacción, con ella
+    }
+
+    @Test
+    fun addDevuelveElIdDeLaCuentaNuevaAunqueNoOrdeneUltimaAlfabeticamente() {
+        // FIX (hallazgo crítico): add() resolvía el id nuevo con selectAll().last(), pero selectAll
+        // ordena por name -- si la cuenta nueva no ordena última alfabéticamente, .last() devolvía
+        // el id de OTRA cuenta ya existente. "Ahorros" ordena antes que "Efectivo"/"Tarjeta...".
+        val db = freshDb()
+        db.currencyQueries.upsert("USD", "$", 2, 1.0, "US Dollar", ".", ",")
+        val repo = AccountRepository(db)
+        repo.add(name = "Efectivo", type = "CASH", currency = "USD")
+        repo.add(name = "Tarjeta de Débito", type = "DEBIT", currency = "USD")
+        val savingsId = repo.add(name = "Ahorros", type = "SAVINGS", currency = "USD")
+
+        val savings = repo.all().single { it.id == savingsId }
+        assertEquals("Ahorros", savings.name)
+        assertEquals("SAVINGS", savings.type)
     }
 
     @Test
@@ -65,7 +83,8 @@ class AccountRepositoryTest {
         val accId = accountRepo.add(name = "Tarjeta", type = "CREDIT", currency = "USD")
         cardRepo.add(accountId = accId, last4 = "1234", network = "OTRA", creditLimitMinor = 100_000, cutoffDay = null, dueDay = null)
         val cardId = cardRepo.byAccount(accId)!!.id
-        planRepo.add(cardId = cardId, categoryId = null, totalAmountMinor = 30_000, installments = 3, interestRate = 0.0, startDateEpochDay = 0, description = "compra")
+        val catId = CategoryRepository(db).addAndGetId("Compras", "EXPENSE", null)
+        planRepo.add(cardId = cardId, categoryId = catId, totalAmountMinor = 30_000, installments = 3, interestRate = 0.0, startDateEpochDay = 0, description = "compra")
 
         vm.delete(accId)
 

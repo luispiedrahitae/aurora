@@ -70,9 +70,10 @@ class BackupFormatTest {
         db.currencyQueries.upsert("USD", "$", 2, 1.0, "US Dollar", ".", ",")
         val accountRepo = AccountRepository(db)
         val accId = accountRepo.add(name = "Efectivo", type = "CASH", currency = "USD")
-        db.subscriptionQueries.insert("Streaming", 1_500, "USD", null, accId, "MONTHLY", 15, 0, 3, 1)
+        val catId = CategoryRepository(db).addAndGetId("Suscripciones", "EXPENSE", null)
+        db.subscriptionQueries.insert("Streaming", 1_500, "USD", catId, accId, "MONTHLY", 15, 0, 3, 1)
         val subscription = db.subscriptionQueries.selectAll().executeAsList().first()
-        db.transactionQueries.insert(accId, null, 1_500, "USD", 0, "cargo streaming", "EXPENSE", null, null, null, subscription.id)
+        db.transactionQueries.insert(accId, catId, 1_500, "USD", 0, "cargo streaming", "EXPENSE", null, null, null, subscription.id)
 
         val snapshot = BackupSerializer.snapshotOf(db, 0)
         BackupSerializer.restore(db, snapshot) // primer restore

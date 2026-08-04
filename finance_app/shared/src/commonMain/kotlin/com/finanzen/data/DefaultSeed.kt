@@ -32,7 +32,9 @@ fun seedIfEmpty(db: FinanzenDb) {
                 db.settingQueries.put(SettingsRepository.KEY_CURRENCY, initialCurrency)
 
                 // (nombre, clave de icono, color ARGB). Las claves deben existir en categoryIcons (UI);
-                // el color es un ARGB de la paleta para que el seed inicial se vea variado.
+                // el color es un ARGB de la paleta para que el seed inicial se vea variado. Cada
+                // categoría recibe una subcategoría "General" — categoryId ahora exige siempre una
+                // hoja (ver Transaction.sq), así que ninguna categoría puede quedar sin al menos una.
                 val expenseSeeds = listOf(
                     Triple("Alimentación", "restaurant", 0xFFE53935),
                     Triple("Transporte", "car", 0xFF1E88E5),
@@ -40,18 +42,21 @@ fun seedIfEmpty(db: FinanzenDb) {
                     Triple("Salud", "health", 0xFF43A047),
                     Triple("Ocio", "games", 0xFFF4511E),
                 )
-                expenseSeeds.forEach { (name, icon, color) ->
-                    db.categoryQueries.insert(parentId = null, name = name, icon = icon, color = color, kind = "EXPENSE")
-                }
+                expenseSeeds.forEach { (name, icon, color) -> insertWithGeneralChild(db, name, icon, color, "EXPENSE") }
 
                 val incomeSeeds = listOf(
                     Triple("Salario", "salary", 0xFF3949AB),
                     Triple("Freelance", "work", 0xFF00838F),
                     Triple("Otros", "other", 0xFF546E7A),
                 )
-                incomeSeeds.forEach { (name, icon, color) ->
-                    db.categoryQueries.insert(parentId = null, name = name, icon = icon, color = color, kind = "INCOME")
-                }
+                incomeSeeds.forEach { (name, icon, color) -> insertWithGeneralChild(db, name, icon, color, "INCOME") }
+
+                // Categorías de sistema — usadas como fallback cuando un movimiento no tiene una
+                // categoría explícita (transferencias, ajustes de saldo, suscripciones sin categoría
+                // elegida). Resueltas en runtime por nombre vía systemCategoryLeaf() en Repositories.kt.
+                insertWithGeneralChild(db, "Transferencias", "other", 0xFF757575, "TRANSFER", "Transferencia entre cuentas")
+                insertWithGeneralChild(db, "Ajustes", "other", 0xFF757575, "ADJUSTMENT", "Ajuste de saldo")
+                insertWithGeneralChild(db, "Suscripciones", "card", 0xFF8E24AA, "EXPENSE", "Suscripción")
 
                 db.accountQueries.insert(
                     name = "Efectivo",
@@ -86,4 +91,10 @@ private fun upsertWorldCurrencies(db: FinanzenDb) {
     WORLD_CURRENCIES.forEach { c ->
         db.currencyQueries.upsert(c.code, c.symbol, c.decimals.toLong(), 1.0, c.name, c.decimalSeparator, c.groupSeparator)
     }
+}
+
+private fun insertWithGeneralChild(db: FinanzenDb, name: String, icon: String, color: Long, kind: String, childName: String = "General") {
+    db.categoryQueries.insert(parentId = null, name = name, icon = icon, color = color, kind = kind)
+    val parentId = db.categoryQueries.lastInsertRowId().executeAsOne()
+    db.categoryQueries.insert(parentId = parentId, name = childName, icon = icon, color = color, kind = kind)
 }

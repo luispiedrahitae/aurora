@@ -21,7 +21,7 @@ class TransactionRepository(private val db: FinanzenDb) {
 
     fun add(
         accountId: Long,
-        categoryId: Long?,
+        categoryId: Long,
         amountMinor: Long,
         currency: String,
         epochDay: Long,
@@ -47,7 +47,7 @@ class TransactionRepository(private val db: FinanzenDb) {
     fun update(
         id: Long,
         accountId: Long,
-        categoryId: Long?,
+        categoryId: Long,
         amountMinor: Long,
         currency: String,
         epochDay: Long,
@@ -68,10 +68,12 @@ class TransactionRepository(private val db: FinanzenDb) {
         id = id,
     )
 
-    /** Transferencia: una fila kind=TRANSFER, origen=accountId, destino=transferAccountId. Sin categoría. */
+    /** Transferencia: una fila kind=TRANSFER, origen=accountId, destino=transferAccountId. Categoría
+     * de sistema "Transferencias/Transferencia entre cuentas" (ver DefaultSeed.kt) — no es un
+     * gasto/ingreso real, pero categoryId sigue siendo obligatorio en el esquema. */
     fun addTransfer(fromAccountId: Long, toAccountId: Long, amountMinor: Long, currency: String, epochDay: Long, note: String) = db.transactionQueries.insert(
         accountId = fromAccountId,
-        categoryId = null,
+        categoryId = systemCategoryLeaf(db, "TRANSFER", "Transferencias", "Transferencia entre cuentas"),
         amountMinor = amountMinor,
         currency = currency,
         date = epochDay,
@@ -85,7 +87,7 @@ class TransactionRepository(private val db: FinanzenDb) {
 
     fun updateTransfer(id: Long, fromAccountId: Long, toAccountId: Long, amountMinor: Long, currency: String, epochDay: Long, note: String) = db.transactionQueries.update(
         accountId = fromAccountId,
-        categoryId = null,
+        categoryId = systemCategoryLeaf(db, "TRANSFER", "Transferencias", "Transferencia entre cuentas"),
         amountMinor = amountMinor,
         currency = currency,
         date = epochDay,
@@ -96,6 +98,22 @@ class TransactionRepository(private val db: FinanzenDb) {
         investmentId = null,
         subscriptionId = null,
         id = id,
+    )
+
+    /** Ajuste de saldo (creación de cuenta o edición de monto). Categoría de sistema
+     * "Ajustes/Ajuste de saldo" (ver DefaultSeed.kt) — no es un gasto/ingreso real. */
+    fun addAdjustment(accountId: Long, amountMinor: Long, currency: String, epochDay: Long, note: String) = db.transactionQueries.insert(
+        accountId = accountId,
+        categoryId = systemCategoryLeaf(db, "ADJUSTMENT", "Ajustes", "Ajuste de saldo"),
+        amountMinor = amountMinor,
+        currency = currency,
+        date = epochDay,
+        note = note,
+        kind = "ADJUSTMENT",
+        transferAccountId = null,
+        installmentPlanId = null,
+        investmentId = null,
+        subscriptionId = null,
     )
 
     fun byId(id: Long): TransactionRow? = db.transactionQueries.selectById(id).executeAsOneOrNull()
@@ -118,12 +136,15 @@ class AccountRepository(private val db: FinanzenDb) {
 
     fun all(): List<Account> = db.accountQueries.selectAll().executeAsList()
 
-    fun add(name: String, type: String, currency: String, openingBalanceMinor: Long = 0): Long {
+    fun add(name: String, type: String, currency: String, openingBalanceMinor: Long = 0): Long = db.transactionWithResult {
         db.accountQueries.insert(name, type, currency, openingBalanceMinor, color = 0, archived = 0)
-        return db.accountQueries.selectAll().executeAsList().last().id
+        db.accountQueries.lastInsertRowId().executeAsOne()
     }
 
     fun delete(id: Long) = db.accountQueries.delete(id)
+
+    fun ensureAny(): Account = all().firstOrNull()
+        ?: add("Efectivo", "CASH", "USD").let { id -> all().first { it.id == id } }
 
     fun observeArchived(): Flow<List<Account>> = db.accountQueries.selectArchived().asFlow().mapToList(Dispatchers.Default)
 
@@ -165,7 +186,7 @@ class InstallmentPlanRepository(private val db: FinanzenDb) {
 
     fun add(
         cardId: Long,
-        categoryId: Long?,
+        categoryId: Long,
         totalAmountMinor: Long,
         installments: Long,
         interestRate: Double,
@@ -190,18 +211,18 @@ class SubscriptionRepository(private val db: FinanzenDb) {
         name: String,
         amountMinor: Long,
         currency: String,
-        categoryId: Long?,
+        categoryId: Long,
         accountId: Long?,
         frequency: String,
         intervalCount: Long,
         nextChargeDateEpochDay: Long,
         remindDaysBefore: Long,
-    ): Long {
+    ): Long = db.transactionWithResult {
         db.subscriptionQueries.insert(
             name, amountMinor, currency, categoryId, accountId,
             frequency, intervalCount, nextChargeDateEpochDay, remindDaysBefore, active = 1,
         )
-        return db.subscriptionQueries.selectAll().executeAsList().last().id
+        db.subscriptionQueries.lastInsertRowId().executeAsOne()
     }
 
     fun activeNow(): List<Subscription> = db.subscriptionQueries.selectActive().executeAsList()
@@ -223,7 +244,7 @@ class InvestmentRepository(private val db: FinanzenDb) {
         amountMinor: Long,
         currency: String,
         accountId: Long?,
-        categoryId: Long?,
+        categoryId: Long,
         periodic: Boolean,
         frequency: String?,
         intervalCount: Long?,
@@ -261,12 +282,12 @@ class RecurringExpenseRepository(private val db: FinanzenDb) {
         intervalCount: Long,
         nextChargeDateEpochDay: Long,
         remindDaysBefore: Long,
-    ): Long {
+    ): Long = db.transactionWithResult {
         db.recurringExpenseQueries.insert(
             name, amountMinor, currency, categoryId, accountId,
             frequency, intervalCount, nextChargeDateEpochDay, remindDaysBefore, active = 1,
         )
-        return db.recurringExpenseQueries.selectAll().executeAsList().last().id
+        db.recurringExpenseQueries.lastInsertRowId().executeAsOne()
     }
 
     fun delete(id: Long) = db.recurringExpenseQueries.delete(id)
@@ -277,7 +298,21 @@ class CategoryRepository(private val db: FinanzenDb) {
 
     fun byKind(kind: String): List<Category> = db.categoryQueries.selectByKind(kind).executeAsList()
 
-    fun add(name: String, kind: String, parentId: Long?, icon: String = "", color: Long = 0) = db.categoryQueries.insert(parentId = parentId, name = name, icon = icon, color = color, kind = kind)
+    fun children(parentId: Long): List<Category> = db.categoryQueries.selectChildren(parentId).executeAsList()
+
+    /** Resuelve una subcategoría de sistema (Transferencias/Ajustes/Suscripciones, sembradas por
+     * DefaultSeed.kt) por nombre — fallback cuando el usuario no elige una categoría explícita. */
+    fun systemLeaf(kind: String, parentName: String, childName: String): Long = systemCategoryLeaf(db, kind, parentName, childName)
+
+    /** Toda categoría de nivel superior recibe una subcategoría "General" a la vez, para que
+     * siempre exista al menos una hoja seleccionable (categoryId ahora exige una hoja). */
+    fun add(name: String, kind: String, parentId: Long?, icon: String = "", color: Long = 0): Unit = db.transaction {
+        db.categoryQueries.insert(parentId = parentId, name = name, icon = icon, color = color, kind = kind)
+        if (parentId == null) {
+            val newId = db.categoryQueries.lastInsertRowId().executeAsOne()
+            db.categoryQueries.insert(parentId = newId, name = "General", icon = icon, color = color, kind = kind)
+        }
+    }
 
     /** Igual que [add] pero devuelve el id nuevo — usado para auto-seleccionar una subcategoría recién creada. */
     fun addAndGetId(name: String, kind: String, parentId: Long?, icon: String = "", color: Long = 0): Long {
@@ -287,7 +322,32 @@ class CategoryRepository(private val db: FinanzenDb) {
 
     fun update(id: Long, name: String, kind: String, parentId: Long?, icon: String = "", color: Long = 0) = db.categoryQueries.update(parentId = parentId, name = name, icon = icon, color = color, kind = kind, id = id)
 
-    fun delete(id: Long) = db.categoryQueries.delete(id)
+    /** Borra la categoría (y, si es de nivel superior, sus subcategorías hijas) junto con todo lo
+     * que la referencia: movimientos, presupuestos, suscripciones, inversiones y planes de cuotas.
+     * SQLite no garantiza el enforcement de FKs en esta app (ver Platform.*.kt), así que la cascada
+     * se hace a mano — mismo patrón que ya usaba CategoriesViewModel para Budget. */
+    fun deleteCascade(id: Long) {
+        val affectedIds = listOf(id) + db.categoryQueries.selectChildren(id).executeAsList().map { it.id }
+        db.transaction {
+            affectedIds.forEach { catId ->
+                db.transactionQueries.deleteByCategory(catId)
+                db.budgetQueries.deleteByCategory(catId)
+                db.subscriptionQueries.deleteByCategory(catId)
+                db.investmentQueries.deleteByCategory(catId)
+                db.installmentPlanQueries.deleteByCategory(catId)
+            }
+            // Hijas primero (parentId apunta a la categoría que se borra al final).
+            affectedIds.filter { it != id }.forEach { db.categoryQueries.delete(it) }
+            db.categoryQueries.delete(id)
+        }
+    }
+}
+
+/** Resuelve el id de una subcategoría de sistema (Transferencias/Ajustes/Suscripciones, sembradas
+ * por DefaultSeed.kt) por nombre de categoría padre + subcategoría. */
+internal fun systemCategoryLeaf(db: FinanzenDb, kind: String, parentName: String, childName: String): Long {
+    val parent = db.categoryQueries.selectByKind(kind).executeAsList().first { it.parentId == null && it.name == parentName }
+    return db.categoryQueries.selectChildren(parent.id).executeAsList().first { it.name == childName }.id
 }
 
 class CurrencyRepository(private val db: FinanzenDb) {

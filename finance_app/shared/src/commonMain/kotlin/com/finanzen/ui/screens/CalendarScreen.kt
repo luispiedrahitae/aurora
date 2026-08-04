@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -36,15 +37,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.finanzen.data.CurrencyLocaleInfo
 import com.finanzen.db.Category
 import com.finanzen.db.TransactionRow
 import com.finanzen.ui.components.CategoryAvatar
+import com.finanzen.ui.components.EmptyState
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.KindAvatar
 import com.finanzen.ui.components.MonthSelector
+import com.finanzen.ui.components.kindLabel
+import com.finanzen.ui.components.signedAmountAndColor
 import com.finanzen.ui.format.formatFechaLarga
 import com.finanzen.ui.format.formatMesAnio
 import com.finanzen.ui.theme.LocalDateLocale
@@ -118,6 +124,10 @@ fun CalendarScreen(
                     label = formatMesAnio(month, dateLocale),
                     onPrev = { month = month.plus(DatePeriod(months = -1)) },
                     onNext = { month = month.plus(DatePeriod(months = 1)) },
+                    onLabelClick = {
+                        month = LocalDate(today.year, today.month, 1)
+                        selected = today
+                    },
                 )
             }
 
@@ -156,11 +166,13 @@ fun CalendarScreen(
 
             if (selectedRows.isEmpty()) {
                 item {
-                    Text(
-                        "Sin movimientos este día.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    Box(Modifier.fillMaxWidth().padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
+                        EmptyState(
+                            icon = Icons.AutoMirrored.Outlined.ReceiptLong,
+                            title = "Sin movimientos este día",
+                            subtitle = "Toca otro día del calendario o registra uno con el botón + de Movimientos.",
+                        )
+                    }
                 }
             } else {
                 items(selectedRows, key = { it.id }) { row ->
@@ -190,12 +202,31 @@ private fun MonthGrid(
                 // Rellena la última semana para que las celdas conserven el ancho.
                 val padded = week + List(7 - week.size) { null }
                 padded.forEach { day ->
-                    Box(modifier = Modifier.weight(1f).aspectRatio(1f), contentAlignment = Alignment.Center) {
-                        if (day != null) {
-                            val date = LocalDate(month.year, month.month, day)
-                            val isSelected = date == selected
-                            val isToday = date == today
-                            val net = netByDay[date.epochDay()]
+                    if (day == null) {
+                        Box(modifier = Modifier.weight(1f).aspectRatio(1f))
+                    } else {
+                        val date = LocalDate(month.year, month.month, day)
+                        val isSelected = date == selected
+                        val isToday = date == today
+                        val net = netByDay[date.epochDay()]
+                        // El punto de color no puede ser la única codificación: la celda anuncia el
+                        // estado del día (sin movimientos / neto positivo / negativo / en cero).
+                        val dayState = when {
+                            net == null -> "sin movimientos"
+                            net > 0L -> "neto positivo"
+                            net < 0L -> "neto negativo"
+                            else -> "neto en cero"
+                        }
+                        Box(
+                            // El área táctil es la celda completa (~48dp+); el círculo de 40dp queda
+                            // como tratamiento visual de selección/hoy.
+                            modifier = Modifier
+                                .weight(1f)
+                                .aspectRatio(1f)
+                                .clickable(onClickLabel = "Seleccionar día") { onSelect(date) }
+                                .semantics(mergeDescendants = true) { contentDescription = "Día $day, $dayState" },
+                            contentAlignment = Alignment.Center,
+                        ) {
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center,
@@ -210,8 +241,7 @@ private fun MonthGrid(
                                         } else {
                                             Modifier
                                         },
-                                    )
-                                    .clickable { onSelect(date) },
+                                    ),
                             ) {
                                 Text(
                                     day.toString(),
@@ -243,7 +273,7 @@ private fun DayTxRow(row: TransactionRow, category: Category?, onClick: () -> Un
     val finance = LocalFinanceColors.current
     val fmt = LocalMoneyFormat.current
     val isTransfer = row.kind == "TRANSFER"
-    val isIncome = row.kind == "INCOME"
+    val (signedAmount, amountColor) = signedAmountAndColor(row.kind, row.amountMinor, finance)
     Row(
         modifier = Modifier.fillMaxWidth().clip(MaterialTheme.shapes.medium).clickable(onClick = onClick).padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -262,7 +292,7 @@ private fun DayTxRow(row: TransactionRow, category: Category?, onClick: () -> Un
                 maxLines = 1,
             )
             Text(
-                category?.name ?: kindLabelCal(row.kind),
+                category?.name ?: kindLabel(row.kind),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -285,19 +315,13 @@ private fun DayTxRow(row: TransactionRow, category: Category?, onClick: () -> Un
             }
         } else {
             Text(
-                if (isIncome) fmt.format(row.amountMinor, row.currency, signed = true) else fmt.format(-row.amountMinor, row.currency),
+                fmt.format(signedAmount, row.currency, signed = true),
                 fontWeight = FontWeight.SemiBold,
                 style = MaterialTheme.typography.titleMedium,
-                color = if (isIncome) finance.income else finance.expense,
+                color = amountColor,
             )
         }
     }
-}
-
-private fun kindLabelCal(kind: String): String = when (kind) {
-    "INCOME" -> "Ingreso"
-    "TRANSFER" -> "Transferencia"
-    else -> "Gasto"
 }
 
 private fun dayHeading(date: LocalDate, locale: CurrencyLocaleInfo): String = formatFechaLarga(date, locale)

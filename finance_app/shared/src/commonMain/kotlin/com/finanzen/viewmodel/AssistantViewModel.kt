@@ -310,9 +310,9 @@ Trata cada valor como el único registro válido de esa cifra.
                 }
             }
 
-            if (dashboard.donut.isNotEmpty()) {
+            if (dashboard.categoryBreakdown.isNotEmpty()) {
                 sb.appendLine("CATEGORIAS_TOP_GASTO_ANIO")
-                dashboard.donut.take(TOP_CATEGORIES).forEach { sb.appendLine("${it.name}: ${money(it.amountMinor)} (${(it.pct * 100).toInt()}%)") }
+                dashboard.categoryBreakdown.take(TOP_CATEGORIES).forEach { sb.appendLine("${it.name}: ${money(it.amountMinor)} (${(it.pct * 100).toInt()}%)") }
             }
 
             val todayEpoch = today.toEpochDays().toLong()

@@ -24,7 +24,6 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.HelpOutline
-import androidx.compose.material.icons.outlined.PriceChange
 import androidx.compose.material.icons.outlined.Unarchive
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -46,6 +45,7 @@ import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
@@ -80,7 +80,9 @@ import com.finanzen.ui.components.MoneyText
 import com.finanzen.ui.components.MonthSelector
 import com.finanzen.ui.components.PickerField
 import com.finanzen.ui.components.accountTypeLabel
+import com.finanzen.ui.components.flatFabElevation
 import com.finanzen.ui.components.kindLabel
+import com.finanzen.ui.components.signedAmountAndColor
 import com.finanzen.ui.format.formatDiaMes
 import com.finanzen.ui.format.formatMesAnio
 import com.finanzen.ui.format.monthPeriod
@@ -215,6 +217,7 @@ fun AccountsTabScreen(vm: AccountsViewModel = koinViewModel()) {
                 onClick = { showForm = true },
                 icon = { Icon(Icons.Outlined.Add, null) },
                 text = { Text("Cuenta") },
+                elevation = flatFabElevation(),
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -226,6 +229,10 @@ fun AccountsTabScreen(vm: AccountsViewModel = koinViewModel()) {
                 onPrev = { month = month.plus(DatePeriod(months = -1)) },
                 onNext = { month = month.plus(DatePeriod(months = 1)) },
                 modifier = Modifier.padding(horizontal = spacing.lg),
+                onLabelClick = {
+                    val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+                    month = LocalDate(today.year, today.month, 1)
+                },
             )
             if (accounts.isEmpty() && archivedAccounts.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -500,27 +507,14 @@ private fun MovementSummaryRow(label: String, amountMinor: Long, currency: Strin
 private fun AccountMovementRow(row: TransactionRow, cuotaLabel: String? = null) {
     val dateLocale = LocalDateLocale.current
     val finance = LocalFinanceColors.current
-    val isIncome = row.kind == "INCOME"
-    val isAdjustment = row.kind == "ADJUSTMENT"
-    // ADJUSTMENT ya trae el signo correcto en amountMinor (positivo = sube el saldo, negativo =
-    // lo baja) — a diferencia de EXPENSE, que se niega aquí para mostrarse en rojo.
-    val signedAmount = if (isIncome || isAdjustment) row.amountMinor else -row.amountMinor
-    val amountColor = when {
-        isAdjustment -> if (row.amountMinor >= 0) finance.income else finance.expense
-        isIncome -> finance.income
-        else -> finance.expense
-    }
+    val (signedAmount, amountColor) = signedAmountAndColor(row.kind, row.amountMinor, finance)
     val dateLine = formatDiaMes(row.date, dateLocale) + (cuotaLabel?.let { " · $it" } ?: "")
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(LocalSpacing.current.sm),
     ) {
-        if (isAdjustment) {
-            KindAvatar(kind = row.kind, size = 32.dp, icon = Icons.Outlined.PriceChange)
-        } else {
-            KindAvatar(kind = row.kind, size = 32.dp)
-        }
+        KindAvatar(kind = row.kind, size = 32.dp)
         Column(Modifier.weight(1f)) {
             Text(row.note.ifBlank { kindLabel(row.kind) }, style = MaterialTheme.typography.bodyMedium, maxLines = 1)
             Text(dateLine, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -605,7 +599,8 @@ private fun CreditDetails(card: Card, balanceMinor: Long, unbilledMinor: Long, c
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Medium,
                     )
-                    IconButton(onClick = { showInfo = true }, modifier = Modifier.size(18.dp)) {
+                    // Área táctil mínima de 48dp (WCAG 2.5.8); el icono sigue siendo de 16dp visuales.
+                    IconButton(onClick = { showInfo = true }, modifier = Modifier.minimumInteractiveComponentSize()) {
                         Icon(
                             Icons.Outlined.HelpOutline,
                             contentDescription = "¿Cómo se calcula el disponible?",

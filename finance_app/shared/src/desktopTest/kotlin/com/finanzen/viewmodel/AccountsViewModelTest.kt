@@ -6,6 +6,7 @@ import com.finanzen.data.CardRepository
 import com.finanzen.data.InstallmentPlanRepository
 import com.finanzen.data.SettingsRepository
 import com.finanzen.data.TransactionRepository
+import com.finanzen.data.seedIfEmpty
 import com.finanzen.db.FinanzenDb
 import com.finanzen.platform.NotificationScheduler
 import kotlin.test.Test
@@ -30,7 +31,7 @@ class AccountsViewModelTest {
     @Test
     fun addAccountConMontoInicialLoRegistraComoMovimientoAdjustmentNoComoSeedCrudo() {
         val db = freshDb()
-        db.currencyQueries.upsert("USD", "$", 2, 1.0, "US Dollar", ".", ",")
+        seedIfEmpty(db)
         val vm = buildVm(db)
 
         val id = vm.addAccount(type = "CASH", name = "Ahorros", amountMinor = 50_000)
@@ -51,7 +52,7 @@ class AccountsViewModelTest {
     @Test
     fun addAccountConMontoCeroNoCreaMovimiento() {
         val db = freshDb()
-        db.currencyQueries.upsert("USD", "$", 2, 1.0, "US Dollar", ".", ",")
+        seedIfEmpty(db)
         val vm = buildVm(db)
 
         vm.addAccount(type = "CASH", name = "Efectivo", amountMinor = 0)
@@ -62,7 +63,7 @@ class AccountsViewModelTest {
     @Test
     fun updateAccountRegistraSoloElDeltaComoNuevoAjusteYElSaldoCierra() {
         val db = freshDb()
-        db.currencyQueries.upsert("USD", "$", 2, 1.0, "US Dollar", ".", ",")
+        seedIfEmpty(db)
         val vm = buildVm(db)
         val id = vm.addAccount(type = "CASH", name = "Ahorros", amountMinor = 50_000)!!
 
@@ -81,7 +82,7 @@ class AccountsViewModelTest {
     @Test
     fun updateAccountConMontoDisminuidoRegistraAjusteNegativo() {
         val db = freshDb()
-        db.currencyQueries.upsert("USD", "$", 2, 1.0, "US Dollar", ".", ",")
+        seedIfEmpty(db)
         val vm = buildVm(db)
         val id = vm.addAccount(type = "CASH", name = "Ahorros", amountMinor = 50_000)!!
 

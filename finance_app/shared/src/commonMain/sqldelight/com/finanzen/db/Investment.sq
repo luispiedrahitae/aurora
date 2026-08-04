@@ -1,12 +1,13 @@
 -- ponytail: tabla nueva sin migración (proyecto pre-release, mismo patrón que InstallmentPlan) —
--- requiere reinstalar/limpiar la BD de desarrollo.
+-- requiere reinstalar/limpiar la BD de desarrollo. categoryId es NOT NULL: el formulario ya exige
+-- elegir categoría y ahora también subcategoría (ver InvestmentsScreen.kt).
 CREATE TABLE Investment (
     id                   INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     name                 TEXT NOT NULL,
     amountMinor          INTEGER NOT NULL,                 -- monto por aporte (puntual = el monto único)
     currency             TEXT NOT NULL REFERENCES Currency(code),
     accountId            INTEGER REFERENCES Account(id),
-    categoryId           INTEGER REFERENCES Category(id),  -- null por defecto (igual que Subscription)
+    categoryId           INTEGER NOT NULL REFERENCES Category(id),
     periodic             INTEGER NOT NULL DEFAULT 0,
     frequency            TEXT,                             -- null salvo periódica: DAILY | MONTHLY
     intervalCount        INTEGER,
@@ -46,3 +47,6 @@ UPDATE Investment SET status = 'CLOSED', withdrawnAmountMinor = ?, closedDate = 
 
 delete:
 DELETE FROM Investment WHERE id = ?;
+
+deleteByCategory:
+DELETE FROM Investment WHERE categoryId = ?;

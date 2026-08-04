@@ -3,10 +3,12 @@ package com.finanzen.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.finanzen.data.AccountRepository
+import com.finanzen.data.CategoryRepository
 import com.finanzen.data.InvestmentRepository
 import com.finanzen.data.SettingsRepository
 import com.finanzen.data.TransactionRepository
 import com.finanzen.db.Account
+import com.finanzen.db.Category
 import com.finanzen.db.Investment
 import com.finanzen.db.TransactionRow
 import com.finanzen.domain.RecurrenceSchedule
@@ -23,6 +25,7 @@ class InvestmentsViewModel(
     private val accountRepo: AccountRepository,
     private val txRepo: TransactionRepository,
     private val settingsRepo: SettingsRepository,
+    private val categoryRepo: CategoryRepository,
 ) : ViewModel() {
 
     val openInvestments: StateFlow<List<Investment>> =
@@ -33,6 +36,9 @@ class InvestmentsViewModel(
 
     val accounts: StateFlow<List<Account>> =
         accountRepo.observeAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val categories: StateFlow<List<Category>> =
+        categoryRepo.observeAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** Aportes de cada inversión, agrupados desde el flujo ya suscrito por Movimientos — igual que
      * `AccountsViewModel.transactionsByAccount`, evita una suscripción nueva por fila expandida. */
@@ -56,6 +62,7 @@ class InvestmentsViewModel(
         name: String,
         amountMinor: Long,
         accountId: Long,
+        categoryId: Long,
         periodic: Boolean,
         frequency: String?,
         intervalCount: Long?,
@@ -67,7 +74,7 @@ class InvestmentsViewModel(
             amountMinor = amountMinor,
             currency = account.currency,
             accountId = account.id,
-            categoryId = null,
+            categoryId = categoryId,
             periodic = periodic,
             frequency = if (periodic) frequency else null,
             intervalCount = if (periodic) intervalCount else null,
@@ -79,7 +86,7 @@ class InvestmentsViewModel(
         } else {
             txRepo.add(
                 accountId = account.id,
-                categoryId = null,
+                categoryId = categoryId,
                 amountMinor = amountMinor,
                 currency = account.currency,
                 epochDay = startEpochDay,
@@ -131,7 +138,7 @@ class InvestmentsViewModel(
         val yieldValue = yieldMinor(withdrawnAmountMinor, contributed)
         txRepo.add(
             accountId = account.id,
-            categoryId = null,
+            categoryId = inv.categoryId,
             amountMinor = withdrawnAmountMinor,
             currency = account.currency,
             epochDay = todayEpochDay(),

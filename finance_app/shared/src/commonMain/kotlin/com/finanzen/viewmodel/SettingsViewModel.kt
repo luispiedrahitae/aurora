@@ -57,6 +57,9 @@ class SettingsViewModel(
     private val mutableHideAmounts = MutableStateFlow(repo.hideAmountsEnabled())
     val hideAmounts: StateFlow<Boolean> = mutableHideAmounts.asStateFlow()
 
+    private val mutableReduceMotion = MutableStateFlow(repo.reduceMotionEnabled())
+    val reduceMotion: StateFlow<Boolean> = mutableReduceMotion.asStateFlow()
+
     private val mutableSymbolPos = MutableStateFlow(MoneyFormat.parse(repo.symbolPosition()))
     val symbolPosition: StateFlow<SymbolPosition> = mutableSymbolPos.asStateFlow()
 
@@ -98,6 +101,11 @@ class SettingsViewModel(
     fun setHideAmounts(enabled: Boolean) {
         repo.setHideAmountsEnabled(enabled)
         mutableHideAmounts.value = enabled
+    }
+
+    fun setReduceMotion(enabled: Boolean) {
+        repo.setReduceMotionEnabled(enabled)
+        mutableReduceMotion.value = enabled
     }
 
     fun setSymbolPosition(pos: SymbolPosition) {

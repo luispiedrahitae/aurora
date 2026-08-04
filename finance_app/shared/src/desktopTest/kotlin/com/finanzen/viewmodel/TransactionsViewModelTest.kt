@@ -43,7 +43,8 @@ class TransactionsViewModelTest {
         val db = freshDb()
         seedIfEmpty(db)
         val account = db.accountQueries.selectAll().executeAsList().first()
-        TransactionRepository(db).add(account.id, null, 1000, account.currency, 20000, "café", "EXPENSE")
+        val expenseCat = db.categoryQueries.selectByKind("EXPENSE").executeAsList().first()
+        TransactionRepository(db).add(account.id, expenseCat.id, 1000, account.currency, 20000, "café", "EXPENSE")
         val id = db.transactionQueries.selectAll().executeAsList().first { it.note == "café" }.id
 
         assertNull(buildVm(db).deleteBlockReason(id))
@@ -54,19 +55,20 @@ class TransactionsViewModelTest {
         val db = freshDb()
         seedIfEmpty(db)
         val account = db.accountQueries.selectAll().executeAsList().first()
+        val expenseCat = db.categoryQueries.selectByKind("EXPENSE").executeAsList().first()
         val subsRepo = SubscriptionRepository(db)
         val subId = subsRepo.add(
             name = "Netflix",
             amountMinor = 5000,
             currency = account.currency,
-            categoryId = null,
+            categoryId = expenseCat.id,
             accountId = account.id,
             frequency = "MONTHLY",
             intervalCount = 1,
             nextChargeDateEpochDay = 20000,
             remindDaysBefore = 1,
         )
-        TransactionRepository(db).add(account.id, null, 5000, account.currency, 20000, "Netflix", "EXPENSE", subscriptionId = subId)
+        TransactionRepository(db).add(account.id, expenseCat.id, 5000, account.currency, 20000, "Netflix", "EXPENSE", subscriptionId = subId)
         val txId = db.transactionQueries.selectAll().executeAsList().first { it.note == "Netflix" }.id
 
         val vm = buildVm(db)
@@ -83,19 +85,20 @@ class TransactionsViewModelTest {
         val db = freshDb()
         seedIfEmpty(db)
         val account = db.accountQueries.selectAll().executeAsList().first()
+        val expenseCat = db.categoryQueries.selectByKind("EXPENSE").executeAsList().first()
         val investId = InvestmentRepository(db).add(
             name = "Fondo Mensual",
             amountMinor = 100_000,
             currency = account.currency,
             accountId = account.id,
-            categoryId = null,
+            categoryId = expenseCat.id,
             periodic = true,
             frequency = "MONTHLY",
             intervalCount = 1,
             nextContributionDate = 20030,
             startDate = 20000,
         )
-        TransactionRepository(db).add(account.id, null, 100_000, account.currency, 20000, "Fondo Mensual", "EXPENSE", investmentId = investId)
+        TransactionRepository(db).add(account.id, expenseCat.id, 100_000, account.currency, 20000, "Fondo Mensual", "EXPENSE", investmentId = investId)
         val txId = db.transactionQueries.selectAll().executeAsList().first { it.note == "Fondo Mensual" }.id
 
         val block = buildVm(db).deleteBlockReason(txId)
@@ -108,19 +111,20 @@ class TransactionsViewModelTest {
         val db = freshDb()
         seedIfEmpty(db)
         val account = db.accountQueries.selectAll().executeAsList().first()
+        val expenseCat = db.categoryQueries.selectByKind("EXPENSE").executeAsList().first()
         val investId = InvestmentRepository(db).add(
             name = "Acciones Dinamico",
             amountMinor = 300_000,
             currency = account.currency,
             accountId = account.id,
-            categoryId = null,
+            categoryId = expenseCat.id,
             periodic = false,
             frequency = null,
             intervalCount = null,
             nextContributionDate = null,
             startDate = 20000,
         )
-        TransactionRepository(db).add(account.id, null, 300_000, account.currency, 20000, "Acciones Dinamico", "EXPENSE", investmentId = investId)
+        TransactionRepository(db).add(account.id, expenseCat.id, 300_000, account.currency, 20000, "Acciones Dinamico", "EXPENSE", investmentId = investId)
         val txId = db.transactionQueries.selectAll().executeAsList().first { it.note == "Acciones Dinamico" }.id
 
         assertNull(buildVm(db).deleteBlockReason(txId))

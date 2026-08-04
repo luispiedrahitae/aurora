@@ -1,5 +1,7 @@
 package com.finanzen.ui.navigation
 
+import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -16,7 +18,6 @@ import androidx.compose.material.icons.outlined.Repeat
 import androidx.compose.material.icons.outlined.SmartToy
 import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material.icons.outlined.TrendingUp
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -46,6 +47,7 @@ import androidx.navigation.navArgument
 import com.finanzen.ui.components.AutoSizeText
 import com.finanzen.ui.components.SpeedDialAction
 import com.finanzen.ui.components.SpeedDialFab
+import com.finanzen.ui.components.flatFabElevation
 import com.finanzen.ui.screens.AboutScreen
 import com.finanzen.ui.screens.AccountsTabScreen
 import com.finanzen.ui.screens.AnalysisScreen
@@ -66,9 +68,13 @@ import com.finanzen.ui.screens.SubscriptionsScreen
 import com.finanzen.ui.screens.TransactionFormScreen
 import com.finanzen.ui.screens.TransactionsScreen
 import com.finanzen.ui.theme.LocalFinanceColors
+import com.finanzen.ui.theme.LocalReduceMotion
 
 // Ancho a partir del cual mostramos rail lateral en vez de bottom bar (escritorio/tablet).
 private val WIDE_BREAKPOINT = 600.dp
+
+// Pantalla donde el FAB de captura rápida y el asistente IA están disponibles.
+private val FAB_ROUTES = setOf(TopDestination.Transactions.route)
 
 @Composable
 fun AppNav() {
@@ -77,9 +83,9 @@ fun AppNav() {
     val currentRoute = backStack?.destination?.route
 
     val showNav = TopDestination.entries.any { it.route == currentRoute }
-    // El FAB desplegable crea movimientos/suscripciones; solo en Movimientos, para no competir con
-    // las acciones propias de Resumen y Análisis.
-    val showFab = currentRoute == TopDestination.Transactions.route
+    // El FAB desplegable crea movimientos/suscripciones; vive solo en Movimientos, la pantalla
+    // dueña de esa acción. Resumen y Análisis son de solo lectura.
+    val showFab = currentRoute in FAB_ROUTES
     var fabExpanded by remember { mutableStateOf(false) }
 
     val onSelect: (TopDestination) -> Unit = { dest ->
@@ -159,12 +165,7 @@ fun AppNav() {
                         if (!fabExpanded) {
                             SmallFloatingActionButton(
                                 onClick = { navController.navigate("assistant") },
-                                elevation = FloatingActionButtonDefaults.elevation(
-                                    defaultElevation = 0.dp,
-                                    pressedElevation = 0.dp,
-                                    focusedElevation = 0.dp,
-                                    hoveredElevation = 0.dp,
-                                ),
+                                elevation = flatFabElevation(),
                                 modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 16.dp + 56.dp + 12.dp),
                             ) {
                                 Icon(Icons.Outlined.SmartToy, contentDescription = "Asistente IA")
@@ -220,12 +221,7 @@ fun AppNav() {
                         if (!fabExpanded) {
                             SmallFloatingActionButton(
                                 onClick = { navController.navigate("assistant") },
-                                elevation = FloatingActionButtonDefaults.elevation(
-                                    defaultElevation = 0.dp,
-                                    pressedElevation = 0.dp,
-                                    focusedElevation = 0.dp,
-                                    hoveredElevation = 0.dp,
-                                ),
+                                elevation = flatFabElevation(),
                                 modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 16.dp + 56.dp + 12.dp),
                             ) {
                                 Icon(Icons.Outlined.SmartToy, contentDescription = "Asistente IA")
@@ -240,14 +236,18 @@ fun AppNav() {
 
 @Composable
 private fun AppNavHost(navController: NavHostController, modifier: Modifier = Modifier) {
+    // Las lambdas de transición del NavHost no son @Composable: el flag se captura aquí fuera.
+    val reduceMotion = LocalReduceMotion.current
+    val enterSpec: FiniteAnimationSpec<Float> = if (reduceMotion) snap() else tween(220)
+    val exitSpec: FiniteAnimationSpec<Float> = if (reduceMotion) snap() else tween(180)
     NavHost(
         navController = navController,
         startDestination = TopDestination.Transactions.route,
         modifier = modifier,
-        enterTransition = { fadeIn(tween(220)) },
-        exitTransition = { fadeOut(tween(180)) },
-        popEnterTransition = { fadeIn(tween(220)) },
-        popExitTransition = { fadeOut(tween(180)) },
+        enterTransition = { fadeIn(enterSpec) },
+        exitTransition = { fadeOut(exitSpec) },
+        popEnterTransition = { fadeIn(enterSpec) },
+        popExitTransition = { fadeOut(exitSpec) },
     ) {
         composable(TopDestination.Dashboard.route) {
             DashboardScreen()

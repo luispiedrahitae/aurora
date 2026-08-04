@@ -1,7 +1,6 @@
 package com.finanzen.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,6 +34,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.finanzen.ui.theme.LocalFinanceColors
+import com.finanzen.ui.theme.motionTween
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.min
@@ -51,9 +51,12 @@ fun SavingsRateGauge(savingsRate: Float, goalPct: Long, onGoalChange: (Long) -> 
     val finance = LocalFinanceColors.current
     val trackColor = MaterialTheme.colorScheme.surfaceVariant
     val markerColor = MaterialTheme.colorScheme.onSurface
-    val target = savingsRate.coerceIn(0f, 1f)
-    val animated by animateFloatAsState(targetValue = target, animationSpec = tween(600))
-    val pctInt = (target * 100).toInt()
+    // El arco no puede pintar un déficit (no hay barrido negativo): se recorta a 0. El número sí
+    // muestra la tasa real, incluida negativa — aplanarla a 0% escondería que el mes fue deficitario.
+    val arcTarget = savingsRate.coerceIn(0f, 1f)
+    val animated by animateFloatAsState(targetValue = arcTarget, animationSpec = motionTween(600))
+    val pctInt = (savingsRate.coerceAtMost(1f) * 100).toInt()
+    val valueColor = if (pctInt < 0) finance.expense else finance.income
     val goalFraction = (goalPct / 100f).coerceIn(0f, 1f)
     var showGoalDialog by remember { mutableStateOf(false) }
 
@@ -110,7 +113,7 @@ fun SavingsRateGauge(savingsRate: Float, goalPct: Long, onGoalChange: (Long) -> 
                     AutoSizeText(
                         text = "$pctInt%",
                         modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp),
-                        color = finance.income,
+                        color = valueColor,
                         fontWeight = FontWeight.Bold,
                     )
                 }
@@ -128,6 +131,7 @@ fun SavingsRateGauge(savingsRate: Float, goalPct: Long, onGoalChange: (Long) -> 
             }
             InfoTooltip(
                 "Es lo que ahorraste del mes: (ingresos − gastos) ÷ ingresos, en porcentaje. " +
+                    "Un valor negativo significa que gastaste más de lo que ingresó. " +
                     "Sin ingresos registrados este mes, muestra 0%.",
                 contentDescription = "Cómo se calcula la tasa de ahorro",
             )
