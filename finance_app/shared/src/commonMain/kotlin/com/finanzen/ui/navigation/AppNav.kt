@@ -50,7 +50,6 @@ import com.finanzen.ui.components.SpeedDialFab
 import com.finanzen.ui.components.flatFabElevation
 import com.finanzen.ui.screens.AboutScreen
 import com.finanzen.ui.screens.AccountsTabScreen
-import com.finanzen.ui.screens.AnalysisScreen
 import com.finanzen.ui.screens.AssistantScreen
 import com.finanzen.ui.screens.BackupScreen
 import com.finanzen.ui.screens.BudgetsScreen
@@ -336,9 +335,6 @@ private fun AppNavHost(navController: NavHostController, modifier: Modifier = Mo
         }
         composable("categories") {
             CategoriesScreen(onBack = { navController.popBackStack() })
-        }
-        composable("analysis") {
-            AnalysisScreen(onBack = { navController.popBackStack() })
         }
         composable("assistant") {
             AssistantScreen(onBack = { navController.popBackStack() })

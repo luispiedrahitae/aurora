@@ -7,7 +7,6 @@ import com.finanzen.data.CategoryRepository
 import com.finanzen.data.SettingsRepository
 import com.finanzen.data.SubscriptionRepository
 import com.finanzen.db.Account
-import com.finanzen.db.Category
 import com.finanzen.db.Subscription
 import com.finanzen.platform.NotificationScheduler
 import kotlinx.coroutines.flow.SharingStarted
@@ -29,9 +28,6 @@ class SubscriptionsViewModel(
     val accounts: StateFlow<List<Account>> =
         accountRepo.observeAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val categories: StateFlow<List<Category>> =
-        categoryRepo.observeAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
     val baseCurrency: String get() = settingsRepo.baseCurrency()
 
     init {
@@ -48,14 +44,14 @@ class SubscriptionsViewModel(
      * aplica); si es futuro, no cobra nada todavía. [frequency] = "DAILY" (cada [interval] días) o
      * "MONTHLY" (mismo día del mes).
      */
-    fun addSubscription(name: String, amountMinor: Long, frequency: String, interval: Long, accountId: Long?, startEpochDay: Long, categoryId: Long?) {
+    fun addSubscription(name: String, amountMinor: Long, frequency: String, interval: Long, accountId: Long?, startEpochDay: Long) {
         val account = accountId?.let { id -> accountRepo.all().firstOrNull { it.id == id } } ?: accountRepo.ensureAny()
         val remindDaysBefore = settingsRepo.reminderDaysBefore()
         val id = subsRepo.add(
             name = name,
             amountMinor = amountMinor,
             currency = account.currency,
-            categoryId = categoryId ?: categoryRepo.systemLeaf("EXPENSE", "Suscripciones", "Suscripción"),
+            categoryId = categoryRepo.systemLeaf("EXPENSE", "Suscripciones", "Suscripción"),
             accountId = account.id,
             frequency = frequency,
             intervalCount = interval,

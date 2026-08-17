@@ -19,6 +19,7 @@ import com.finanzen.db.Subscription
 import com.finanzen.db.TransactionRow
 import com.finanzen.domain.Money
 import com.finanzen.platform.DownloadState
+import com.finanzen.ui.format.PeriodMode
 import com.finanzen.ui.format.diaSemana
 import com.finanzen.ui.format.monthPeriod
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -258,8 +259,8 @@ Trata cada valor como el único registro válido de esa cifra.
 """
 
         /**
-         * Agregación pura, reutiliza [DashboardViewModel.computeDashboard],
-         * [BudgetsViewModel.computeBudgets] y [AnalysisViewModel.computeSubscriptionMonthlyCost] —
+         * Agregación pura, reutiliza [DashboardViewModel.computeDashboard] (modo anual, así trae el
+         * desglose mes a mes de donde se saca el mes en curso) y [BudgetsViewModel.computeBudgets] —
          * sin RAG ni recomputar lo que esas funciones ya resuelven. [keyword], si viene, agrega una
          * sección MOVIMIENTOS con transacciones puntuales que coinciden (ver [findMatchingTransactions]).
          */
@@ -275,13 +276,17 @@ Trata cada valor como el único registro válido de esa cifra.
             keyword: String? = null,
         ): String {
             val firstOfMonth = LocalDate(today.year, today.month, 1)
-            val dashboard = DashboardViewModel.computeDashboard(txs, accounts, cats, budgets, firstOfMonth, today.year, baseCurrency, locale)
+            val dashboard = DashboardViewModel.computeDashboard(
+                txs = txs, accounts = accounts, cats = cats,
+                mode = PeriodMode.YEAR, month = firstOfMonth, year = today.year,
+                baseCurrency = baseCurrency, locale = locale, today = today,
+            )
             val budgetsData = BudgetsViewModel.computeBudgets(budgets, cats, txs, monthPeriod(firstOfMonth))
             val activeSubs = subscriptions.filter { it.active == 1L }
-            val subsMonthlyCost = AnalysisViewModel.computeSubscriptionMonthlyCost(activeSubs)
+            val subsMonthlyCost = DashboardViewModel.computeSubscriptionMonthlyCost(activeSubs)
             val monthIdx = (today.monthNumber - 1).coerceIn(0, 11)
-            val monthIncome = dashboard.incomeByMonth.getOrNull(monthIdx)?.amountMinor ?: 0L
-            val monthExpense = dashboard.expenseByMonth.getOrNull(monthIdx)?.amountMinor ?: 0L
+            val monthIncome = dashboard.incomeExpenseTrend.getOrNull(monthIdx)?.incomeMinor ?: 0L
+            val monthExpense = dashboard.incomeExpenseTrend.getOrNull(monthIdx)?.expenseMinor ?: 0L
             val monthSavingsRate = DashboardViewModel.computeSavingsRate(monthIncome, monthExpense)
 
             fun money(minor: Long) = Money(minor, baseCurrency).format(2)
@@ -351,7 +356,7 @@ Trata cada valor como el único registro válido de esa cifra.
             }
 
             val monthsElapsed = today.monthNumber
-            val avgMonthlyExpense = dashboard.expenseByMonth.take(monthsElapsed).sumOf { it.amountMinor } / monthsElapsed
+            val avgMonthlyExpense = dashboard.incomeExpenseTrend.take(monthsElapsed).sumOf { it.expenseMinor } / monthsElapsed
             sb.appendLine("GASTO_PROMEDIO_MENSUAL")
             sb.appendLine("Promedio mensual ($monthsElapsed meses transcurridos de ${today.year}): ${money(avgMonthlyExpense)}")
 

@@ -5,6 +5,25 @@ import com.finanzen.platform.systemCountryCode
 
 private const val KEY_SEEDED = "seeded"
 private const val KEY_CURRENCIES_EXPANDED = "currencies_expanded"
+private const val KEY_SYSTEM_CATEGORIES_ENSURED = "system_categories_ensured"
+private const val KEY_LEGACY_SYSTEM_CATEGORIES_FIXED = "legacy_system_categories_fixed_v2"
+
+/** Nombres de categorías raíz gestionadas por el sistema (sembradas más abajo) — no seleccionables
+ * en pickers de categoría ni creables a mano (CategoriesScreen.kt las bloquea por nombre). */
+val RESERVED_CATEGORY_NAMES = setOf("Transferencias", "Ajustes", "Suscripciones", "Inversiones")
+
+private data class SystemCategorySeed(val kind: String, val parentName: String, val childName: String, val icon: String, val color: Long)
+
+/** Categorías de sistema — usadas como fallback cuando un movimiento no tiene una categoría
+ * explícita (transferencias, ajustes de saldo, suscripciones/inversiones). Resueltas en runtime
+ * por nombre vía systemCategoryLeaf() en Repositories.kt. Única fuente de verdad: reutilizada
+ * tanto en el seed inicial como en [ensureSystemCategoriesExist] para instalaciones existentes. */
+private val SYSTEM_CATEGORY_SEEDS = listOf(
+    SystemCategorySeed("TRANSFER", "Transferencias", "Transferencia entre cuentas", "other", 0L),
+    SystemCategorySeed("ADJUSTMENT", "Ajustes", "Ajuste de saldo", "other", 0L),
+    SystemCategorySeed("EXPENSE", "Suscripciones", "Suscripción", "card", 0L),
+    SystemCategorySeed("EXPENSE", "Inversiones", "Inversión", "investment", 0L),
+)
 
 /**
  * Inserta datos mínimos en la primera apertura de la DB. Idempotente: una bandera persistente marca
@@ -32,31 +51,29 @@ fun seedIfEmpty(db: FinanzenDb) {
                 db.settingQueries.put(SettingsRepository.KEY_CURRENCY, initialCurrency)
 
                 // (nombre, clave de icono, color ARGB). Las claves deben existir en categoryIcons (UI);
-                // el color es un ARGB de la paleta para que el seed inicial se vea variado. Cada
-                // categoría recibe una subcategoría "General" — categoryId ahora exige siempre una
-                // hoja (ver Transaction.sq), así que ninguna categoría puede quedar sin al menos una.
+                // color = 0 -> sin color propio, cae al fallback por hash de colorForCategory() (ver
+                // FinanceComponents.kt), que ya reparte tonos variados y theme-aware. Cada categoría
+                // recibe una subcategoría "General" — categoryId ahora exige siempre una hoja (ver
+                // Transaction.sq), así que ninguna categoría puede quedar sin al menos una.
                 val expenseSeeds = listOf(
-                    Triple("Alimentación", "restaurant", 0xFFE53935),
-                    Triple("Transporte", "car", 0xFF1E88E5),
-                    Triple("Vivienda", "home", 0xFF00897B),
-                    Triple("Salud", "health", 0xFF43A047),
-                    Triple("Ocio", "games", 0xFFF4511E),
+                    Triple("Alimentación", "restaurant", 0L),
+                    Triple("Transporte", "car", 0L),
+                    Triple("Vivienda", "home", 0L),
+                    Triple("Salud", "health", 0L),
+                    Triple("Ocio", "games", 0L),
                 )
                 expenseSeeds.forEach { (name, icon, color) -> insertWithGeneralChild(db, name, icon, color, "EXPENSE") }
 
                 val incomeSeeds = listOf(
-                    Triple("Salario", "salary", 0xFF3949AB),
-                    Triple("Freelance", "work", 0xFF00838F),
-                    Triple("Otros", "other", 0xFF546E7A),
+                    Triple("Salario", "salary", 0L),
+                    Triple("Freelance", "work", 0L),
+                    Triple("Otros", "other", 0L),
                 )
                 incomeSeeds.forEach { (name, icon, color) -> insertWithGeneralChild(db, name, icon, color, "INCOME") }
 
-                // Categorías de sistema — usadas como fallback cuando un movimiento no tiene una
-                // categoría explícita (transferencias, ajustes de saldo, suscripciones sin categoría
-                // elegida). Resueltas en runtime por nombre vía systemCategoryLeaf() en Repositories.kt.
-                insertWithGeneralChild(db, "Transferencias", "other", 0xFF757575, "TRANSFER", "Transferencia entre cuentas")
-                insertWithGeneralChild(db, "Ajustes", "other", 0xFF757575, "ADJUSTMENT", "Ajuste de saldo")
-                insertWithGeneralChild(db, "Suscripciones", "card", 0xFF8E24AA, "EXPENSE", "Suscripción")
+                SYSTEM_CATEGORY_SEEDS.forEach { seed ->
+                    insertWithGeneralChild(db, seed.parentName, seed.icon, seed.color, seed.kind, seed.childName)
+                }
 
                 db.accountQueries.insert(
                     name = "Efectivo",
@@ -70,6 +87,8 @@ fun seedIfEmpty(db: FinanzenDb) {
         }
     }
     expandCurrenciesIfNeeded(db)
+    ensureSystemCategoriesExist(db)
+    reassignLegacySystemCategories(db)
 }
 
 /**
@@ -84,6 +103,47 @@ private fun expandCurrenciesIfNeeded(db: FinanzenDb) {
     db.transaction {
         upsertWorldCurrencies(db)
         db.settingQueries.put(KEY_CURRENCIES_EXPANDED, "true")
+    }
+}
+
+/**
+ * Las categorías de sistema (Suscripciones/Inversiones) se agregaron a [SYSTEM_CATEGORY_SEEDS]
+ * después del seed inicial de muchas instalaciones ya existentes, que nunca vuelven a pasar por el
+ * bloque `if (KEY_SEEDED == null)` de [seedIfEmpty]. Sin esto, systemCategoryLeaf() lanzaría al
+ * resolver una categoría que nunca se sembró. Mismo patrón idempotente que [expandCurrenciesIfNeeded].
+ */
+private fun ensureSystemCategoriesExist(db: FinanzenDb) {
+    if (db.settingQueries.get(KEY_SYSTEM_CATEGORIES_ENSURED).executeAsOneOrNull() != null) return
+    db.transaction {
+        SYSTEM_CATEGORY_SEEDS.forEach { seed ->
+            val parentExists = db.categoryQueries.selectByKind(seed.kind).executeAsList().any { it.parentId == null && it.name == seed.parentName }
+            if (!parentExists) {
+                insertWithGeneralChild(db, seed.parentName, seed.icon, seed.color, seed.kind, seed.childName)
+            }
+        }
+        db.settingQueries.put(KEY_SYSTEM_CATEGORIES_ENSURED, "true")
+    }
+}
+
+/**
+ * Corrige, una sola vez, inversiones/suscripciones (y sus transacciones de aporte/retiro/cobro) que
+ * hayan quedado con una categoría elegida a mano por un formulario viejo, antes de que
+ * addInvestment/addSubscription empezaran a forzar siempre la categoría de sistema. La regla no
+ * admite excepciones por fila, así que es un UPDATE masivo, no una iteración condicional.
+ */
+private fun reassignLegacySystemCategories(db: FinanzenDb) {
+    if (db.settingQueries.get(KEY_LEGACY_SYSTEM_CATEGORIES_FIXED).executeAsOneOrNull() != null) return
+    db.transaction {
+        val investmentsCategoryId = systemCategoryLeaf(db, "EXPENSE", "Inversiones", "Inversión")
+        db.investmentQueries.reassignCategory(investmentsCategoryId)
+        db.transactionQueries.reassignInvestmentCategory(investmentsCategoryId)
+        db.transactionQueries.reassignWithdrawalCategory(investmentsCategoryId)
+
+        val subscriptionsCategoryId = systemCategoryLeaf(db, "EXPENSE", "Suscripciones", "Suscripción")
+        db.subscriptionQueries.reassignCategory(subscriptionsCategoryId)
+        db.transactionQueries.reassignSubscriptionCategory(subscriptionsCategoryId)
+
+        db.settingQueries.put(KEY_LEGACY_SYSTEM_CATEGORIES_FIXED, "true")
     }
 }
 

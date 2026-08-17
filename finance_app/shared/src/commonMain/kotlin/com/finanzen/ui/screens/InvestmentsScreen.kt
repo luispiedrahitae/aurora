@@ -52,10 +52,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.finanzen.db.Account
-import com.finanzen.db.Category
 import com.finanzen.db.Investment
 import com.finanzen.db.TransactionRow
-import com.finanzen.ui.components.CategoryAvatar
 import com.finanzen.ui.components.DateField
 import com.finanzen.ui.components.EmptyState
 import com.finanzen.ui.components.FinanceCard
@@ -87,7 +85,6 @@ fun InvestmentsScreen(
     val open by vm.openInvestments.collectAsState()
     val closed by vm.closedInvestments.collectAsState()
     val accounts by vm.accounts.collectAsState()
-    val categories by vm.categories.collectAsState()
     val contributionsByInvestment by vm.contributionsByInvestment.collectAsState()
     var showForm by remember { mutableStateOf(openAddInitially) }
     var withdrawingInvestment by remember { mutableStateOf<Investment?>(null) }
@@ -99,11 +96,10 @@ fun InvestmentsScreen(
     if (showForm) {
         InvestmentFormDialog(
             accounts = accounts,
-            categories = categories,
             currencyCode = vm.baseCurrency,
             onDismiss = { showForm = false },
-            onConfirm = { name, amountMinor, accountId, categoryId, periodic, frequency, interval, startEpochDay ->
-                vm.addInvestment(name, amountMinor, accountId, categoryId, periodic, frequency, interval, startEpochDay)
+            onConfirm = { name, amountMinor, accountId, periodic, frequency, interval, startEpochDay ->
+                vm.addInvestment(name, amountMinor, accountId, periodic, frequency, interval, startEpochDay)
                 showForm = false
             },
         )
@@ -224,37 +220,31 @@ private fun todayEpochDayInv(): Long = Clock.System.todayIn(TimeZone.currentSyst
 @Composable
 private fun InvestmentFormDialog(
     accounts: List<Account>,
-    categories: List<Category>,
     currencyCode: String,
     onDismiss: () -> Unit,
     onConfirm: (
         name: String,
         amountMinor: Long,
         accountId: Long,
-        categoryId: Long,
         periodic: Boolean,
         frequency: String?,
         interval: Long?,
         startEpochDay: Long,
     ) -> Unit,
 ) {
-    val categoryOptions = categories.filter { it.kind == "EXPENSE" && it.parentId == null }
     var name by remember { mutableStateOf("") }
     var amountMinor by remember { mutableStateOf(0L) }
     var selectedAccount by remember { mutableStateOf(accounts.firstOrNull()) }
-    var selectedCategory by remember { mutableStateOf<Category?>(null) }
-    var selectedSubcategory by remember { mutableStateOf<Category?>(null) }
     var startEpochDay by remember { mutableStateOf(todayEpochDayInv()) }
     var periodic by remember { mutableStateOf(false) }
     var monthly by remember { mutableStateOf(true) } // true = Día del mes, false = Cada X días
     var dayOfMonth by remember { mutableStateOf("1") }
     var everyDays by remember { mutableStateOf("30") }
-    val subcategoryOptions = categories.filter { it.parentId == selectedCategory?.id }
 
     val dayValid = dayOfMonth.toIntOrNull()?.let { it in 1..31 } == true
     val everyValid = everyDays.toLongOrNull()?.let { it >= 1 } == true
     val recurValid = if (monthly) dayValid else everyValid
-    val valid = name.isNotBlank() && amountMinor > 0 && selectedAccount != null && selectedSubcategory != null && (!periodic || recurValid)
+    val valid = name.isNotBlank() && amountMinor > 0 && selectedAccount != null && (!periodic || recurValid)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -284,32 +274,6 @@ private fun InvestmentFormDialog(
                     emptyHint = "Crea una cuenta primero (pestaña Cuentas).",
                     modifier = Modifier.fillMaxWidth(),
                 )
-                PickerField(
-                    label = "Categoría",
-                    options = categoryOptions,
-                    selected = selectedCategory,
-                    optionLabel = { it.name },
-                    onSelect = {
-                        selectedCategory = it
-                        selectedSubcategory = null
-                    },
-                    placeholder = "Selecciona categoría",
-                    emptyHint = "No hay categorías de gasto.",
-                    leadingContent = { cat -> CategoryAvatar(cat.icon) },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                if (selectedCategory != null) {
-                    PickerField(
-                        label = "Subcategoría",
-                        options = subcategoryOptions,
-                        selected = selectedSubcategory,
-                        optionLabel = { it.name },
-                        onSelect = { selectedSubcategory = it },
-                        placeholder = "Selecciona subcategoría",
-                        emptyHint = "Aún no hay subcategorías en ${selectedCategory?.name}.",
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
                 DateField(
                     epochDay = startEpochDay,
                     onEpochDayChange = { startEpochDay = it },
@@ -376,7 +340,7 @@ private fun InvestmentFormDialog(
                     } else {
                         everyDays.toLong()
                     }
-                    onConfirm(name.trim(), amountMinor, selectedAccount!!.id, selectedSubcategory!!.id, periodic, frequency, interval, startEpochDay)
+                    onConfirm(name.trim(), amountMinor, selectedAccount!!.id, periodic, frequency, interval, startEpochDay)
                 },
                 enabled = valid,
             ) { Text("Guardar") }
@@ -397,6 +361,8 @@ private fun WithdrawDialog(
     var withdrawnAmountMinor by remember { mutableStateOf(0L) }
     val finance = LocalFinanceColors.current
     val yieldMinor = withdrawnAmountMinor - contributedMinor
+    val yieldPct = if (contributedMinor != 0L) yieldMinor * 100.0 / contributedMinor else null
+    val yieldColor = if (yieldMinor >= 0) finance.income else finance.expense
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -412,12 +378,22 @@ private fun WithdrawDialog(
                 )
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text("Rendimiento", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    MoneyText(
-                        amountMinor = yieldMinor,
-                        currency = currencyCode,
-                        signed = true,
-                        colorOverride = if (yieldMinor >= 0) finance.income else finance.expense,
-                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        if (yieldPct != null) {
+                            val sign = if (yieldPct >= 0) "+" else ""
+                            Text(
+                                "($sign${yieldPct.toInt()}%)",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = yieldColor,
+                            )
+                        }
+                        MoneyText(
+                            amountMinor = yieldMinor,
+                            currency = currencyCode,
+                            signed = true,
+                            colorOverride = yieldColor,
+                        )
+                    }
                 }
             }
         },

@@ -1,6 +1,7 @@
 -- ponytail: tabla nueva sin migración (proyecto pre-release, mismo patrón que InstallmentPlan) —
--- requiere reinstalar/limpiar la BD de desarrollo. categoryId es NOT NULL: el formulario ya exige
--- elegir categoría y ahora también subcategoría (ver InvestmentsScreen.kt).
+-- requiere reinstalar/limpiar la BD de desarrollo. categoryId es NOT NULL: siempre se resuelve a la
+-- categoría de sistema "Inversiones/Inversión" (ver InvestmentsViewModel.addInvestment y
+-- DefaultSeed.kt), no se elige a mano.
 CREATE TABLE Investment (
     id                   INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
     name                 TEXT NOT NULL,
@@ -50,3 +51,6 @@ DELETE FROM Investment WHERE id = ?;
 
 deleteByCategory:
 DELETE FROM Investment WHERE categoryId = ?;
+
+reassignCategory:
+UPDATE Investment SET categoryId = :newCategoryId WHERE categoryId != :newCategoryId;

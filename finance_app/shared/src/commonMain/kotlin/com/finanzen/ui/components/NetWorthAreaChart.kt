@@ -33,17 +33,29 @@ import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.viewmodel.MonthNetWorth
 
 /**
- * Área rellena bajo la línea de patrimonio neto, un punto por mes del año seleccionado. Un único
- * color para toda la serie según la tendencia global (verde si el último punto >= el primero, rojo
- * si cayó). El valor del punto seleccionado va como titular arriba; por defecto es el más reciente
- * y tocar otra columna lo cambia (mismo mecanismo que MonthlyBarChart / IncomeExpenseBarChart).
+ * Área rellena bajo la línea de patrimonio neto: un punto por mes (modo año) o por día (modo mes,
+ * ver [com.finanzen.viewmodel.DashboardViewModel.computeDailyNetWorth]) del periodo seleccionado.
+ * Un único color para toda la serie según la tendencia global (verde si el último punto >= el
+ * primero, rojo si cayó). La línea/área/puntos solo se dibujan hasta [lastDataIndex] — [points]
+ * suele incluir meses o días futuros del periodo (arrastran el último saldo conocido, no son datos
+ * reales); esos quedan visibles solo como etiquetas en el eje X, sin línea continua encima. El valor
+ * del punto seleccionado va como titular arriba; por defecto es el más reciente con datos reales, no
+ * el último índice del array, y tocar otra columna lo cambia (mismo mecanismo que
+ * [IncomeExpenseBarChart]).
  */
 @Composable
-fun NetWorthAreaChart(points: List<MonthNetWorth>, currency: String, modifier: Modifier = Modifier) {
+fun NetWorthAreaChart(
+    points: List<MonthNetWorth>,
+    currency: String,
+    modifier: Modifier = Modifier,
+    lastDataIndex: Int = points.lastIndex,
+    initialSelectedIndex: Int = lastDataIndex,
+) {
     if (points.isEmpty()) return
     val finance = LocalFinanceColors.current
     val fmt = LocalMoneyFormat.current
-    var selectedIndex by remember(points) { mutableStateOf(points.lastIndex) }
+    val lastData = lastDataIndex.coerceIn(0, points.lastIndex)
+    var selectedIndex by remember(points) { mutableStateOf(initialSelectedIndex.coerceIn(0, points.lastIndex)) }
     // El rango incluye 0 siempre (coerceAtLeast/coerceAtMost) para poder dibujar la línea base y para
     // que un patrimonio negativo no quede indistinguible de un mes en $0 (antes cy() recortaba frac a
     // 0f para cualquier valor negativo, aplastando ambos casos al fondo del gráfico).
@@ -95,9 +107,12 @@ fun NetWorthAreaChart(points: List<MonthNetWorth>, currency: String, modifier: M
                             strokeWidth = 1.5f,
                         )
                     }
+                    // Solo se dibuja hasta [lastData]: más allá no hay información real, aunque el
+                    // punto exista en la lista (arrastra el último saldo conocido). El eje de
+                    // etiquetas más abajo sí sigue mostrando todos los puntos.
                     val line = Path()
                     val fill = Path()
-                    points.forEachIndexed { i, p ->
+                    points.take(lastData + 1).forEachIndexed { i, p ->
                         val x = cx(i)
                         val y = cy(p.netWorthMinor)
                         if (i == 0) {
@@ -109,7 +124,7 @@ fun NetWorthAreaChart(points: List<MonthNetWorth>, currency: String, modifier: M
                             fill.lineTo(x, y)
                         }
                     }
-                    fill.lineTo(cx(n - 1), bottom)
+                    fill.lineTo(cx(lastData), bottom)
                     fill.close()
                     drawPath(fill, lineColor.copy(alpha = 0.22f))
                     drawPath(line, lineColor, style = Stroke(width = 4f, cap = StrokeCap.Round, join = StrokeJoin.Round))
@@ -121,7 +136,7 @@ fun NetWorthAreaChart(points: List<MonthNetWorth>, currency: String, modifier: M
                         end = Offset(selX, bottom),
                         strokeWidth = 2f,
                     )
-                    points.forEachIndexed { i, p ->
+                    points.take(lastData + 1).forEachIndexed { i, p ->
                         val r = if (i == selectedIndex) 6f else 3.5f
                         drawCircle(lineColor, radius = r, center = Offset(cx(i), cy(p.netWorthMinor)))
                     }
@@ -132,27 +147,37 @@ fun NetWorthAreaChart(points: List<MonthNetWorth>, currency: String, modifier: M
                             Modifier
                                 .weight(1f)
                                 .fillMaxHeight()
-                                .clickable { selectedIndex = i },
+                                .clickable { selectedIndex = i.coerceAtMost(lastData) },
                         )
                     }
                 }
             }
-            // Eje de meses: 12 puntos caben sin adelgazar etiquetas.
+            // Eje: 12 puntos (año) caben sin adelgazar etiquetas; hasta 31 (mes) se agrupan en
+            // bloques de `labelEvery` columnas por etiqueta (axis-readability) — cada bloque muestra
+            // la etiqueta del punto seleccionado si cae dentro, si no la de su primer índice. El peso
+            // de cada Text es el tamaño del bloque (no 1 fijo): así una etiqueta de dos dígitos tiene
+            // el ancho de varias columnas para no recortarse a un solo carácter.
+            val labelEvery = if (n > 12) ((n + 11) / 12) else 1
             Row(Modifier.fillMaxWidth()) {
-                points.forEachIndexed { i, p ->
+                var i = 0
+                while (i < n) {
+                    val chunkEnd = (i + labelEvery).coerceAtMost(n)
+                    val labelIndex = if (selectedIndex in i until chunkEnd) selectedIndex else i
+                    val p = points[labelIndex]
                     Text(
                         p.label,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight((chunkEnd - i).toFloat()),
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (i == selectedIndex) {
+                        color = if (labelIndex == selectedIndex) {
                             MaterialTheme.colorScheme.onSurface
                         } else {
                             MaterialTheme.colorScheme.onSurfaceVariant
                         },
-                        fontWeight = if (i == selectedIndex) FontWeight.SemiBold else FontWeight.Normal,
+                        fontWeight = if (labelIndex == selectedIndex) FontWeight.SemiBold else FontWeight.Normal,
                         textAlign = TextAlign.Center,
                         maxLines = 1,
                     )
+                    i = chunkEnd
                 }
             }
         }

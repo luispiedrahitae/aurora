@@ -45,6 +45,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.finanzen.data.RESERVED_CATEGORY_NAMES
 import com.finanzen.domain.InstallmentMath
 import com.finanzen.ui.components.CategoryAvatar
 import com.finanzen.ui.components.MoneyField
@@ -92,7 +93,6 @@ fun TransactionFormScreen(
     }
     var showDatePicker by remember { mutableStateOf(false) }
     var cuotasText by remember { mutableStateOf("") }
-    var note by remember { mutableStateOf(existing?.note ?: "") }
 
     // En edición, existing.categoryId es la hoja guardada; espera a que categories cargue para
     // resolver su padre y precargar ambos pickers. El guard evita pisar una selección ya en curso.
@@ -112,7 +112,7 @@ fun TransactionFormScreen(
     val destOptions = accounts.filter { it.id != selectedAccount?.id }
     val selectedDest = accounts.firstOrNull { it.id == toAccountId }
         ?: existing?.let { allAccounts.firstOrNull { a -> a.id == toAccountId } }
-    val categoryOptions = categories.filter { it.kind == kind && it.parentId == null }
+    val categoryOptions = categories.filter { it.kind == kind && it.parentId == null && it.name !in RESERVED_CATEGORY_NAMES }
     val selectedCategory = categoryOptions.firstOrNull { it.id == categoryId }
     val subcategoryOptions = categories.filter { it.parentId == selectedCategory?.id }
     val selectedSubcategory = subcategoryOptions.firstOrNull { it.id == subcategoryId }
@@ -281,16 +281,6 @@ fun TransactionFormScreen(
                 Text(formatFechaCorta(dateEpochDay, dateLocale))
             }
 
-            // La búsqueda de Movimientos filtra por nota; sin este campo, la nota siempre era el
-            // nombre de la categoría y buscar no distinguía nada.
-            OutlinedTextField(
-                value = note,
-                onValueChange = { note = it },
-                label = { Text("Nota (opcional)") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
             error?.let { Text(it, color = finance.expense, style = MaterialTheme.typography.bodySmall) }
 
             Button(
@@ -305,7 +295,7 @@ fun TransactionFormScreen(
                             minor <= 0 -> error = "Monto inválido."
                             else -> {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                vm.saveTransfer(existing?.id, account.id, dest.id, minor, note.trim(), dateEpochDay)
+                                vm.saveTransfer(existing?.id, account.id, dest.id, minor, "", dateEpochDay)
                                 onBack()
                             }
                         }
@@ -317,8 +307,8 @@ fun TransactionFormScreen(
                             minor <= 0 -> error = "Monto inválido."
                             else -> {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                // Sin nota manual, se conserva el comportamiento histórico: la nota
-                                // es el nombre de la subcategoría/categoría (y la búsqueda la encuentra).
+                                // Sin campo de nota manual, la nota es siempre el nombre de la
+                                // subcategoría/categoría (y así la búsqueda la encuentra).
                                 val movementName = selectedSubcategory?.name ?: selectedCategory?.name ?: ""
                                 vm.save(
                                     id = existing?.id,
@@ -326,7 +316,7 @@ fun TransactionFormScreen(
                                     categoryId = subcategoryId!!,
                                     amountMinor = minor,
                                     kind = kind,
-                                    note = note.trim().ifBlank { movementName },
+                                    note = movementName,
                                     dateEpochDay = dateEpochDay,
                                     installments = cuotasText.toLongOrNull()?.coerceAtLeast(1) ?: 1,
                                 )

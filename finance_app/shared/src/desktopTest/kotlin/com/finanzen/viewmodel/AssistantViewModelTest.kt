@@ -4,6 +4,7 @@ import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.finanzen.data.seedIfEmpty
 import com.finanzen.db.FinanzenDb
 import com.finanzen.domain.Money
+import com.finanzen.ui.format.PeriodMode
 import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -38,14 +39,15 @@ class AssistantViewModelTest {
         val accounts = db.accountQueries.selectAll().executeAsList()
         val cats = db.categoryQueries.selectAll().executeAsList()
 
+        val firstOfMonth = LocalDate(today.year, today.month, 1)
         val dashboard = DashboardViewModel.computeDashboard(
-            txs,
-            accounts,
-            cats,
-            emptyList(),
-            LocalDate(today.year, today.month, 1),
-            today.year,
-            account.currency,
+            txs = txs,
+            accounts = accounts,
+            cats = cats,
+            mode = PeriodMode.YEAR,
+            month = firstOfMonth,
+            year = today.year,
+            baseCurrency = account.currency,
         )
 
         val context = AssistantViewModel.buildFinancialContext(
@@ -66,8 +68,8 @@ class AssistantViewModelTest {
         assertContains(context, expectedBalance)
         // ingresos/gastos del mes también deben coincidir con lo que muestra Dashboard (mismo mes/año)
         val monthIdx = today.monthNumber - 1
-        assertContains(context, Money(dashboard.incomeByMonth[monthIdx].amountMinor, account.currency).format(2))
-        assertContains(context, Money(dashboard.expenseByMonth[monthIdx].amountMinor, account.currency).format(2))
+        assertContains(context, Money(dashboard.incomeExpenseTrend[monthIdx].incomeMinor, account.currency).format(2))
+        assertContains(context, Money(dashboard.incomeExpenseTrend[monthIdx].expenseMinor, account.currency).format(2))
     }
 
     @Test

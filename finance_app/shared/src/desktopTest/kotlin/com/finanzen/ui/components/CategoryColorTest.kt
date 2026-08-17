@@ -1,6 +1,7 @@
 package com.finanzen.ui.components
 
 import androidx.compose.ui.graphics.toArgb
+import com.finanzen.ui.theme.LightCategoryColors
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -15,7 +16,7 @@ class CategoryColorTest {
 
     @Test
     fun colorGuardadoSeRespetaYHaceRoundTrip() {
-        val chosen = categoryColors[3]
+        val chosen = LightCategoryColors[3]
         val stored = chosen.toArgb().toLong()
         assertEquals(chosen, categoryColor("loQueSea", stored))
     }

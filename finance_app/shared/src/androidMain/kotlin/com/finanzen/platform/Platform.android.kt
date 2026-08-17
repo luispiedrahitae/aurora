@@ -68,7 +68,7 @@ actual class ReportExporter(private val context: Context) {
         }
     }.getOrElse { "error: ${it.message}" }
 
-    actual fun savePdf(suggestedName: String, lines: List<String>): String = runCatching {
+    actual fun savePdf(suggestedName: String, lines: List<ReportLine>): String = runCatching {
         writeToDownloads(context, ensureExtension(suggestedName, "pdf"), "application/pdf") { os ->
             writePdf(os, lines)
         }

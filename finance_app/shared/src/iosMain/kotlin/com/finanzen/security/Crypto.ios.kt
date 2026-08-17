@@ -31,3 +31,23 @@ actual fun secureRandomBytes(size: Int): ByteArray {
     bytes.usePinned { SecRandomCopyBytes(kSecRandomDefault, size.convert(), it.addressOf(0)) }
     return bytes
 }
+
+private val HEX_CHARS = "0123456789abcdef".toCharArray()
+
+actual fun sha256HexIterated(seed: String, iterations: Int): String = memScoped {
+    val digestBuf = allocArray<kotlinx.cinterop.UByteVar>(CC_SHA256_DIGEST_LENGTH)
+    var current = seed.encodeToByteArray()
+    var hex = ""
+    repeat(iterations) {
+        CC_SHA256(current.refTo(0), current.size.convert(), digestBuf)
+        val out = CharArray(CC_SHA256_DIGEST_LENGTH * 2)
+        for (i in 0 until CC_SHA256_DIGEST_LENGTH) {
+            val v = digestBuf[i].toInt() and 0xFF
+            out[i * 2] = HEX_CHARS[v ushr 4]
+            out[i * 2 + 1] = HEX_CHARS[v and 0x0F]
+        }
+        hex = String(out)
+        current = hex.encodeToByteArray()
+    }
+    hex
+}

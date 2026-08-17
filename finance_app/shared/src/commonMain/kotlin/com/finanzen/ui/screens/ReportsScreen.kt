@@ -26,8 +26,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.finanzen.ui.components.FinanceCard
+import com.finanzen.ui.components.MonthSelector
+import com.finanzen.ui.components.PeriodModeChip
+import com.finanzen.ui.components.YearSelector
+import com.finanzen.ui.format.PeriodMode
+import com.finanzen.ui.format.formatMesAnio
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.viewmodel.ReportsViewModel
+import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.plus
 import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -37,6 +44,10 @@ fun ReportsScreen(
     vm: ReportsViewModel = koinViewModel(),
 ) {
     val status by vm.status.collectAsState()
+    val mode by vm.mode.collectAsState()
+    val month by vm.month.collectAsState()
+    val year by vm.year.collectAsState()
+    val periodLabel = vm.periodLabel()
 
     Scaffold(
         topBar = {
@@ -47,6 +58,12 @@ fun ReportsScreen(
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Volver")
                     }
                 },
+                actions = {
+                    PeriodModeChip(
+                        mode = mode,
+                        onToggle = { vm.setMode(if (mode == PeriodMode.MONTH) PeriodMode.YEAR else PeriodMode.MONTH) },
+                    )
+                },
             )
         },
     ) { inner ->
@@ -56,9 +73,24 @@ fun ReportsScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
+                if (mode == PeriodMode.MONTH) {
+                    MonthSelector(
+                        label = formatMesAnio(month),
+                        onPrev = { vm.setMonth(month.plus(DatePeriod(months = -1))) },
+                        onNext = { vm.setMonth(month.plus(DatePeriod(months = 1))) },
+                    )
+                } else {
+                    YearSelector(
+                        label = year.toString(),
+                        onPrev = { vm.setYear(year - 1) },
+                        onNext = { vm.setYear(year + 1) },
+                    )
+                }
+            }
+            item {
                 ReportCard(
                     title = "Movimientos (CSV)",
-                    subtitle = "Exporta todos los movimientos. Compatible con Excel, Google Sheets, scripts.",
+                    subtitle = "Exporta los movimientos de $periodLabel. Compatible con Excel, Google Sheets, scripts.",
                     icon = Icons.Outlined.Description,
                     buttonText = "Exportar CSV",
                     onClick = { vm.exportTransactionsCsv() },
@@ -66,11 +98,11 @@ fun ReportsScreen(
             }
             item {
                 ReportCard(
-                    title = "Resumen mensual (PDF)",
-                    subtitle = "Totales del periodo + top 10 categorías de gasto. En Desktop sale como .pdf.txt (stub); PDF real en Android/iOS.",
+                    title = "Resumen del periodo (PDF)",
+                    subtitle = "Balance, patrimonio neto, categorías, presupuestos e inversiones de $periodLabel.",
                     icon = Icons.Outlined.PictureAsPdf,
                     buttonText = "Exportar PDF",
-                    onClick = { vm.exportMonthlySummaryPdf() },
+                    onClick = { vm.exportPeriodSummaryPdf() },
                 )
             }
 

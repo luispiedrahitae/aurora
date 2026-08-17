@@ -50,7 +50,7 @@ import kotlin.math.sin
 fun SavingsRateGauge(savingsRate: Float, goalPct: Long, onGoalChange: (Long) -> Unit, modifier: Modifier = Modifier) {
     val finance = LocalFinanceColors.current
     val trackColor = MaterialTheme.colorScheme.surfaceVariant
-    val markerColor = MaterialTheme.colorScheme.onSurface
+    val markerColor = MaterialTheme.colorScheme.primary
     // El arco no puede pintar un déficit (no hay barrido negativo): se recorta a 0. El número sí
     // muestra la tasa real, incluida negativa — aplanarla a 0% escondería que el mes fue deficitario.
     val arcTarget = savingsRate.coerceIn(0f, 1f)

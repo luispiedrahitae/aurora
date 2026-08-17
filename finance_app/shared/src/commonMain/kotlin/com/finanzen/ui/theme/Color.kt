@@ -129,6 +129,46 @@ internal val DarkFinanceColors = FinanceColors(
 val LocalFinanceColors = staticCompositionLocalOf { LightFinanceColors }
 
 /**
+ * Paleta de codificación de datos para los charts de categoría (donut, desglose): 12 matices
+ * repartidos por la rueda de color, misma receta H/S/L dentro de cada tema (no Tailwind/Material
+ * genérico) para que se sientan primas del acento y los semánticos — oscuro con L alta (brilla
+ * sobre el negro OLED puro, igual que [DarkFinanceColors]/el acento en oscuro), claro con L baja
+ * (contraste ≥3:1 sobre blanco, igual que [LightFinanceColors]/el acento en claro). Nunca la única
+ * codificación: cada porción/fila va acompañada de nombre y porcentaje.
+ */
+val LightCategoryColors = listOf(
+    Color(0xFFAA1830), // rose
+    Color(0xFFAA4918), // orange
+    Color(0xFF8F7A14), // amber
+    Color(0xFF668F14), // lime
+    Color(0xFF298F14), // green
+    Color(0xFF18AA49), // emerald
+    Color(0xFF18AA91), // teal
+    Color(0xFF1879AA), // cyan
+    Color(0xFF1830AA), // blue
+    Color(0xFF4918AA), // indigo
+    Color(0xFF9118AA), // violet
+    Color(0xFFAA1879), // fuchsia
+)
+
+val DarkCategoryColors = listOf(
+    Color(0xFFDC6A7D), // rose
+    Color(0xFFDC906A), // orange
+    Color(0xFFD4BD49), // amber
+    Color(0xFFA6D449), // lime
+    Color(0xFF60D449), // green
+    Color(0xFF6ADC90), // emerald
+    Color(0xFF6ADCC9), // teal
+    Color(0xFF6AB6DC), // cyan
+    Color(0xFF6A7DDC), // blue
+    Color(0xFF906ADC), // indigo
+    Color(0xFFC96ADC), // violet
+    Color(0xFFDC6AB6), // fuchsia
+)
+
+val LocalCategoryColors = staticCompositionLocalOf { LightCategoryColors }
+
+/**
  * Color de acento fijo para fondos de avatar (p.ej. [com.finanzen.ui.components.CategoryAvatar]).
  * Siempre el primary "claro" del acento elegido en Apariencia, nunca el de [FinanZenDarkScheme]:
  * en oscuro el primary se aclara para contrastar con superficies negras y deja de sostener un

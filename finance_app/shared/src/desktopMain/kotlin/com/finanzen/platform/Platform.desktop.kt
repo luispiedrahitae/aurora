@@ -54,11 +54,23 @@ actual class ReportExporter {
         file.absolutePath
     }.getOrElse { "error: ${it.message}" }
 
-    actual fun savePdf(suggestedName: String, lines: List<String>): String = runCatching {
+    actual fun savePdf(suggestedName: String, lines: List<ReportLine>): String = runCatching {
         // ponytail: stub Desktop — texto plano marcado. Real PDF solo en Android/iOS (release).
         val file = uniqueFile(suggestedName, ".pdf.txt")
         val header = "=== FinanZen PDF STUB (Desktop preview) ===\n"
-        file.writeText(header + lines.joinToString("\n"), Charsets.UTF_8)
+        val body = lines.joinToString("\n") { line ->
+            when (line) {
+                is ReportLine.Title -> "\n${line.text}\n${"=".repeat(line.text.length)}"
+                is ReportLine.Section -> "\n-- ${line.text} --"
+                is ReportLine.Row -> {
+                    val prefix = if (line.emphasis) "* " else "  "
+                    if (line.value.isEmpty()) "$prefix${line.label}" else "$prefix${line.label.padEnd(42)}${line.value}"
+                }
+                ReportLine.Divider -> "-".repeat(40)
+                ReportLine.Blank -> ""
+            }
+        }
+        file.writeText(header + body, Charsets.UTF_8)
         file.absolutePath
     }.getOrElse { "error: ${it.message}" }
 

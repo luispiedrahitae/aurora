@@ -23,7 +23,7 @@ class SubscriptionsViewModelTest {
     }
 
     /** Siembra la categoría de sistema "Suscripciones/Suscripción" que DefaultSeed.kt crea en la
-     * app real — addSubscription() cae en ella cuando no se pasa categoryId explícito. */
+     * app real — addSubscription() siempre la usa (no hay selección manual de categoría). */
     private fun buildVm(db: FinanzenDb): SubscriptionsViewModel {
         val scheduler = NotificationScheduler()
         db.categoryQueries.insert(parentId = null, name = "Suscripciones", icon = "", color = 0, kind = "EXPENSE")
@@ -48,7 +48,7 @@ class SubscriptionsViewModelTest {
         val accountId = AccountRepository(db).add("Efectivo", "CASH", "USD")
         val future = todayEpochDay() + 10
 
-        buildVm(db).addSubscription("Streaming", 5_000, "DAILY", 30, accountId, future, categoryId = null)
+        buildVm(db).addSubscription("Streaming", 5_000, "DAILY", 30, accountId, future)
 
         assertTrue(db.transactionQueries.selectAll().executeAsList().isEmpty())
         val sub = db.subscriptionQueries.selectActive().executeAsList().first()
@@ -62,7 +62,7 @@ class SubscriptionsViewModelTest {
         val accountId = AccountRepository(db).add("Efectivo", "CASH", "USD")
         val past = todayEpochDay() - 5
 
-        buildVm(db).addSubscription("Streaming", 5_000, "DAILY", 1, accountId, past, categoryId = null)
+        buildVm(db).addSubscription("Streaming", 5_000, "DAILY", 1, accountId, past)
 
         val txs = db.transactionQueries.selectAll().executeAsList()
         assertTrue(txs.isNotEmpty())
@@ -79,7 +79,7 @@ class SubscriptionsViewModelTest {
         accountRepo.add("Efectivo", "CASH", "USD")
         val creditId = accountRepo.add("Tarjeta", "CREDIT", "USD")
 
-        buildVm(db).addSubscription("Streaming", 5_000, "DAILY", 30, creditId, todayEpochDay(), categoryId = null)
+        buildVm(db).addSubscription("Streaming", 5_000, "DAILY", 30, creditId, todayEpochDay())
 
         val sub = db.subscriptionQueries.selectActive().executeAsList().first()
         assertEquals(creditId, sub.accountId)

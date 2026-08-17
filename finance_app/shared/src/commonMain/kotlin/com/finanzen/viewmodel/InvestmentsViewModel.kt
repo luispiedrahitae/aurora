@@ -8,7 +8,6 @@ import com.finanzen.data.InvestmentRepository
 import com.finanzen.data.SettingsRepository
 import com.finanzen.data.TransactionRepository
 import com.finanzen.db.Account
-import com.finanzen.db.Category
 import com.finanzen.db.Investment
 import com.finanzen.db.TransactionRow
 import com.finanzen.domain.RecurrenceSchedule
@@ -37,9 +36,6 @@ class InvestmentsViewModel(
     val accounts: StateFlow<List<Account>> =
         accountRepo.observeAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    val categories: StateFlow<List<Category>> =
-        categoryRepo.observeAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
     /** Aportes de cada inversión, agrupados desde el flujo ya suscrito por Movimientos — igual que
      * `AccountsViewModel.transactionsByAccount`, evita una suscripción nueva por fila expandida. */
     val contributionsByInvestment: StateFlow<Map<Long, List<TransactionRow>>> =
@@ -62,13 +58,13 @@ class InvestmentsViewModel(
         name: String,
         amountMinor: Long,
         accountId: Long,
-        categoryId: Long,
         periodic: Boolean,
         frequency: String?,
         intervalCount: Long?,
         startEpochDay: Long,
     ) {
         val account = accountRepo.all().firstOrNull { it.id == accountId } ?: return
+        val categoryId = categoryRepo.systemLeaf("EXPENSE", "Inversiones", "Inversión")
         val id = investRepo.add(
             name = name,
             amountMinor = amountMinor,

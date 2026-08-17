@@ -23,6 +23,21 @@ expect class NotificationScheduler {
 }
 
 /**
+ * Una línea de contenido de reporte con su rol visual, para que cada plataforma le dé jerarquía
+ * (tamaño/negrita/separadores) al renderizarla sin tener que adivinar el rol a partir del texto.
+ */
+sealed interface ReportLine {
+    data class Title(val text: String) : ReportLine
+    data class Section(val text: String) : ReportLine
+
+    /** [value] vacío = línea de texto corrido; no vacío = fila de dos columnas (label a la
+     * izquierda, value pegado al margen derecho — para montos/porcentajes). */
+    data class Row(val label: String, val value: String = "", val emphasis: Boolean = false) : ReportLine
+    data object Divider : ReportLine
+    data object Blank : ReportLine
+}
+
+/**
  * Escribe el contenido de un reporte al disco/store del SO. Devuelve la ruta o un mensaje de error.
  * - Desktop: ~/Downloads
  * - Android: TODO usar MediaStore (Phase de release Android)
@@ -30,7 +45,7 @@ expect class NotificationScheduler {
  */
 expect class ReportExporter {
     fun saveCsv(suggestedName: String, content: String): String
-    fun savePdf(suggestedName: String, lines: List<String>): String
+    fun savePdf(suggestedName: String, lines: List<ReportLine>): String
 }
 
 /**

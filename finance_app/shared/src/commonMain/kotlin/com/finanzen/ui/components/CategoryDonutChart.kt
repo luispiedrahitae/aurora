@@ -25,10 +25,11 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.finanzen.ui.theme.LocalCategoryColors
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
-import com.finanzen.viewmodel.AnalysisViewModel
 import com.finanzen.viewmodel.CategorySlice
+import com.finanzen.viewmodel.DashboardViewModel
 import kotlin.math.roundToInt
 
 /**
@@ -41,6 +42,7 @@ import kotlin.math.roundToInt
 fun CategoryDonutChart(slices: List<CategorySlice>, currency: String, modifier: Modifier = Modifier) {
     if (slices.isEmpty()) return
     val finance = LocalFinanceColors.current
+    val palette = LocalCategoryColors.current
     val fmt = LocalMoneyFormat.current
     val gapColor = MaterialTheme.colorScheme.surfaceContainer
 
@@ -56,21 +58,21 @@ fun CategoryDonutChart(slices: List<CategorySlice>, currency: String, modifier: 
                 amountMinor = rest.sumOf { it.amountMinor },
                 pct = rest.map { it.pct }.sum(),
             )
-            val merged = AnalysisViewModel.mergeOthersByPct(top, otros)
+            val merged = DashboardViewModel.mergeOthersByPct(top, otros)
             merged to merged.indexOfFirst { it === otros }
         } else {
             sorted to -1
         }
     }
     val colors = display.mapIndexed { i, s ->
-        if (i == otrosIndex) finance.neutral else categoryColor(s.name, s.color)
+        if (i == otrosIndex) finance.neutral else categoryColor(s.name, s.color, palette)
     }
 
     FinanceCard(modifier = modifier.semantics { contentDescription = "Distribución de gastos por categoría" }) {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Box(Modifier.fillMaxWidth(0.62f).aspectRatio(1f), contentAlignment = Alignment.Center) {
                 Canvas(Modifier.fillMaxWidth().aspectRatio(1f)) {
-                    val strokeW = 34f
+                    val strokeW = size.minDimension * 0.32f
                     val inset = strokeW / 2f
                     val topLeft = Offset(inset, inset)
                     val arcSize = Size(size.width - strokeW, size.height - strokeW)

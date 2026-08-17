@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -26,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.finanzen.ui.theme.LocalCategoryColors
 import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.viewmodel.CategorySlice
@@ -61,17 +63,22 @@ fun CategoryBreakdownSection(spend: List<CategorySpend>, currency: String, modif
 }
 
 /** Fila de categoría (reusa [CategoryProgressRow]); si tiene subcategorías, es tocable y revela su
- * desglose indentado. Sin subcategorías, es una fila plana sin chevron. */
+ * desglose, alineado con el inicio/fin de la barra (no indentado). Sin subcategorías, el chevron se
+ * omite pero su espacio se reserva igual, para que la barra mida lo mismo en ambos casos. */
 @Composable
 private fun CategoryBreakdownRow(spend: CategorySpend, currency: String) {
     var expanded by remember(spend.name) { mutableStateOf(false) }
     val expandable = spend.subcategories.isNotEmpty()
     val spacing = LocalSpacing.current
+    val palette = LocalCategoryColors.current
 
     FinanceCard(
         modifier = Modifier.fillMaxWidth(),
         onClick = if (expandable) ({ expanded = !expanded }) else null,
         size = BentoTileSize.Small,
+        // Mismo tono que la tarjeta de la torta (BentoTileSize.Medium por defecto en
+        // CategoryDonutChart) — visualmente son parte del mismo bloque "Gastos por categoría".
+        color = MaterialTheme.colorScheme.surfaceContainer,
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
@@ -80,23 +87,31 @@ private fun CategoryBreakdownRow(spend: CategorySpend, currency: String) {
                     amountMinor = spend.amountMinor,
                     currency = currency,
                     pct = spend.pct,
-                    color = categoryColor(spend.name, spend.color),
+                    color = categoryColor(spend.name, spend.color, palette),
                     modifier = Modifier.weight(1f),
                 )
-                if (expandable) {
-                    Icon(
-                        if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
-                        contentDescription = if (expanded) "Contraer" else "Expandir",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                // Tamaño reservado siempre (haya o no chevron), para que la barra mida el mismo
+                // ancho disponible con o sin subcategorías — si no, una fila sin chevron estira su
+                // barra más que una con chevron y quedan desalineadas entre sí.
+                Box(modifier = Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+                    if (expandable) {
+                        Icon(
+                            if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                            contentDescription = if (expanded) "Contraer" else "Expandir",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
             if (expanded) {
-                Column(
-                    modifier = Modifier.padding(start = 28.dp),
-                    verticalArrangement = Arrangement.spacedBy(spacing.xs),
-                ) {
-                    spend.subcategories.forEach { sub -> SubcategoryRow(sub, currency) }
+                // Mismo Row de dos columnas que el header (contenido + carril de 24dp) para que el
+                // punto de cada subcategoría arranque donde arranca la barra, y el monto termine
+                // donde termina la barra — no donde termina la tarjeta completa.
+                Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
+                        spend.subcategories.forEach { sub -> SubcategoryRow(sub, currency) }
+                    }
+                    Spacer(modifier = Modifier.size(24.dp))
                 }
             }
         }
@@ -109,12 +124,13 @@ private fun CategoryBreakdownRow(spend: CategorySpend, currency: String) {
 private fun SubcategoryRow(slice: CategorySlice, currency: String) {
     val fmt = LocalMoneyFormat.current
     val spacing = LocalSpacing.current
+    val palette = LocalCategoryColors.current
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(spacing.sm),
     ) {
-        Box(Modifier.size(8.dp).clip(CircleShape).background(categoryColor(slice.name, slice.color)))
+        Box(Modifier.size(8.dp).clip(CircleShape).background(categoryColor(slice.name, slice.color, palette)))
         Text(slice.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, maxLines = 1)
         Text("${(slice.pct * 100).roundToInt()}%", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
         Text(

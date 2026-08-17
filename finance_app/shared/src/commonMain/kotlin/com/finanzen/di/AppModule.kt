@@ -18,7 +18,6 @@ import com.finanzen.data.seedIfEmpty
 import com.finanzen.db.FinanzenDb
 import com.finanzen.platform.DriverFactory
 import com.finanzen.viewmodel.AccountsViewModel
-import com.finanzen.viewmodel.AnalysisViewModel
 import com.finanzen.viewmodel.AssistantViewModel
 import com.finanzen.viewmodel.BackupViewModel
 import com.finanzen.viewmodel.BudgetsViewModel
@@ -76,8 +75,7 @@ val sharedModule: Module = module {
     viewModel { AccountsViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { SubscriptionsViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { InvestmentsViewModel(get(), get(), get(), get(), get()) }
-    viewModel { AnalysisViewModel(get(), get(), get()) }
-    viewModel { ReportsViewModel(get(), get(), get(), get()) }
+    viewModel { ReportsViewModel(get(), get(), get(), get(), get()) }
     viewModel { BackupViewModel(get(), get(), get()) }
     viewModel { AssistantViewModel(get(), get(), get(), get(), get(), get(), get()) }
     single { SecurityViewModel(get()) }

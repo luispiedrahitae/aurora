@@ -2,6 +2,8 @@ package com.finanzen.data
 
 import com.finanzen.db.FinanzenDb
 import com.finanzen.security.PinHasher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class SecurityRepository(private val db: FinanzenDb) {
 
@@ -9,7 +11,8 @@ class SecurityRepository(private val db: FinanzenDb) {
 
     fun hasPin(): Boolean = read(KEY_PIN_HASH) != null
 
-    fun enableLockWithPin(pin: String) {
+    /** PinHasher.hash hace 200k iteraciones de SHA-256; fuera del hilo principal para no congelar la UI (ANR). */
+    suspend fun enableLockWithPin(pin: String) = withContext(Dispatchers.Default) {
         val salt = PinHasher.newSalt()
         val hash = PinHasher.hash(pin, salt)
         db.transaction {
@@ -36,17 +39,17 @@ class SecurityRepository(private val db: FinanzenDb) {
      * incorrectos seguidos disparan una espera que se duplica en cada ciclo (backoff exponencial),
      * hasta un techo de [MAX_LOCKOUT_SECONDS]. [nowMs] es inyectable para tests.
      */
-    fun verifyPin(pin: String, nowMs: Long): Boolean {
-        if (nowMs < lockedUntilMs()) return false
-        val salt = read(KEY_SALT) ?: return false
-        val expected = read(KEY_PIN_HASH) ?: return false
+    suspend fun verifyPin(pin: String, nowMs: Long): Boolean = withContext(Dispatchers.Default) {
+        if (nowMs < lockedUntilMs()) return@withContext false
+        val salt = read(KEY_SALT) ?: return@withContext false
+        val expected = read(KEY_PIN_HASH) ?: return@withContext false
         val ok = PinHasher.verify(pin, salt, expected)
         if (ok) {
             clearAttempts()
         } else {
             registerFailedAttempt(nowMs)
         }
-        return ok
+        ok
     }
 
     private fun registerFailedAttempt(nowMs: Long) {

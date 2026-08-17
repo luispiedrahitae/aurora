@@ -48,6 +48,7 @@ private const val PIN_MAX = 8
 fun LockScreen(vm: SecurityViewModel) {
     var entered by remember { mutableStateOf("") }
     val error by vm.attemptError.collectAsState()
+    val isBusy by vm.isBusy.collectAsState()
     val finance = LocalFinanceColors.current
     val biometric = rememberBiometricUnlock()
 
@@ -85,20 +86,29 @@ fun LockScreen(vm: SecurityViewModel) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             PinDots(entered.length, max = PIN_MAX)
-            error?.let {
+            if (isBusy) {
                 Text(
-                    it,
-                    color = finance.expense,
+                    "Verificando…",
                     style = MaterialTheme.typography.bodyMedium,
-                    // liveRegion: el lector de pantalla anuncia el error al fallar el PIN.
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                 )
+            } else {
+                error?.let {
+                    Text(
+                        it,
+                        color = finance.expense,
+                        style = MaterialTheme.typography.bodyMedium,
+                        // liveRegion: el lector de pantalla anuncia el error al fallar el PIN.
+                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
+                    )
+                }
             }
             Keypad(
                 onDigit = { d -> if (entered.length < PIN_MAX) entered += d },
                 onBackspace = { entered = entered.dropLast(1) },
                 onSubmit = {
-                    if (entered.length >= 4) {
+                    if (entered.length >= 4 && !isBusy) {
                         vm.unlock(entered)
                         entered = ""
                     }

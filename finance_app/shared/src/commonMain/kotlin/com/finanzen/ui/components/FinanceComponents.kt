@@ -112,6 +112,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -122,7 +125,9 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.finanzen.domain.Money
+import com.finanzen.ui.format.PeriodMode
 import com.finanzen.ui.theme.FinanceColors
+import com.finanzen.ui.theme.LightCategoryColors
 import com.finanzen.ui.theme.LocalAccentColor
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
@@ -265,6 +270,7 @@ fun MoneyText(
     fontWeight: FontWeight? = FontWeight.SemiBold,
     signed: Boolean = false,
     colorOverride: Color? = null,
+    textAlign: TextAlign? = null,
 ) {
     val finance = LocalFinanceColors.current
     val color = colorOverride ?: when {
@@ -274,7 +280,7 @@ fun MoneyText(
     }
     // El símbolo y su posición ($ antes/después/ninguno) los aporta el formato global.
     val text = LocalMoneyFormat.current.format(amountMinor, currency, signed)
-    Text(text, modifier = modifier, style = style, fontWeight = fontWeight, color = color)
+    Text(text, modifier = modifier, style = style, fontWeight = fontWeight, color = color, textAlign = textAlign)
 }
 
 /**
@@ -383,6 +389,39 @@ fun YearSelector(
     }
 }
 
+/**
+ * Chip compacto de un toque que alterna entre modo Mensual y Anual — pensado para la esquina
+ * superior derecha de [MainTabHeader] (`action`), a la altura del título; el selector prev/next del
+ * periodo elegido sigue siendo [MonthSelector]/[YearSelector] debajo, sin cambios.
+ */
+@Composable
+fun PeriodModeChip(mode: PeriodMode, onToggle: () -> Unit, modifier: Modifier = Modifier) {
+    val label = when (mode) {
+        PeriodMode.MONTH -> "Mes"
+        PeriodMode.YEAR -> "Año"
+    }
+    val nextLabel = when (mode) {
+        PeriodMode.MONTH -> "año"
+        PeriodMode.YEAR -> "mes"
+    }
+    Surface(
+        onClick = onToggle,
+        modifier = modifier.semantics {
+            role = Role.Switch
+            contentDescription = "Vista: $label. Cambiar a vista de $nextLabel"
+        },
+        shape = PillShape,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    ) {
+        Text(
+            label,
+            modifier = Modifier.padding(horizontal = LocalSpacing.current.md, vertical = LocalSpacing.current.xs),
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
+}
+
 /** Etiqueta central de los selectores de periodo; tocable como boton cuando hay accion "hoy". */
 @Composable
 private fun SelectorLabel(label: String, onClick: (() -> Unit)?, onClickLabel: String) {
@@ -461,34 +500,18 @@ fun CategoryProgressRow(
 }
 
 /**
- * Paleta de codificación de datos para los charts de categoría (donut, desglose). Misma familia
- * tonal que los colores semánticos del design system (fila 600 de Tailwind: saturación y
- * luminosidad consistentes), repartida por la rueda de color y legible con glifo blanco (≥3:1).
+ * Color por hash del nombre dentro de [palette] — fallback cuando la categoría no tiene color
+ * propio (color = 0). [palette] es [LightCategoryColors]/[DarkCategoryColors] (ver
+ * [LocalCategoryColors]): mismo hash, tono claro u oscuro según el tema activo.
  *
- * Deliberadamente distinta del rol de [CategoryAvatar]/[KindAvatar], que usan el acento de
+ * Deliberadamente distinto del rol de [CategoryAvatar]/[KindAvatar], que usan el acento de
  * Apariencia: el avatar identifica de forma uniforme (la categoría se distingue por el icono),
  * el chart codifica series de datos y sí necesita un color por categoría.
  */
-val categoryColors = listOf(
-    Color(0xFFE11D48), // rose
-    Color(0xFFEA580C), // orange
-    Color(0xFFD97706), // amber
-    Color(0xFF65A30D), // lime
-    Color(0xFF059669), // emerald
-    Color(0xFF0D9488), // teal
-    Color(0xFF0891B2), // cyan
-    Color(0xFF2563EB), // blue
-    Color(0xFF4F46E5), // indigo
-    Color(0xFF7C3AED), // violet
-    Color(0xFFC026D3), // fuchsia
-    Color(0xFFDB2777), // pink
-)
-
-/** Color por hash del nombre, fallback cuando la categoría no tiene color propio (color = 0). */
-fun colorForCategory(name: String): Color = categoryColors[((name.hashCode() % categoryColors.size) + categoryColors.size) % categoryColors.size]
+fun colorForCategory(name: String, palette: List<Color> = LightCategoryColors): Color = palette[((name.hashCode() % palette.size) + palette.size) % palette.size]
 
 /** Color efectivo de una categoría: el guardado (ARGB en [storedColor]) si lo hay, si no el del hash. */
-fun categoryColor(name: String, storedColor: Long): Color = if (storedColor != 0L) Color(storedColor.toInt()) else colorForCategory(name)
+fun categoryColor(name: String, storedColor: Long, palette: List<Color> = LightCategoryColors): Color = if (storedColor != 0L) Color(storedColor.toInt()) else colorForCategory(name, palette)
 
 /**
  * Glifo de una categoría: o un vector de Material (iconos generales) o un drawable de marca

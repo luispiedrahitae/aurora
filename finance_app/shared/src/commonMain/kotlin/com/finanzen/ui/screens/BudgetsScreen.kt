@@ -35,11 +35,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.finanzen.ui.components.BudgetProgressCard
+import com.finanzen.ui.components.CategoryAvatar
 import com.finanzen.ui.components.EmptyState
-import com.finanzen.ui.components.LabeledDropdown
 import com.finanzen.ui.components.MainTabHeader
 import com.finanzen.ui.components.MoneyField
 import com.finanzen.ui.components.MonthSelector
+import com.finanzen.ui.components.PickerField
+import com.finanzen.ui.components.SectionHeader
 import com.finanzen.ui.components.flatFabElevation
 import com.finanzen.ui.format.formatMesAnio
 import com.finanzen.ui.theme.LocalDateLocale
@@ -71,6 +73,8 @@ fun BudgetsScreen(
     val spacing = LocalSpacing.current
     val budgeted = data.rows.filter { it.limitMinor > 0 }
     val unbudgeted = data.rows.filter { it.limitMinor <= 0 }
+    val categoryBudgets = budgeted.filter { it.parentName == null }
+    val subcategoryBudgets = budgeted.filter { it.parentName != null }
     var editing by remember { mutableStateOf<BudgetRow?>(null) }
     var showAdd by remember { mutableStateOf(false) }
     var showInfo by remember { mutableStateOf(false) }
@@ -158,8 +162,17 @@ fun BudgetsScreen(
                         contentPadding = PaddingValues(start = spacing.lg, end = spacing.lg, top = spacing.sm, bottom = 96.dp),
                         verticalArrangement = Arrangement.spacedBy(spacing.md),
                     ) {
-                        items(budgeted, key = { it.categoryId }) { row ->
-                            BudgetProgressCard(row, data.currency, onClick = { editing = row })
+                        if (categoryBudgets.isNotEmpty()) {
+                            item { SectionHeader("Categorías") }
+                            items(categoryBudgets, key = { it.categoryId }) { row ->
+                                BudgetProgressCard(row, data.currency, onClick = { editing = row })
+                            }
+                        }
+                        if (subcategoryBudgets.isNotEmpty()) {
+                            item { SectionHeader("Subcategorías") }
+                            items(subcategoryBudgets, key = { it.categoryId }) { row ->
+                                BudgetProgressCard(row, data.currency, onClick = { editing = row })
+                            }
                         }
                     }
             }
@@ -205,12 +218,15 @@ private fun BudgetFormDialog(
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                LabeledDropdown(
+                PickerField(
                     label = "Categoría",
                     options = categories,
                     selected = selected,
                     optionLabel = { it.categoryName },
                     onSelect = { selected = it },
+                    leadingContent = { row -> CategoryAvatar(row.icon, size = 32.dp) },
+                    trailingLabel = { row -> if (row.parentName == null) "Categoría completa" else null },
+                    sectionOf = { row -> row.parentName ?: "Categorías" },
                 )
                 MoneyField(
                     amountMinor = limitMinor,

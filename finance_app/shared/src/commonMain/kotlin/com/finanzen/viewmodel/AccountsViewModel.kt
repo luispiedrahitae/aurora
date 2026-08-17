@@ -53,7 +53,7 @@ class AccountsViewModel(
 
     /** Movimientos de cada cuenta, agrupados desde el mismo flujo ya suscrito para [balances] —
      * evita abrir una suscripción nueva por cada fila expandida en la UI. El filtro por mes/tipo
-     * se aplica en la pantalla (mismo patrón que TransactionsScreen/AnalysisViewModel). */
+     * se aplica en la pantalla (mismo patrón que TransactionsScreen/DashboardViewModel). */
     val transactionsByAccount: StateFlow<Map<Long, List<TransactionRow>>> =
         txRepo.observeAll().map { groupByAccount(it) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())

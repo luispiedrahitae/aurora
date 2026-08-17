@@ -10,7 +10,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
-import androidx.compose.material.icons.outlined.Analytics
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Backup
 import androidx.compose.material.icons.outlined.CalendarMonth
@@ -48,9 +47,6 @@ fun MoreScreen(onNavigate: (route: String) -> Unit) {
         },
         MoreItem("Calendario", "Movimientos por día", Icons.Outlined.CalendarMonth) {
             onNavigate("calendar")
-        },
-        MoreItem("Análisis", "Gastos por categoría", Icons.Outlined.Analytics) {
-            onNavigate("analysis")
         },
         MoreItem("Reportes", "Exportar CSV / PDF", Icons.Outlined.Description) {
             onNavigate("reports")

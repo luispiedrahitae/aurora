@@ -2,6 +2,7 @@ package com.finanzen.data
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.finanzen.db.FinanzenDb
+import kotlinx.coroutines.test.runTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -15,7 +16,7 @@ class SecurityRepositoryTest {
     }
 
     @Test
-    fun cincoIntentosFallidosBloqueanElPin() {
+    fun cincoIntentosFallidosBloqueanElPin() = runTest {
         // FIX (hallazgo alto #6): antes no había límite de intentos; ahora el 5º fallo seguido
         // bloquea, y el PIN correcto tampoco pasa mientras el bloqueo esté activo.
         val repo = SecurityRepository(freshDb())
@@ -33,7 +34,7 @@ class SecurityRepositoryTest {
     }
 
     @Test
-    fun elBloqueoExpiraYUnPinCorrectoReseteaLosIntentos() {
+    fun elBloqueoExpiraYUnPinCorrectoReseteaLosIntentos() = runTest {
         val repo = SecurityRepository(freshDb())
         repo.enableLockWithPin("1234")
         repeat(5) { repo.verifyPin("0000", 0L) }

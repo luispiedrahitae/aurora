@@ -81,3 +81,16 @@ SELECT * FROM TransactionRow WHERE subscriptionId = ? ORDER BY date DESC, id DES
 
 countBySubscription:
 SELECT COUNT(*) FROM TransactionRow WHERE subscriptionId = ?;
+
+reassignInvestmentCategory:
+UPDATE TransactionRow SET categoryId = :newCategoryId WHERE investmentId IS NOT NULL AND categoryId != :newCategoryId;
+
+reassignSubscriptionCategory:
+UPDATE TransactionRow SET categoryId = :newCategoryId WHERE subscriptionId IS NOT NULL AND categoryId != :newCategoryId;
+
+-- El retiro de una inversión se crea deliberadamente sin investmentId (ver
+-- InvestmentsViewModel.closeInvestment, para no aparecer en el historial de aportes), así que no lo
+-- alcanza reassignInvestmentCategory. Se identifica por el prefijo de nota fijo que genera esa misma
+-- función ("Retiro: <nombre>"), único a este flujo.
+reassignWithdrawalCategory:
+UPDATE TransactionRow SET categoryId = :newCategoryId WHERE kind = 'INCOME' AND note LIKE 'Retiro: %' AND categoryId != :newCategoryId;

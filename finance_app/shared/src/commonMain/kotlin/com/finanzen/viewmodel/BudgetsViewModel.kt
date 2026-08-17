@@ -19,7 +19,9 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 
-/** Una categoría de gasto con su límite del mes (0 = sin presupuesto) y lo gastado en el mes. */
+/** Una categoría de gasto con su límite del mes (0 = sin presupuesto) y lo gastado en el mes.
+ * [parentName] es null si [categoryId] es una categoría de nivel superior, o el nombre de su
+ * categoría padre si es una subcategoría — así la UI puede distinguir un nivel del otro. */
 data class BudgetRow(
     val categoryId: Long,
     val categoryName: String,
@@ -27,6 +29,7 @@ data class BudgetRow(
     val spentMinor: Long,
     val icon: String = "",
     val color: Long = 0L,
+    val parentName: String? = null,
 )
 
 data class BudgetsData(val periodMonth: Long, val rows: List<BudgetRow>, val currency: String = "")
@@ -83,6 +86,7 @@ class BudgetsViewModel(
                 .filter { it.kind == "EXPENSE" && it.categoryId != null && monthOf(it.date) == period }
                 .groupBy { it.categoryId!! }
                 .mapValues { (_, list) -> list.sumOf { it.amountMinor } }
+            val catById = cats.associateBy { it.id }
             val rows = cats.filter { it.kind == "EXPENSE" }.map { cat ->
                 BudgetRow(
                     categoryId = cat.id,
@@ -91,8 +95,9 @@ class BudgetsViewModel(
                     spentMinor = spentByCat[cat.id] ?: 0L,
                     icon = cat.icon,
                     color = cat.color,
+                    parentName = cat.parentId?.let { catById[it]?.name },
                 )
-            }
+            }.sortedWith(compareBy({ it.parentName != null }, { it.parentName ?: it.categoryName }, { it.categoryName }))
             val currency = txs.firstOrNull()?.currency ?: ""
             return BudgetsData(period, rows, currency)
         }

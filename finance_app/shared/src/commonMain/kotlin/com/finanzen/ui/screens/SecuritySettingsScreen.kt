@@ -22,9 +22,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,6 +37,8 @@ import androidx.compose.ui.unit.dp
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.viewmodel.SecurityViewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -106,15 +110,12 @@ fun SecuritySettingsScreen(
                 item {
                     PinSetupCard(
                         onCancel = { showSetup = false },
-                        onSave = { pin ->
-                            if (vm.setupPin(pin)) {
-                                lockOn.value = true
-                                showSetup = false
-                                true
-                            } else {
-                                false
-                            }
+                        onSave = { pin, onResult -> vm.setupPin(pin, onResult) },
+                        onSaved = {
+                            lockOn.value = true
+                            showSetup = false
                         },
+                        isBusy = vm.isBusy.collectAsState().value,
                     )
                 }
             }
@@ -137,11 +138,17 @@ fun SecuritySettingsScreen(
 }
 
 @Composable
-private fun PinSetupCard(onCancel: () -> Unit, onSave: (String) -> Boolean) {
+private fun PinSetupCard(
+    onCancel: () -> Unit,
+    onSave: (String, (Boolean) -> Unit) -> Unit,
+    onSaved: () -> Unit,
+    isBusy: Boolean,
+) {
     var pin by remember { mutableStateOf("") }
     var confirm by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     val finance = LocalFinanceColors.current
+    val scope = rememberCoroutineScope()
 
     FinanceCard(modifier = Modifier.fillMaxWidth()) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -172,16 +179,26 @@ private fun PinSetupCard(onCancel: () -> Unit, onSave: (String) -> Boolean) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                TextButton(onClick = onCancel) { Text("Cancelar") }
+                TextButton(onClick = onCancel, enabled = !isBusy) { Text("Cancelar") }
                 Button(
+                    enabled = !isBusy,
                     onClick = {
                         when {
                             pin.length < 4 -> error = "Mínimo 4 dígitos"
                             pin != confirm -> error = "Los PINs no coinciden"
-                            else -> if (!onSave(pin)) error = "PIN no válido"
+                            else -> onSave(pin) { success ->
+                                if (success) {
+                                    scope.launch {
+                                        delay(150)
+                                        onSaved()
+                                    }
+                                } else {
+                                    error = "PIN no válido"
+                                }
+                            }
                         }
                     },
-                ) { Text("Guardar") }
+                ) { Text(if (isBusy) "Guardando…" else "Guardar") }
             }
         }
     }

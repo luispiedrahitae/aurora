@@ -34,7 +34,7 @@ actual class ReportExporter {
         return "stub: no disponible en esta plataforma todavía"
     }
 
-    actual fun savePdf(suggestedName: String, lines: List<String>): String {
+    actual fun savePdf(suggestedName: String, lines: List<ReportLine>): String {
         println("[REPORT-iOS stub] savePdf '$suggestedName' (${lines.size} líneas)")
         return "stub: no disponible en esta plataforma todavía"
     }

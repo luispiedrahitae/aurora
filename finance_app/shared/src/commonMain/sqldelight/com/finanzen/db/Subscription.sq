@@ -45,3 +45,6 @@ DELETE FROM Subscription WHERE id = ?;
 
 deleteByCategory:
 DELETE FROM Subscription WHERE categoryId = ?;
+
+reassignCategory:
+UPDATE Subscription SET categoryId = :newCategoryId WHERE categoryId != :newCategoryId;

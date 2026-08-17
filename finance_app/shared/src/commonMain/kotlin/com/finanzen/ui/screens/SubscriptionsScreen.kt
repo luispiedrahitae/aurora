@@ -43,10 +43,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.finanzen.db.Account
-import com.finanzen.db.Category
 import com.finanzen.db.Subscription
 import com.finanzen.ui.components.BentoTileSize
-import com.finanzen.ui.components.CategoryAvatar
 import com.finanzen.ui.components.DateField
 import com.finanzen.ui.components.EmptyState
 import com.finanzen.ui.components.FinanceCard
@@ -59,7 +57,7 @@ import com.finanzen.ui.components.flatFabElevation
 import com.finanzen.ui.format.formatDiaMes
 import com.finanzen.ui.theme.LocalDateLocale
 import com.finanzen.ui.theme.LocalFinanceColors
-import com.finanzen.viewmodel.AnalysisViewModel
+import com.finanzen.viewmodel.DashboardViewModel
 import com.finanzen.viewmodel.SubscriptionsViewModel
 import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
@@ -75,7 +73,6 @@ fun SubscriptionsScreen(
 ) {
     val subs by vm.subscriptions.collectAsState()
     val accounts by vm.accounts.collectAsState()
-    val categories by vm.categories.collectAsState()
     var showForm by remember { mutableStateOf(openAddInitially) }
     var pendingDelete by remember { mutableStateOf<Subscription?>(null) }
 
@@ -97,11 +94,10 @@ fun SubscriptionsScreen(
     if (showForm) {
         SubscriptionFormDialog(
             accounts = accounts,
-            categories = categories,
             currencyCode = vm.baseCurrency,
             onDismiss = { showForm = false },
-            onConfirm = { name, amountMinor, frequency, interval, accountId, startEpochDay, categoryId ->
-                vm.addSubscription(name, amountMinor, frequency, interval, accountId, startEpochDay, categoryId)
+            onConfirm = { name, amountMinor, frequency, interval, accountId, startEpochDay ->
+                vm.addSubscription(name, amountMinor, frequency, interval, accountId, startEpochDay)
                 showForm = false
             },
         )
@@ -147,7 +143,7 @@ fun SubscriptionsScreen(
             } else {
                 item {
                     // Total mensual comprometido: la cifra que responde "¿cuánto me cuestan al mes?".
-                    val monthlyCost = remember(subs) { AnalysisViewModel.computeSubscriptionMonthlyCost(subs) }
+                    val monthlyCost = remember(subs) { DashboardViewModel.computeSubscriptionMonthlyCost(subs) }
                     FinanceCard(modifier = Modifier.fillMaxWidth(), size = BentoTileSize.Small) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -191,27 +187,22 @@ fun SubscriptionsScreen(
 @Composable
 private fun SubscriptionFormDialog(
     accounts: List<Account>,
-    categories: List<Category>,
     currencyCode: String,
     onDismiss: () -> Unit,
-    onConfirm: (name: String, amountMinor: Long, frequency: String, interval: Long, accountId: Long?, startEpochDay: Long, categoryId: Long?) -> Unit,
+    onConfirm: (name: String, amountMinor: Long, frequency: String, interval: Long, accountId: Long?, startEpochDay: Long) -> Unit,
 ) {
-    val categoryOptions = categories.filter { it.kind == "EXPENSE" && it.parentId == null }
     var name by remember { mutableStateOf("") }
     var amountMinor by remember { mutableStateOf(0L) }
     var selectedAccount by remember { mutableStateOf(accounts.firstOrNull()) }
-    var selectedCategory by remember { mutableStateOf<Category?>(null) }
-    var selectedSubcategory by remember { mutableStateOf<Category?>(null) }
     var startEpochDay by remember { mutableStateOf(Clock.System.todayIn(TimeZone.currentSystemDefault()).toEpochDays().toLong()) }
     var monthly by remember { mutableStateOf(true) } // true = Día del mes, false = Cada X días
     var dayOfMonth by remember { mutableStateOf("1") }
     var everyDays by remember { mutableStateOf("30") }
-    val subcategoryOptions = categories.filter { it.parentId == selectedCategory?.id }
 
     val dayValid = dayOfMonth.toIntOrNull()?.let { it in 1..31 } == true
     val everyValid = everyDays.toLongOrNull()?.let { it >= 1 } == true
     val recurValid = if (monthly) dayValid else everyValid
-    val valid = name.isNotBlank() && amountMinor > 0 && recurValid && (selectedCategory == null || selectedSubcategory != null)
+    val valid = name.isNotBlank() && amountMinor > 0 && recurValid
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -241,32 +232,6 @@ private fun SubscriptionFormDialog(
                     emptyHint = "Crea una cuenta primero (pestaña Cuentas).",
                     modifier = Modifier.fillMaxWidth(),
                 )
-                PickerField(
-                    label = "Categoría (opcional)",
-                    options = categoryOptions,
-                    selected = selectedCategory,
-                    optionLabel = { it.name },
-                    onSelect = {
-                        selectedCategory = it
-                        selectedSubcategory = null
-                    },
-                    placeholder = "Usar categoría \"Suscripciones\"",
-                    emptyHint = "No hay categorías de gasto.",
-                    leadingContent = { cat -> CategoryAvatar(cat.icon) },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                if (selectedCategory != null) {
-                    PickerField(
-                        label = "Subcategoría",
-                        options = subcategoryOptions,
-                        selected = selectedSubcategory,
-                        optionLabel = { it.name },
-                        onSelect = { selectedSubcategory = it },
-                        placeholder = "Selecciona subcategoría",
-                        emptyHint = "Aún no hay subcategorías en ${selectedCategory?.name}.",
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
                 DateField(
                     epochDay = startEpochDay,
                     onEpochDayChange = { startEpochDay = it },
@@ -315,7 +280,7 @@ private fun SubscriptionFormDialog(
                 onClick = {
                     val frequency = if (monthly) "MONTHLY" else "DAILY"
                     val interval = if (monthly) dayOfMonth.toLong() else everyDays.toLong()
-                    onConfirm(name.trim(), amountMinor, frequency, interval, selectedAccount?.id, startEpochDay, selectedSubcategory?.id)
+                    onConfirm(name.trim(), amountMinor, frequency, interval, selectedAccount?.id, startEpochDay)
                 },
                 enabled = valid,
             ) { Text("Guardar") }

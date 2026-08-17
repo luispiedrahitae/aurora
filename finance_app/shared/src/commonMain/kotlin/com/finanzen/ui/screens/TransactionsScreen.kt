@@ -110,9 +110,10 @@ fun TransactionsScreen(
     val dateLocale = LocalDateLocale.current
     var query by remember { mutableStateOf("") }
     val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
+    val todayEpochDay = remember(today) { today.toEpochDays().toLong() }
     var month by remember { mutableStateOf(LocalDate(today.year, today.month, 1)) }
-    // Días expandidos (acordeón). Ausente = abierto; todos expandidos por defecto, el acordeón
-    // sirve para colapsar días concretos en meses densos.
+    // Días expandidos (acordeón). Por defecto solo el día de hoy abre; el resto queda
+    // colapsado. Ausente en el mapa = usa el default; una vez tocado, el valor explícito manda.
     val expandedDays = remember { mutableStateMapOf<Long, Boolean>() }
     var pendingDeleteIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
     var blockedDelete by remember { mutableStateOf<TransactionsViewModel.DeleteBlock?>(null) }
@@ -192,7 +193,7 @@ fun TransactionsScreen(
                     ) {
                         groups.forEach { (day, dayRows) ->
                             // Con búsqueda activa se muestran expandidos para ver los resultados.
-                            val expanded = searching || (expandedDays[day] != false)
+                            val expanded = searching || (expandedDays[day] ?: (day == todayEpochDay))
                             val d = LocalDate.fromEpochDays(day.toInt())
                             item(key = "h_$day") {
                                 DayHeader(
@@ -203,15 +204,17 @@ fun TransactionsScreen(
                                     expenseMinor = dayExpense(dayRows),
                                     currency = dayRows.first().currency,
                                     expanded = expanded,
-                                    onToggle = { expandedDays[day] = !(expandedDays[day] != false) },
+                                    onToggle = { expandedDays[day] = !(expandedDays[day] ?: (day == todayEpochDay)) },
                                     modifier = Modifier.animateItem(),
                                 )
                             }
                             if (expanded) {
                                 items(dayRows, key = { it.id }) { row ->
+                                    val subcategory = row.categoryId?.let { categoriesById[it] }
                                     TransactionItem(
                                         row = row,
-                                        category = row.categoryId?.let { categoriesById[it] },
+                                        category = subcategory,
+                                        parentCategory = subcategory?.parentId?.let { categoriesById[it] },
                                         account = accountsById[row.accountId],
                                         onClick = { onEdit(row.id) },
                                         onSwipeToDelete = {
@@ -382,6 +385,7 @@ private fun SummaryRow(label: String, amountMinor: Long, currency: String, color
 private fun TransactionItem(
     row: TransactionRow,
     category: Category?,
+    parentCategory: Category?,
     account: Account?,
     onClick: () -> Unit,
     onSwipeToDelete: () -> Boolean,
@@ -432,7 +436,7 @@ private fun TransactionItem(
                 // La suscripción se distingue aun si tiene categoría (igual que una transferencia
                 // nunca se pierde detrás de su categoría) — de ahí que vaya antes del chequeo de categoría.
                 isSubscription -> KindAvatar(kind = row.kind, icon = Icons.Outlined.Autorenew)
-                category != null -> CategoryAvatar(icon = category.icon)
+                category != null -> CategoryAvatar(icon = category.icon, size = 40.dp)
                 else -> KindAvatar(kind = row.kind)
             }
             Column(Modifier.weight(1f)) {
@@ -443,7 +447,7 @@ private fun TransactionItem(
                     maxLines = 1,
                 )
                 Text(
-                    category?.name ?: kindLabel(row.kind),
+                    parentCategory?.name ?: category?.name ?: kindLabel(row.kind),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,

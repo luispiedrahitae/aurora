@@ -48,6 +48,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.finanzen.data.RESERVED_CATEGORY_NAMES
 import com.finanzen.db.Category
 import com.finanzen.ui.components.CategoryAvatar
 import com.finanzen.ui.components.CategoryGlyph
@@ -72,6 +73,7 @@ fun CategoriesScreen(
     val parents = categories.filter { it.parentId == null }
     val existingNames = categories.filter { it.kind == kind }.map { it.name.trim().lowercase() }.toSet()
     val nameTaken = name.isNotBlank() && name.trim().lowercase() in existingNames
+    val isReserved = name.isNotBlank() && RESERVED_CATEGORY_NAMES.any { it.equals(name.trim(), ignoreCase = true) }
     var pendingDelete by remember { mutableStateOf<Category?>(null) }
 
     pendingDelete?.let { cat ->
@@ -141,11 +143,15 @@ fun CategoriesScreen(
                                 onValueChange = { name = it },
                                 label = { Text("Nombre") },
                                 singleLine = true,
-                                isError = nameTaken,
-                                supportingText = if (nameTaken) {
-                                    { Text("Ya existe una categoría con ese nombre") }
-                                } else {
-                                    null
+                                isError = nameTaken || isReserved,
+                                supportingText = when {
+                                    isReserved -> {
+                                        { Text("Nombre de categoría reservado") }
+                                    }
+                                    nameTaken -> {
+                                        { Text("Ya existe una categoría con ese nombre") }
+                                    }
+                                    else -> null
                                 },
                                 modifier = Modifier.weight(1f),
                             )
@@ -157,7 +163,7 @@ fun CategoriesScreen(
                                 name = ""
                                 icon = iconGroups.first().icons.first().first
                             },
-                            enabled = name.isNotBlank() && !nameTaken,
+                            enabled = name.isNotBlank() && !nameTaken && !isReserved,
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Icon(Icons.Outlined.Add, null)
@@ -173,8 +179,8 @@ fun CategoriesScreen(
                 }
             }
             val requestDelete: (Long) -> Unit = { id -> pendingDelete = categories.firstOrNull { it.id == id } }
-            categoryGroup(parents.filter { it.kind == "EXPENSE" }, "Gastos", categories, requestDelete, addSubcategory)
-            categoryGroup(parents.filter { it.kind == "INCOME" }, "Ingresos", categories, requestDelete, addSubcategory)
+            categoryGroup(parents.filter { it.kind == "EXPENSE" && it.name !in RESERVED_CATEGORY_NAMES }, "Gastos", categories, requestDelete, addSubcategory)
+            categoryGroup(parents.filter { it.kind == "INCOME" && it.name !in RESERVED_CATEGORY_NAMES }, "Ingresos", categories, requestDelete, addSubcategory)
         }
     }
 }
@@ -231,6 +237,7 @@ private fun CategoryCard(
                 var newSubName by remember { mutableStateOf("") }
                 val existingNames = children.map { it.name.trim().lowercase() }.toSet()
                 val nameTaken = newSubName.isNotBlank() && newSubName.trim().lowercase() in existingNames
+                val isReserved = newSubName.isNotBlank() && RESERVED_CATEGORY_NAMES.any { it.equals(newSubName.trim(), ignoreCase = true) }
                 Row(
                     modifier = Modifier.padding(start = 16.dp, top = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -241,11 +248,15 @@ private fun CategoryCard(
                         onValueChange = { newSubName = it },
                         label = { Text("Subcategoría") },
                         singleLine = true,
-                        isError = nameTaken,
-                        supportingText = if (nameTaken) {
-                            { Text("Ya existe") }
-                        } else {
-                            null
+                        isError = nameTaken || isReserved,
+                        supportingText = when {
+                            isReserved -> {
+                                { Text("Nombre de categoría reservado") }
+                            }
+                            nameTaken -> {
+                                { Text("Ya existe") }
+                            }
+                            else -> null
                         },
                         modifier = Modifier.weight(1f),
                     )
@@ -254,7 +265,7 @@ private fun CategoryCard(
                             onAddSubcategory(parent.id, newSubName)
                             newSubName = ""
                         },
-                        enabled = newSubName.isNotBlank() && !nameTaken,
+                        enabled = newSubName.isNotBlank() && !nameTaken && !isReserved,
                     ) {
                         Icon(Icons.Outlined.Add, contentDescription = "Añadir subcategoría")
                     }

@@ -40,7 +40,12 @@ fun BudgetProgressCard(row: BudgetRow, currency: String, modifier: Modifier = Mo
         Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(spacing.md)) {
                 CategoryAvatar(icon = row.icon, size = 36.dp)
-                Text(row.categoryName, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(row.categoryName, fontWeight = FontWeight.SemiBold)
+                    row.parentName?.let {
+                        Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
                 if (over) {
                     Icon(
                         Icons.Outlined.WarningAmber,

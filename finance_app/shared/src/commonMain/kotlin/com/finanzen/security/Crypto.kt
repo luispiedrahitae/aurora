@@ -7,6 +7,14 @@ expect fun sha256Hex(input: String): String
 expect fun secureRandomBytes(size: Int): ByteArray
 
 /**
+ * Encadena [iterations] hashes SHA-256 partiendo de `sha256Hex(seed)`, donde cada vuelta re-hashea la
+ * representación hexadecimal ASCII de la vuelta anterior (mismo resultado que llamar a [sha256Hex] en
+ * bucle). Implementación por plataforma para reutilizar el motor de hash en vez de recrearlo en cada
+ * una de las iteraciones — ver comentario en [PinHasher].
+ */
+expect fun sha256HexIterated(seed: String, iterations: Int): String
+
+/**
  * Hash de PIN: SHA-256 iterado con sal aleatoria segura.
  * ponytail: el techo de seguridad es la entropía del PIN (4–8 dígitos), no el KDF — ningún número de
  * iteraciones resiste un ataque offline a 10^4–10^8 combinaciones. Las iteraciones solo encarecen cada
@@ -15,11 +23,7 @@ expect fun secureRandomBytes(size: Int): ByteArray
 object PinHasher {
     private const val ITERATIONS = 200_000
 
-    fun hash(pin: String, salt: String): String {
-        var current = sha256Hex(salt + pin)
-        repeat(ITERATIONS - 1) { current = sha256Hex(current) }
-        return current
-    }
+    fun hash(pin: String, salt: String): String = sha256HexIterated(salt + pin, ITERATIONS)
 
     fun verify(pin: String, salt: String, expectedHash: String): Boolean = hash(pin, salt) == expectedHash
 

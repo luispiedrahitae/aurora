@@ -176,7 +176,13 @@ fun CalendarScreen(
                 }
             } else {
                 items(selectedRows, key = { it.id }) { row ->
-                    DayTxRow(row, category = row.categoryId?.let { categoriesById[it] }, onClick = { onEdit(row.id) })
+                    val subcategory = row.categoryId?.let { categoriesById[it] }
+                    DayTxRow(
+                        row,
+                        category = subcategory,
+                        parentCategory = subcategory?.parentId?.let { categoriesById[it] },
+                        onClick = { onEdit(row.id) },
+                    )
                 }
             }
         }
@@ -269,7 +275,7 @@ private fun MonthGrid(
 }
 
 @Composable
-private fun DayTxRow(row: TransactionRow, category: Category?, onClick: () -> Unit) {
+private fun DayTxRow(row: TransactionRow, category: Category?, parentCategory: Category?, onClick: () -> Unit) {
     val finance = LocalFinanceColors.current
     val fmt = LocalMoneyFormat.current
     val isTransfer = row.kind == "TRANSFER"
@@ -280,7 +286,7 @@ private fun DayTxRow(row: TransactionRow, category: Category?, onClick: () -> Un
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         if (category != null) {
-            CategoryAvatar(icon = category.icon)
+            CategoryAvatar(icon = category.icon, size = 40.dp)
         } else {
             KindAvatar(kind = row.kind)
         }
@@ -292,7 +298,7 @@ private fun DayTxRow(row: TransactionRow, category: Category?, onClick: () -> Un
                 maxLines = 1,
             )
             Text(
-                category?.name ?: kindLabel(row.kind),
+                parentCategory?.name ?: category?.name ?: kindLabel(row.kind),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
