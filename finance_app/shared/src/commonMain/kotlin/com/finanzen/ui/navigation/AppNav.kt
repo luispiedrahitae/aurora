@@ -15,7 +15,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowDownward
 import androidx.compose.material.icons.outlined.ArrowUpward
 import androidx.compose.material.icons.outlined.Repeat
-import androidx.compose.material.icons.outlined.SmartToy
 import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material.icons.outlined.TrendingUp
 import androidx.compose.material3.Icon
@@ -25,13 +24,11 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -47,10 +44,8 @@ import androidx.navigation.navArgument
 import com.finanzen.ui.components.AutoSizeText
 import com.finanzen.ui.components.SpeedDialAction
 import com.finanzen.ui.components.SpeedDialFab
-import com.finanzen.ui.components.flatFabElevation
 import com.finanzen.ui.screens.AboutScreen
 import com.finanzen.ui.screens.AccountsTabScreen
-import com.finanzen.ui.screens.AssistantScreen
 import com.finanzen.ui.screens.BackupScreen
 import com.finanzen.ui.screens.BudgetsScreen
 import com.finanzen.ui.screens.CalendarScreen
@@ -72,7 +67,7 @@ import com.finanzen.ui.theme.LocalReduceMotion
 // Ancho a partir del cual mostramos rail lateral en vez de bottom bar (escritorio/tablet).
 private val WIDE_BREAKPOINT = 600.dp
 
-// Pantalla donde el FAB de captura rápida y el asistente IA están disponibles.
+// Pantalla donde el FAB de captura rápida está disponible.
 private val FAB_ROUTES = setOf(TopDestination.Transactions.route)
 
 @Composable
@@ -161,15 +156,6 @@ fun AppNav() {
                             onExpandedChange = { fabExpanded = it },
                             contentDescription = "Agregar movimiento",
                         )
-                        if (!fabExpanded) {
-                            SmallFloatingActionButton(
-                                onClick = { navController.navigate("assistant") },
-                                elevation = flatFabElevation(),
-                                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 16.dp + 56.dp + 12.dp),
-                            ) {
-                                Icon(Icons.Outlined.SmartToy, contentDescription = "Asistente IA")
-                            }
-                        }
                     }
                 }
             }
@@ -217,15 +203,6 @@ fun AppNav() {
                             onExpandedChange = { fabExpanded = it },
                             contentDescription = "Agregar movimiento",
                         )
-                        if (!fabExpanded) {
-                            SmallFloatingActionButton(
-                                onClick = { navController.navigate("assistant") },
-                                elevation = flatFabElevation(),
-                                modifier = Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 16.dp + 56.dp + 12.dp),
-                            ) {
-                                Icon(Icons.Outlined.SmartToy, contentDescription = "Asistente IA")
-                            }
-                        }
                     }
                 }
             }
@@ -335,9 +312,6 @@ private fun AppNavHost(navController: NavHostController, modifier: Modifier = Mo
         }
         composable("categories") {
             CategoriesScreen(onBack = { navController.popBackStack() })
-        }
-        composable("assistant") {
-            AssistantScreen(onBack = { navController.popBackStack() })
         }
         composable("calendar") {
             CalendarScreen(

@@ -84,14 +84,14 @@ object ReportBuilder {
             val lines = mutableListOf<ReportLine>()
             byParent.forEach { (parentId, parentTotal) ->
                 val parentPct = if (total > 0) (parentTotal * 100 / total) else 0L
-                lines += ReportLine.Row(catName[parentId] ?: "Sin categoría", "${money(parentTotal, currency)} ($parentPct%)", emphasis = true)
+                lines += ReportLine.Row(catName.getValue(parentId), "${money(parentTotal, currency)} ($parentPct%)", emphasis = true)
 
                 byLeaf.entries
                     .filter { (catId, _) -> catId != parentId && (catById[catId]?.parentId ?: catId) == parentId }
                     .sortedByDescending { it.value }
                     .forEach { (catId, amount) ->
                         val childPct = if (parentTotal > 0) (amount * 100 / parentTotal) else 0L
-                        lines += ReportLine.Row("   › ${catName[catId] ?: "Sin categoría"}", "${money(amount, currency)} ($childPct%)")
+                        lines += ReportLine.Row("   › ${catName.getValue(catId)}", "${money(amount, currency)} ($childPct%)")
                     }
             }
             return lines

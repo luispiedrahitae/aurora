@@ -39,7 +39,6 @@ App de finanzas personales **100% local**, multi-moneda, con tarjetas, cuotas, s
 | Async | Coroutines + Flow |
 | Fechas | `kotlinx-datetime` |
 | Serialización | `kotlinx-serialization` |
-| Imágenes | `coil3` (Compose Multiplatform) |
 | Calidad | Spotless (ktlint) · Detekt |
 
 ---

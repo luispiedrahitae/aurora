@@ -176,7 +176,7 @@ fun CalendarScreen(
                 }
             } else {
                 items(selectedRows, key = { it.id }) { row ->
-                    val subcategory = row.categoryId?.let { categoriesById[it] }
+                    val subcategory = categoriesById[row.categoryId]
                     DayTxRow(
                         row,
                         category = subcategory,

@@ -49,7 +49,7 @@ expect class ReportExporter {
 }
 
 /**
- * AES-GCM con clave derivada con PBKDF2-HMAC-SHA256 (100k iteraciones, 256 bits).
+ * AES-GCM con clave derivada con PBKDF2-HMAC-SHA256 (600k iteraciones, 256 bits).
  * El envelope devuelto por [encrypt] es un JSON self-describing (salt + iv + ciphertext b64) y
  * puede ser leído por cualquier plataforma con la misma passphrase.
  */

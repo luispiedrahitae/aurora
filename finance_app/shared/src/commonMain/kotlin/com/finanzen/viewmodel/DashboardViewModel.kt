@@ -407,10 +407,10 @@ class DashboardViewModel(
                         .sortedByDescending { it.amountMinor }
                 }
                 CategorySpend(
-                    name = parent?.name ?: "Sin categoría",
+                    name = parent!!.name,
                     amountMinor = parentAmount,
                     pct = parentAmount / total,
-                    color = parent?.color ?: 0L,
+                    color = parent.color,
                     subcategories = subcategories,
                 )
             }.sortedByDescending { it.amountMinor }

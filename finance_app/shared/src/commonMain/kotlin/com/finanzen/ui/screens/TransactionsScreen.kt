@@ -210,7 +210,7 @@ fun TransactionsScreen(
                             }
                             if (expanded) {
                                 items(dayRows, key = { it.id }) { row ->
-                                    val subcategory = row.categoryId?.let { categoriesById[it] }
+                                    val subcategory = categoriesById[row.categoryId]
                                     TransactionItem(
                                         row = row,
                                         category = subcategory,
@@ -333,7 +333,7 @@ private fun DayHeader(
         Icon(
             if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
             contentDescription = if (expanded) "Contraer" else "Expandir",
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            tint = MaterialTheme.colorScheme.primary,
         )
     }
 }

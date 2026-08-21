@@ -251,7 +251,7 @@ private fun BalanceHeroCard(
     val animatedBalance by animateFloatAsState(targetValue = totalBalance.toFloat(), animationSpec = motionTween(400))
     val balanceText = if (hidden) MASK else fmt.format(animatedBalance.toLong(), currency)
 
-    FinanceCard(size = BentoTileSize.Hero, glass = true, contentPadding = PaddingValues(spacing.xl)) {
+    FinanceCard(size = BentoTileSize.Hero, glass = true) {
         Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),

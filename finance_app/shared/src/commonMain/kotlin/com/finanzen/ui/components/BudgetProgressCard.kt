@@ -24,7 +24,7 @@ import com.finanzen.viewmodel.BudgetRow
 /**
  * Fila de presupuesto: avatar + nombre + % + barra de progreso + "Gastado X de Y". Compartida por
  * la pestaña Presupuesto y la sección de presupuestos del Resumen. El sobregiro usa Warning Amber
- * con icono de triángulo y copy explícito ("Superado por X") — nunca color solo ni rojo de alarma.
+ * con icono de triángulo y el % en color de advertencia — nunca color solo ni rojo de alarma.
  */
 @Composable
 fun BudgetProgressCard(row: BudgetRow, currency: String, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
@@ -67,12 +67,7 @@ fun BudgetProgressCard(row: BudgetRow, currency: String, modifier: Modifier = Mo
                 drawStopIndicator = {},
             )
             Text(
-                if (over) {
-                    "Superado por ${fmt.format(row.spentMinor - row.limitMinor, currency)} · " +
-                        "gastado ${fmt.format(row.spentMinor, currency)} de ${fmt.format(row.limitMinor, currency)}"
-                } else {
-                    "Gastado ${fmt.format(row.spentMinor, currency)} de ${fmt.format(row.limitMinor, currency)}"
-                },
+                "Gastado ${fmt.format(row.spentMinor, currency)} de ${fmt.format(row.limitMinor, currency)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = if (over) finance.warning else MaterialTheme.colorScheme.onSurfaceVariant,
             )

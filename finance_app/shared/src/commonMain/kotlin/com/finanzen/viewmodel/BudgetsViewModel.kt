@@ -83,8 +83,8 @@ class BudgetsViewModel(
             val limitByCat = budgets.groupBy { it.categoryId }
                 .mapValues { (_, rows) -> rows.filter { it.periodMonth <= period }.maxByOrNull { it.periodMonth }?.limitMinor ?: 0L }
             val spentByCat = txs.asSequence()
-                .filter { it.kind == "EXPENSE" && it.categoryId != null && monthOf(it.date) == period }
-                .groupBy { it.categoryId!! }
+                .filter { it.kind == "EXPENSE" && monthOf(it.date) == period }
+                .groupBy { it.categoryId }
                 .mapValues { (_, list) -> list.sumOf { it.amountMinor } }
             val catById = cats.associateBy { it.id }
             val rows = cats.filter { it.kind == "EXPENSE" }.map { cat ->

@@ -98,7 +98,7 @@ private fun CategoryBreakdownRow(spend: CategorySpend, currency: String) {
                         Icon(
                             if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
                             contentDescription = if (expanded) "Contraer" else "Expandir",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            tint = MaterialTheme.colorScheme.primary,
                         )
                     }
                 }

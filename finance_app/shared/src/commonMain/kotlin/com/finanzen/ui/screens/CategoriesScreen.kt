@@ -222,7 +222,7 @@ private fun CategoryCard(
                 Icon(
                     if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
                     contentDescription = if (expanded) "Contraer" else "Expandir",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    tint = MaterialTheme.colorScheme.primary,
                 )
                 Text(
                     "Subcategorías (${children.size})",

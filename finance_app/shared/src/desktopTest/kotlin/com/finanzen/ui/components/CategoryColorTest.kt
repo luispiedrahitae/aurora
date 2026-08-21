@@ -10,15 +10,15 @@ class CategoryColorTest {
     @Test
     fun sinColorPropioUsaElHashYEsEstable() {
         // color = 0 -> fallback por hash del nombre; mismo nombre, mismo color siempre.
-        assertEquals(colorForCategory("Alimentación"), categoryColor("Alimentación", 0))
-        assertEquals(categoryColor("Ocio", 0), categoryColor("Ocio", 0))
+        assertEquals(colorForCategory("Alimentación", LightCategoryColors), categoryColor("Alimentación", 0, LightCategoryColors))
+        assertEquals(categoryColor("Ocio", 0, LightCategoryColors), categoryColor("Ocio", 0, LightCategoryColors))
     }
 
     @Test
     fun colorGuardadoSeRespetaYHaceRoundTrip() {
         val chosen = LightCategoryColors[3]
         val stored = chosen.toArgb().toLong()
-        assertEquals(chosen, categoryColor("loQueSea", stored))
+        assertEquals(chosen, categoryColor("loQueSea", stored, LightCategoryColors))
     }
 
     @Test

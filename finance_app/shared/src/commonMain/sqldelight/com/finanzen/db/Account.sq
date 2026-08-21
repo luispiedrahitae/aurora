@@ -11,19 +11,12 @@ CREATE TABLE Account (
 selectAll:
 SELECT * FROM Account WHERE archived = 0 ORDER BY name;
 
-selectById:
-SELECT * FROM Account WHERE id = ?;
-
 insert:
 INSERT INTO Account(name, type, currency, openingBalanceMinor, color, archived)
 VALUES (?, ?, ?, ?, ?, ?);
 
 lastInsertRowId:
 SELECT last_insert_rowid();
-
-update:
-UPDATE Account SET name = ?, type = ?, currency = ?, openingBalanceMinor = ?, color = ?, archived = ?
-WHERE id = ?;
 
 updateBasics:
 UPDATE Account SET name = ?, openingBalanceMinor = ? WHERE id = ?;

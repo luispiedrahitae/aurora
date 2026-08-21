@@ -24,27 +24,8 @@ CREATE INDEX TransactionRow_account_idx ON TransactionRow(accountId);
 selectAll:
 SELECT * FROM TransactionRow ORDER BY date DESC, id DESC;
 
-selectBetween:
-SELECT * FROM TransactionRow WHERE date BETWEEN :start AND :end ORDER BY date DESC, id DESC;
-
 selectById:
 SELECT * FROM TransactionRow WHERE id = ?;
-
-selectByAccount:
-SELECT * FROM TransactionRow WHERE accountId = ? ORDER BY date DESC, id DESC;
-
-sumByCategoryBetween:
-SELECT categoryId, kind, SUM(amountMinor) AS totalMinor
-FROM TransactionRow
-WHERE date BETWEEN :start AND :end
-GROUP BY categoryId, kind;
-
-monthlyCashflow:
-SELECT (date / 30) AS bucket, kind, SUM(amountMinor) AS totalMinor
-FROM TransactionRow
-WHERE date BETWEEN :start AND :end
-GROUP BY bucket, kind
-ORDER BY bucket;
 
 insert:
 INSERT INTO TransactionRow(accountId, categoryId, amountMinor, currency, date, note, kind, transferAccountId, installmentPlanId, investmentId, subscriptionId)
@@ -73,14 +54,8 @@ SELECT COUNT(*) FROM TransactionRow WHERE installmentPlanId = ?;
 selectByInvestment:
 SELECT * FROM TransactionRow WHERE investmentId = ? ORDER BY date DESC, id DESC;
 
-countByInvestment:
-SELECT COUNT(*) FROM TransactionRow WHERE investmentId = ?;
-
 selectBySubscription:
 SELECT * FROM TransactionRow WHERE subscriptionId = ? ORDER BY date DESC, id DESC;
-
-countBySubscription:
-SELECT COUNT(*) FROM TransactionRow WHERE subscriptionId = ?;
 
 reassignInvestmentCategory:
 UPDATE TransactionRow SET categoryId = :newCategoryId WHERE investmentId IS NOT NULL AND categoryId != :newCategoryId;

@@ -101,11 +101,12 @@ data class FinanceColors(
 )
 
 internal val LightFinanceColors = FinanceColors(
-    // 047857 (emerald-700), no 059669: a 600 solo da ~3.8:1 sobre blanco, bajo el mínimo AA de 4.5:1
-    // para texto de tamaño normal (montos en MoneyText/KpiCard no son "texto grande" WCAG).
-    income = Color(0xFF047857),
+    // Croma/L igualados a los del acento teal claro (~L51 C0.09) para que ingreso/gasto lean como la
+    // misma familia restringida en vez de resaltar por separado; matiz original conservado (verde/rosa).
+    // 1F7759 da 5.5:1 sobre blanco, por encima del mínimo AA de 4.5:1 para texto normal.
+    income = Color(0xFF1F7759),
     incomeContainer = Color(0xFFCDEFDE),
-    expense = Color(0xFFE11D48),
+    expense = Color(0xFF994A4F),
     expenseContainer = Color(0xFFFADDE2),
     neutral = Color(0xFF55565C),
     warning = Color(0xFFB45309),
@@ -115,9 +116,10 @@ internal val LightFinanceColors = FinanceColors(
 )
 
 internal val DarkFinanceColors = FinanceColors(
-    income = Color(0xFF34D399),
+    // Croma/L igualados a los del acento teal oscuro (~L78 C0.13); matiz original conservado.
+    income = Color(0xFF59CA9A),
     incomeContainer = Color(0xFF1B3D30),
-    expense = Color(0xFFFB7185),
+    expense = Color(0xFFF58E9A),
     expenseContainer = Color(0xFF512530),
     neutral = Color(0xFFA9AAB0),
     warning = Color(0xFFFBBF24),

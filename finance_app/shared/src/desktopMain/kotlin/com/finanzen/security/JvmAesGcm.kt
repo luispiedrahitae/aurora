@@ -32,7 +32,7 @@ object JvmAesGcm {
         val random = SecureRandom()
         val salt = ByteArray(SALT_LEN).also(random::nextBytes)
         val iv = ByteArray(IV_LEN).also(random::nextBytes)
-        val key = deriveKey(passphrase, salt)
+        val key = deriveKey(passphrase, salt, ITERATIONS)
         val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply {
             init(Cipher.ENCRYPT_MODE, SecretKeySpec(key, "AES"), GCMParameterSpec(GCM_TAG_BITS, iv))
         }
@@ -41,6 +41,7 @@ object JvmAesGcm {
             s = salt.toHex(),
             i = iv.toHex(),
             c = Base64.encode(ct),
+            it = ITERATIONS,
         )
         return json.encodeToString(EncryptedEnvelope.serializer(), env)
     }
@@ -50,15 +51,15 @@ object JvmAesGcm {
         val salt = env.s.fromHex()
         val iv = env.i.fromHex()
         val ct = Base64.decode(env.c)
-        val key = deriveKey(passphrase, salt)
+        val key = deriveKey(passphrase, salt, env.it)
         val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply {
             init(Cipher.DECRYPT_MODE, SecretKeySpec(key, "AES"), GCMParameterSpec(GCM_TAG_BITS, iv))
         }
         cipher.doFinal(ct).toString(Charsets.UTF_8)
     }.getOrNull()
 
-    private fun deriveKey(passphrase: String, salt: ByteArray): ByteArray {
-        val spec = PBEKeySpec(passphrase.toCharArray(), salt, ITERATIONS, KEY_LEN_BITS)
+    private fun deriveKey(passphrase: String, salt: ByteArray, iterations: Int): ByteArray {
+        val spec = PBEKeySpec(passphrase.toCharArray(), salt, iterations, KEY_LEN_BITS)
         return SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).encoded
     }
 

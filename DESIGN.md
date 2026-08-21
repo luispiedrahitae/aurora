@@ -20,10 +20,10 @@ colors:
   light-outline: "#D4D4D8"
   accent-teal-dark: "#2DD4BF"
   accent-teal-light: "#0F766E"
-  income-dark: "#34D399"
-  income-light: "#047857"
-  expense-dark: "#FB7185"
-  expense-light: "#E11D48"
+  income-dark: "#59CA9A"
+  income-light: "#1F7759"
+  expense-dark: "#F58E9A"
+  expense-light: "#994A4F"
   warning-dark: "#FBBF24"
   warning-light: "#B45309"
 typography:
@@ -124,8 +124,8 @@ Restrained strategy: neutral tonal ramps carry almost the entire surface; one te
 - **Hairline** (`#2E2F33` on dark / `#D4D4D8` on light): the only border weight in the system — 1px, never used as a colored accent stripe.
 
 ### Semantic (fixed, not user-tunable)
-- **Income Green** (`#34D399` dark / `#047857` light): always paired with an upward-trend icon, never color alone.
-- **Expense Rose** (`#FB7185` dark / `#E11D48` light): a rose, not an alarm red — informative, not punishing. Always paired with a downward-trend icon.
+- **Income Green** (`#59CA9A` dark / `#1F7759` light): croma/L matched to the teal accent's own restrained recipe (same L/C envelope, hue kept green) so it reads as part of the system rather than a louder color of its own. Always paired with an upward-trend icon, never color alone.
+- **Expense Rose** (`#F58E9A` dark / `#994A4F` light): a rose, not an alarm red — informative, not punishing. Same croma/L match as Income Green. Always paired with a downward-trend icon.
 - **Warning Amber** (`#FBBF24` dark / `#B45309` light): budget/subscription alerts. Always paired with a triangle icon and explicit copy, never a bare color wash.
 
 ### Named Rules

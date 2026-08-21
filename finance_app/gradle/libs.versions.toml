@@ -9,7 +9,6 @@ datetime = "0.6.1"
 koin = "4.0.0"
 lifecycle = "2.8.4"
 nav = "2.8.0-alpha10"
-coil = "3.0.4"
 work = "2.10.0"
 biometric = "1.2.0-alpha05"
 activity = "1.9.3"
@@ -17,10 +16,6 @@ detekt = "1.23.7"
 spotless = "6.25.0"
 ktlint = "1.4.1"
 skiko = "0.9.4.2"
-# API Kotlin activamente mantenida de Google AI Edge (sucesora de MediaPipe LLM Inference, que
-# quedó en modo "maintenance-only"). 0.14.0 = última versión estable en maven.google.com al momento
-# de fijarla.
-litertlm = "0.14.0"
 
 [libraries]
 kotlinx-coroutines-core    = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
@@ -45,11 +40,6 @@ androidx-navigation-compose  = { module = "org.jetbrains.androidx.navigation:nav
 androidx-activity-compose    = { module = "androidx.activity:activity-compose", version.ref = "activity" }
 androidx-work-runtime        = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
 androidx-biometric           = { module = "androidx.biometric:biometric-ktx", version.ref = "biometric" }
-
-litertlm-android = { module = "com.google.ai.edge.litertlm:litertlm-android", version.ref = "litertlm" }
-
-coil-compose      = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
-coil-network-ktor = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil" }
 
 detekt-formatting = { module = "io.gitlab.arturbosch.detekt:detekt-formatting", version.ref = "detekt" }
 

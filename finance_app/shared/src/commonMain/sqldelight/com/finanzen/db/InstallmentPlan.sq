@@ -18,9 +18,6 @@ SELECT * FROM InstallmentPlan ORDER BY startDate DESC;
 selectById:
 SELECT * FROM InstallmentPlan WHERE id = ?;
 
-selectByCard:
-SELECT * FROM InstallmentPlan WHERE cardId = ? ORDER BY startDate DESC;
-
 selectActiveByCard:
 SELECT * FROM InstallmentPlan WHERE cardId = ? AND settled = 0 ORDER BY startDate DESC;
 
@@ -30,11 +27,6 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?);
 
 lastInsertRowId:
 SELECT last_insert_rowid();
-
-update:
-UPDATE InstallmentPlan
-SET cardId = ?, categoryId = ?, totalAmountMinor = ?, installments = ?, interestRate = ?, startDate = ?, description = ?
-WHERE id = ?;
 
 delete:
 DELETE FROM InstallmentPlan WHERE id = ?;

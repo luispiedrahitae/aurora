@@ -355,11 +355,11 @@ fun MonthSelector(
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         IconButton(onClick = onPrev) {
-            Icon(Icons.Outlined.ChevronLeft, contentDescription = "Mes anterior")
+            Icon(Icons.Outlined.ChevronLeft, contentDescription = "Mes anterior", tint = MaterialTheme.colorScheme.primary)
         }
         SelectorLabel(label, onLabelClick, onClickLabel = "Volver al mes actual")
         IconButton(onClick = onNext) {
-            Icon(Icons.Outlined.ChevronRight, contentDescription = "Mes siguiente")
+            Icon(Icons.Outlined.ChevronRight, contentDescription = "Mes siguiente", tint = MaterialTheme.colorScheme.primary)
         }
     }
 }
@@ -380,11 +380,11 @@ fun YearSelector(
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         IconButton(onClick = onPrev) {
-            Icon(Icons.Outlined.ChevronLeft, contentDescription = "Anio anterior")
+            Icon(Icons.Outlined.ChevronLeft, contentDescription = "Anio anterior", tint = MaterialTheme.colorScheme.primary)
         }
         SelectorLabel(label, onLabelClick, onClickLabel = "Volver al anio actual")
         IconButton(onClick = onNext) {
-            Icon(Icons.Outlined.ChevronRight, contentDescription = "Anio siguiente")
+            Icon(Icons.Outlined.ChevronRight, contentDescription = "Anio siguiente", tint = MaterialTheme.colorScheme.primary)
         }
     }
 }
@@ -456,6 +456,7 @@ fun InfoTooltip(text: String, contentDescription: String = "Más información", 
                 Icons.Outlined.Info,
                 contentDescription = contentDescription,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp),
             )
         }
     }
@@ -508,10 +509,10 @@ fun CategoryProgressRow(
  * Apariencia: el avatar identifica de forma uniforme (la categoría se distingue por el icono),
  * el chart codifica series de datos y sí necesita un color por categoría.
  */
-fun colorForCategory(name: String, palette: List<Color> = LightCategoryColors): Color = palette[((name.hashCode() % palette.size) + palette.size) % palette.size]
+fun colorForCategory(name: String, palette: List<Color>): Color = palette[((name.hashCode() % palette.size) + palette.size) % palette.size]
 
 /** Color efectivo de una categoría: el guardado (ARGB en [storedColor]) si lo hay, si no el del hash. */
-fun categoryColor(name: String, storedColor: Long, palette: List<Color> = LightCategoryColors): Color = if (storedColor != 0L) Color(storedColor.toInt()) else colorForCategory(name, palette)
+fun categoryColor(name: String, storedColor: Long, palette: List<Color>): Color = if (storedColor != 0L) Color(storedColor.toInt()) else colorForCategory(name, palette)
 
 /**
  * Glifo de una categoría: o un vector de Material (iconos generales) o un drawable de marca

@@ -144,4 +144,5 @@ data class EncryptedEnvelope(
     val s: String, // salt hex
     val i: String, // iv hex
     val c: String, // ciphertext base64
+    val it: Int = 600_000, // PBKDF2 iterations usadas para este envelope
 )

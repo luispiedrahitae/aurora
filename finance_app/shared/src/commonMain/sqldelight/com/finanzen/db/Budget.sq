@@ -9,12 +9,6 @@ CREATE TABLE Budget (
 selectAll:
 SELECT * FROM Budget ORDER BY periodMonth DESC, categoryId;
 
-selectByPeriod:
-SELECT * FROM Budget WHERE periodMonth = ?;
-
-selectById:
-SELECT * FROM Budget WHERE id = ?;
-
 -- ponytail: INSERT OR REPLACE re-inserta el row (id cambia). Aceptable porque la clave funcional es (categoryId, periodMonth).
 -- Subir a UPSERT (ON CONFLICT DO UPDATE) cuando minSdk >= 30 o el dialecto SQLDelight pase a sqlite_3_24+.
 upsert:

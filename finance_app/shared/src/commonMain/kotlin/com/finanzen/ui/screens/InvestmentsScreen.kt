@@ -196,7 +196,7 @@ fun InvestmentsScreen(
                         Icon(
                             if (closedExpanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
                             contentDescription = if (closedExpanded) "Contraer" else "Expandir",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            tint = MaterialTheme.colorScheme.primary,
                         )
                     }
                 }
@@ -442,7 +442,7 @@ private fun InvestmentItem(
                     Icon(
                         if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
                         contentDescription = if (expanded) "Contraer" else "Expandir",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        tint = MaterialTheme.colorScheme.primary,
                     )
                 }
             }

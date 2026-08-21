@@ -10,17 +10,7 @@ plugins {
 kotlin {
     jvmToolchain(17)
 
-    androidTarget {
-        // ponytail: litertlm-android's published jars are all stamped with Kotlin 2.3.0 metadata
-        // (every version on Maven, not just latest — verified by trying several) while this
-        // project pins Kotlin 2.1.0. The API surface used here (Engine/EngineConfig/Conversation)
-        // is plain Kotlin, nothing exotic, so skipping the metadata check is safe in practice.
-        // Upgrade path: drop this once the project's Kotlin pin catches up to 2.3.0+ (gated on
-        // Compose Multiplatform/SQLDelight/Koin support for that Kotlin version).
-        compilerOptions {
-            freeCompilerArgs.add("-Xskip-metadata-version-check")
-        }
-    }
+    androidTarget()
 
     jvm("desktop")
 
@@ -52,9 +42,6 @@ kotlin {
 
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.navigation.compose)
-
-            implementation(libs.coil.compose)
-            implementation(libs.coil.network.ktor)
         }
 
         commonTest.dependencies {
@@ -68,7 +55,6 @@ kotlin {
             implementation(libs.androidx.biometric)
             implementation(libs.androidx.work.runtime)
             implementation(libs.koin.android)
-            implementation(libs.litertlm.android)
         }
 
         val desktopMain by getting {

@@ -1,7 +1,6 @@
 package com.finanzen.di
 
 import com.finanzen.data.AccountRepository
-import com.finanzen.data.AssistantRepository
 import com.finanzen.data.BudgetRepository
 import com.finanzen.data.CardRepository
 import com.finanzen.data.CategoryRepository
@@ -18,7 +17,6 @@ import com.finanzen.data.seedIfEmpty
 import com.finanzen.db.FinanzenDb
 import com.finanzen.platform.DriverFactory
 import com.finanzen.viewmodel.AccountsViewModel
-import com.finanzen.viewmodel.AssistantViewModel
 import com.finanzen.viewmodel.BackupViewModel
 import com.finanzen.viewmodel.BudgetsViewModel
 import com.finanzen.viewmodel.CategoriesViewModel
@@ -66,7 +64,6 @@ val sharedModule: Module = module {
     single { SecurityRepository(get()) }
     single { SettingsRepository(get()) }
     single { BudgetRepository(get()) }
-    single { AssistantRepository(get(), get(), get()) }
 
     viewModel { DashboardViewModel(get(), get(), get(), get(), get()) }
     viewModel { TransactionsViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
@@ -77,7 +74,6 @@ val sharedModule: Module = module {
     viewModel { InvestmentsViewModel(get(), get(), get(), get(), get()) }
     viewModel { ReportsViewModel(get(), get(), get(), get(), get()) }
     viewModel { BackupViewModel(get(), get(), get()) }
-    viewModel { AssistantViewModel(get(), get(), get(), get(), get(), get(), get()) }
     single { SecurityViewModel(get()) }
     single { SettingsViewModel(get(), get()) }
 }

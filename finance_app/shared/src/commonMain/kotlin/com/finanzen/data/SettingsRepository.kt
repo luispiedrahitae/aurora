@@ -57,16 +57,6 @@ class SettingsRepository(private val db: FinanzenDb) {
 
     fun setSavingsGoalPct(pct: Long) = db.settingQueries.put(KEY_SAVINGS_GOAL_PCT, pct.toString())
 
-    /** Activación explícita del asistente IA on-device (opt-in). Apagado por defecto. */
-    fun assistantOptIn(): Boolean = db.settingQueries.get(KEY_ASSISTANT_OPT_IN).executeAsOneOrNull()?.toBooleanStrictOrNull() ?: false
-
-    fun setAssistantOptIn(enabled: Boolean) = db.settingQueries.put(KEY_ASSISTANT_OPT_IN, enabled.toString())
-
-    /** Estado del modelo del asistente: NOT_DOWNLOADED | DOWNLOADING | READY | CORRUPT | ERROR. */
-    fun assistantModelState(): String = db.settingQueries.get(KEY_ASSISTANT_MODEL_STATE).executeAsOneOrNull() ?: STATE_NOT_DOWNLOADED
-
-    fun setAssistantModelState(state: String) = db.settingQueries.put(KEY_ASSISTANT_MODEL_STATE, state)
-
     /** Moneda única de la app. La app no maneja FX; todos los montos se asumen en esta moneda. */
     fun baseCurrency(): String = db.settingQueries.get(KEY_CURRENCY).executeAsOneOrNull() ?: DEFAULT_CURRENCY
 
@@ -122,12 +112,5 @@ class SettingsRepository(private val db: FinanzenDb) {
         const val KEY_HIDE_AMOUNTS = "ui.hide_amounts"
         const val KEY_REDUCE_MOTION = "ui.reduce_motion"
         const val KEY_SYMBOL_POS = "ui.symbol_pos"
-        const val KEY_ASSISTANT_OPT_IN = "assistant.opt_in"
-        const val KEY_ASSISTANT_MODEL_STATE = "assistant.model_state"
-        const val STATE_NOT_DOWNLOADED = "NOT_DOWNLOADED"
-        const val STATE_DOWNLOADING = "DOWNLOADING"
-        const val STATE_READY = "READY"
-        const val STATE_CORRUPT = "CORRUPT"
-        const val STATE_ERROR = "ERROR"
     }
 }

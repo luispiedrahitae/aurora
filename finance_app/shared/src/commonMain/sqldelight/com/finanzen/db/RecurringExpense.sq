@@ -28,11 +28,5 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 lastInsertRowId:
 SELECT last_insert_rowid();
 
-update:
-UPDATE RecurringExpense
-SET name = ?, amountMinor = ?, currency = ?, categoryId = ?, accountId = ?, frequency = ?,
-    intervalCount = ?, nextChargeDate = ?, remindDaysBefore = ?, active = ?
-WHERE id = ?;
-
 delete:
 DELETE FROM RecurringExpense WHERE id = ?;

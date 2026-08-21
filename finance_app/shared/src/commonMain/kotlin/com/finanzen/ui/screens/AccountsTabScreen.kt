@@ -309,7 +309,7 @@ fun AccountsTabScreen(vm: AccountsViewModel = koinViewModel()) {
                                 Icon(
                                     if (archivedExpanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
                                     contentDescription = if (archivedExpanded) "Contraer" else "Expandir",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = MaterialTheme.colorScheme.primary,
                                 )
                                 Text(
                                     "Archivadas (${archivedAccounts.size})",
@@ -415,7 +415,7 @@ private fun AccountRow(
                         Icon(
                             if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
                             contentDescription = if (expanded) "Contraer" else "Expandir",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            tint = MaterialTheme.colorScheme.primary,
                         )
                     }
                 }
