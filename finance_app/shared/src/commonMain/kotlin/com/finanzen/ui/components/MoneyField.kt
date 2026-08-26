@@ -1,6 +1,7 @@
 package com.finanzen.ui.components
 
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -9,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
 import com.finanzen.domain.Money
 import com.finanzen.ui.theme.LocalMoneyFormat
 
@@ -45,6 +47,7 @@ fun MoneyField(
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         prefix = row?.symbol?.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
+        textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.End),
         modifier = modifier,
     )
 }

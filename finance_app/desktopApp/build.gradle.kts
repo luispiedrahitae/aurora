@@ -44,10 +44,10 @@ compose.desktop {
         nativeDistributions {
             // Preview de desarrollo en Windows. No se distribuye en stores.
             targetFormats(TargetFormat.Msi, TargetFormat.Exe)
-            packageName = "FinanZen Preview"
+            packageName = "Cauce Preview"
             packageVersion = "0.1.0"
-            description = "FinanZen — preview de UI (no para distribución)"
-            vendor = "FinanZen"
+            description = "Cauce — preview de UI (no para distribución)"
+            vendor = "Cauce"
         }
     }
 }

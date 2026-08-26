@@ -1,4 +1,4 @@
-rootProject.name = "FinanZen"
+rootProject.name = "Cauce"
 
 pluginManagement {
     repositories {

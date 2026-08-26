@@ -183,7 +183,7 @@ fun TransactionsScreen(
                             icon = Icons.AutoMirrored.Outlined.ReceiptLong,
                             title = if (searching) "Sin resultados" else "Sin movimientos",
                             subtitle = if (searching) "Prueba con otra búsqueda o cambia de mes." else "Usa el botón + para registrar tu primer movimiento.",
-                            modifier = Modifier.padding(spacing.xl),
+                            modifier = Modifier.padding(32.dp),
                         )
                     }
                 } else {
@@ -367,6 +367,7 @@ private fun SummaryRow(label: String, amountMinor: Long, currency: String, color
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         MoneyText(

@@ -98,7 +98,7 @@ object ReportBuilder {
         }
 
         val lines = mutableListOf<ReportLine>()
-        lines += ReportLine.Title("FinanZen — Resumen de $periodLabel")
+        lines += ReportLine.Title("Cauce — Resumen de $periodLabel")
         lines += ReportLine.Row("Generado el ${nowLabel()}")
         lines += ReportLine.Blank
 

@@ -166,11 +166,12 @@ fun CalendarScreen(
 
             if (selectedRows.isEmpty()) {
                 item {
-                    Box(Modifier.fillMaxWidth().padding(vertical = 16.dp), contentAlignment = Alignment.Center) {
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                         EmptyState(
                             icon = Icons.AutoMirrored.Outlined.ReceiptLong,
                             title = "Sin movimientos este día",
                             subtitle = "Toca otro día del calendario o registra uno con el botón + de Movimientos.",
+                            modifier = Modifier.padding(32.dp),
                         )
                     }
                 }

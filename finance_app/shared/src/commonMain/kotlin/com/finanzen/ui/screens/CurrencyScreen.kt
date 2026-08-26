@@ -69,7 +69,7 @@ fun CurrencyScreen(
                             "Moneda única de la app. Cambiarla re-etiqueta tus montos existentes sin convertirlos.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 12.dp),
+                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
                         )
                         val frecuentes = setOf("USD", "EUR", "COP", "MXN")
                         val orderedCurrencies = vm.currencies.sortedWith(
@@ -131,6 +131,6 @@ private fun SymbolOption(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         RadioButton(selected = selected == value, onClick = { onSelect(value) })
-        Text(label, fontWeight = FontWeight.SemiBold)
+        Text(label, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
     }
 }

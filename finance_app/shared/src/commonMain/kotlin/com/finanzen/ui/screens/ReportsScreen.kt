@@ -32,6 +32,7 @@ import com.finanzen.ui.components.YearSelector
 import com.finanzen.ui.format.PeriodMode
 import com.finanzen.ui.format.formatMesAnio
 import com.finanzen.ui.theme.LocalFinanceColors
+import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.viewmodel.ReportsViewModel
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.plus
@@ -123,13 +124,15 @@ private fun ReportCard(
 ) {
     FinanceCard(modifier = Modifier.fillMaxWidth()) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            androidx.compose.foundation.layout.Row(
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(LocalSpacing.current.sm),
+            ) {
                 Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                 Text(
                     title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(start = 12.dp),
                 )
             }
             Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

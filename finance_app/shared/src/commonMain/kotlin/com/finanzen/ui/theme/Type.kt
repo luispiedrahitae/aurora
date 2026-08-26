@@ -5,11 +5,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
-import finanzen.shared.generated.resources.Res
-import finanzen.shared.generated.resources.inter_bold
-import finanzen.shared.generated.resources.inter_medium
-import finanzen.shared.generated.resources.inter_regular
-import finanzen.shared.generated.resources.inter_semibold
+import cauce.shared.generated.resources.Res
+import cauce.shared.generated.resources.inter_bold
+import cauce.shared.generated.resources.inter_medium
+import cauce.shared.generated.resources.inter_regular
+import cauce.shared.generated.resources.inter_semibold
 import org.jetbrains.compose.resources.Font
 
 // Cifras tabulares ("tnum") para que los montos no "salten" durante los contadores animados.

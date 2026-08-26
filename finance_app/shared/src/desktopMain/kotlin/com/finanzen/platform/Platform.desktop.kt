@@ -57,7 +57,7 @@ actual class ReportExporter {
     actual fun savePdf(suggestedName: String, lines: List<ReportLine>): String = runCatching {
         // ponytail: stub Desktop — texto plano marcado. Real PDF solo en Android/iOS (release).
         val file = uniqueFile(suggestedName, ".pdf.txt")
-        val header = "=== FinanZen PDF STUB (Desktop preview) ===\n"
+        val header = "=== Cauce PDF STUB (Desktop preview) ===\n"
         val body = lines.joinToString("\n") { line ->
             when (line) {
                 is ReportLine.Title -> "\n${line.text}\n${"=".repeat(line.text.length)}"

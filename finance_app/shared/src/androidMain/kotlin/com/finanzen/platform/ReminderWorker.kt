@@ -57,7 +57,7 @@ class ReminderWorker(context: Context, params: WorkerParameters) : Worker(contex
     override fun doWork(): Result {
         val ctx = applicationContext
         val notifId = inputData.getLong(KEY_NOTIF_ID, 0L).toInt()
-        val title = inputData.getString(KEY_TITLE) ?: "FinanZen"
+        val title = inputData.getString(KEY_TITLE) ?: "Cauce"
         val body = inputData.getString(KEY_BODY).orEmpty()
         postReminderNotification(ctx, notifId, title, body)
         return Result.success()

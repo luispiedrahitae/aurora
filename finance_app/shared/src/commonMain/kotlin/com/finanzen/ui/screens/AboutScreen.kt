@@ -31,7 +31,7 @@ fun AboutScreen(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Acerca de FinanZen") },
+                title = { Text("Acerca de Cauce") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Volver")
@@ -47,9 +47,9 @@ fun AboutScreen(onBack: () -> Unit) {
         ) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("FinanZen", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
+                    Text("Cauce", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
                     Text(
-                        "Finanzas personales 100% locales.",
+                        "Sigue el flujo de tus finanzas.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -75,7 +75,7 @@ fun AboutScreen(onBack: () -> Unit) {
             item {
                 InfoCard(
                     title = "Datos y permisos",
-                    body = "FinanZen no recopila información personal. Solo usa almacenamiento local para la base de " +
+                    body = "Cauce no recopila información personal. Solo usa almacenamiento local para la base de " +
                         "datos y, cuando tú lo pidas, para guardar reportes o backups. No se comparte nada con terceros.",
                 )
             }

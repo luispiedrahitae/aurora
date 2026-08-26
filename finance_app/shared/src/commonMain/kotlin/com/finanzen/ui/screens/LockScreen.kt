@@ -79,7 +79,12 @@ fun LockScreen(vm: SecurityViewModel) {
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(56.dp),
             )
-            Text("FinanZen", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+            Text("Cauce", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
+            Text(
+                "Sigue el flujo de tus finanzas",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             Text(
                 "Introduce tu PIN (4–$PIN_MAX dígitos)",
                 style = MaterialTheme.typography.bodyMedium,

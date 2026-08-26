@@ -10,7 +10,7 @@ A single person managing their own personal finances — accounts, transactions,
 
 ## Product Purpose
 
-FinanZen is a personal finance tracker: accounts, transactions, budgets, subscriptions, categories, and analysis (income/expense trends, net worth, spending patterns) in one local-first app. Success looks like the user trusting the numbers at a glance, without friction or judgment, and being able to act on them (log a transaction, adjust a budget) in a couple of taps.
+Cauce is a personal finance tracker: accounts, transactions, budgets, subscriptions, categories, and analysis (income/expense trends, net worth, spending patterns) in one local-first app. Success looks like the user trusting the numbers at a glance, without friction or judgment, and being able to act on them (log a transaction, adjust a budget) in a couple of taps.
 
 ## Brand Personality
 

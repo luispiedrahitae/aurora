@@ -1,5 +1,5 @@
 ---
-name: FinanZen
+name: Cauce
 description: Precise, trustworthy personal finance tracker — Swiss-modernist grid, restrained glass accents, true-black OLED dark mode.
 colors:
   dark-background: "#000000"
@@ -90,13 +90,13 @@ components:
     rounded: "{rounded.sm}"
 ---
 
-# Design System: FinanZen
+# Design System: Cauce
 
 ## 1. Overview
 
 **Creative North Star: "The Instrument Panel"**
 
-FinanZen reads like a well-made instrument, not a consumer app performing friendliness. Swiss Modernism 2.0 is the base: a precise grid, a tight typographic scale, and color spent only where it carries meaning. On top of that restraint, one deliberate modern gesture — a frosted-glass surface reserved for the single most important number on each screen — and a Bento Box Grid that gives the dashboard real dimensional hierarchy instead of a flat scroll of identical cards. Dark, true-black OLED is the primary experience; a fully accessible light mode is a first-class sibling, not an afterthought bolted on.
+Cauce reads like a well-made instrument, not a consumer app performing friendliness. Swiss Modernism 2.0 is the base: a precise grid, a tight typographic scale, and color spent only where it carries meaning. On top of that restraint, one deliberate modern gesture — a frosted-glass surface reserved for the single most important number on each screen — and a Bento Box Grid that gives the dashboard real dimensional hierarchy instead of a flat scroll of identical cards. Dark, true-black OLED is the primary experience; a fully accessible light mode is a first-class sibling, not an afterthought bolted on.
 
 This system explicitly rejects: gamified/playful consumer-fintech visuals (badges, mascots, confetti), generic gradient-hero SaaS-dashboard boilerplate, shame-based or alarming treatment of overspend, and glassmorphism used as decorative wallpaper rather than a hierarchy signal.
 

@@ -176,7 +176,7 @@ private fun PinSetupCard(
             )
             error?.let { Text(it, color = finance.expense, style = MaterialTheme.typography.bodySmall) }
             androidx.compose.foundation.layout.Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 TextButton(onClick = onCancel, enabled = !isBusy) { Text("Cancelar") }

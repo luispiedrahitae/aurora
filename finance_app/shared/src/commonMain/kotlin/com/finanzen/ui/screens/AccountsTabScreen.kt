@@ -79,6 +79,7 @@ import com.finanzen.ui.components.MoneyField
 import com.finanzen.ui.components.MoneyText
 import com.finanzen.ui.components.MonthSelector
 import com.finanzen.ui.components.PickerField
+import com.finanzen.ui.components.SectionHeader
 import com.finanzen.ui.components.accountTypeLabel
 import com.finanzen.ui.components.flatFabElevation
 import com.finanzen.ui.components.kindLabel
@@ -270,13 +271,7 @@ fun AccountsTabScreen(vm: AccountsViewModel = koinViewModel()) {
                     if (creditAccounts.isNotEmpty()) {
                         item(key = "credit_header") {
                             HorizontalDivider(modifier = Modifier.padding(vertical = spacing.xs))
-                            Text(
-                                "Tarjetas de crédito",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(top = spacing.xs),
-                            )
+                            SectionHeader("Tarjetas de crédito")
                         }
                         items(creditAccounts, key = { it.id }) { account ->
                             AccountRow(
@@ -311,12 +306,7 @@ fun AccountsTabScreen(vm: AccountsViewModel = koinViewModel()) {
                                     contentDescription = if (archivedExpanded) "Contraer" else "Expandir",
                                     tint = MaterialTheme.colorScheme.primary,
                                 )
-                                Text(
-                                    "Archivadas (${archivedAccounts.size})",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+                                SectionHeader("Archivadas (${archivedAccounts.size})")
                             }
                         }
                         if (archivedExpanded) {
@@ -489,7 +479,7 @@ private fun AccountMovementsSection(
 
 @Composable
 private fun MovementSummaryRow(label: String, amountMinor: Long, currency: String, colorOverride: Color) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         MoneyText(
             amountMinor = amountMinor,
@@ -538,6 +528,7 @@ private fun ArchivedAccountRow(
     onHardDelete: () -> Unit,
 ) {
     val spacing = LocalSpacing.current
+    val finance = LocalFinanceColors.current
     val fmt = LocalMoneyFormat.current
     FinanceCard(modifier = Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(spacing.md)) {
@@ -550,11 +541,19 @@ private fun ArchivedAccountRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Text(
-                fmt.format(balanceMinor, account.currency),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    fmt.format(balanceMinor, account.currency),
+                    fontWeight = FontWeight.SemiBold,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (balanceMinor < 0) finance.expense else MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    if (account.type == "CREDIT") "deuda" else "saldo",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             IconButton(onClick = onUnarchive) {
                 Icon(Icons.Outlined.Unarchive, contentDescription = "Restaurar", tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }

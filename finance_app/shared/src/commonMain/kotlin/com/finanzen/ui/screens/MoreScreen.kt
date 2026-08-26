@@ -68,7 +68,7 @@ fun MoreScreen(onNavigate: (route: String) -> Unit) {
         MoreItem("Moneda", "Moneda única de la app", Icons.Outlined.Payments) {
             onNavigate("currency")
         },
-        MoreItem("Acerca de FinanZen", "Versión, privacidad, licencias", Icons.Outlined.Info) {
+        MoreItem("Acerca de Cauce", "Versión, privacidad, licencias", Icons.Outlined.Info) {
             onNavigate("about")
         },
     )
