@@ -431,11 +431,11 @@ fun YearSelector(
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         IconButton(onClick = onPrev) {
-            Icon(LucideIcons.ChevronLeft, contentDescription = "Anio anterior", tint = MaterialTheme.colorScheme.primary)
+            Icon(LucideIcons.ChevronLeft, contentDescription = "Año anterior", tint = MaterialTheme.colorScheme.primary)
         }
-        SelectorLabel(label, onLabelClick, onClickLabel = "Volver al anio actual")
+        SelectorLabel(label, onLabelClick, onClickLabel = "Volver al año actual")
         IconButton(onClick = onNext) {
-            Icon(LucideIcons.ChevronRight, contentDescription = "Anio siguiente", tint = MaterialTheme.colorScheme.primary)
+            Icon(LucideIcons.ChevronRight, contentDescription = "Año siguiente", tint = MaterialTheme.colorScheme.primary)
         }
     }
 }

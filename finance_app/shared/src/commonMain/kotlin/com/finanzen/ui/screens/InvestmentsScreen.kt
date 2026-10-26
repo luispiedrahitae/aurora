@@ -71,6 +71,7 @@ fun InvestmentsScreen(
     val contributionsByInvestment by vm.contributionsByInvestment.collectAsState()
     var withdrawingInvestment by remember { mutableStateOf<Investment?>(null) }
     var pendingDeleteIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
+    var editingId by remember { mutableStateOf<Long?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val accountNameById = remember(accounts) { accounts.associate { it.id to it.name } }
@@ -82,7 +83,7 @@ fun InvestmentsScreen(
             var undone = false
             try {
                 undone = snackbarHostState.showSnackbar(
-                    message = "InversiÃ³n eliminada",
+                    message = "Inversión eliminada",
                     actionLabel = "Deshacer",
                     duration = SnackbarDuration.Short,
                 ) == SnackbarResult.ActionPerformed
@@ -107,6 +108,10 @@ fun InvestmentsScreen(
         )
     }
 
+    editingId?.let { id ->
+        TransactionFormScreen(transactionId = null, investmentId = id, onDismiss = { editingId = null })
+    }
+
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -125,7 +130,7 @@ fun InvestmentsScreen(
                             EmptyState(
                                 icon = LucideIcons.TrendingUp,
                                 title = "Sin inversiones abiertas",
-                                subtitle = "CrÃ©ala desde Nuevo movimiento; los aportes se registran en Movimientos.",
+                                subtitle = "Créala desde Nuevo movimiento; los aportes se registran en Movimientos.",
                                 modifier = Modifier.padding(32.dp),
                             )
                         }
@@ -140,6 +145,7 @@ fun InvestmentsScreen(
                                 investment = inv,
                                 accountName = accountNameById[inv.accountId] ?: "",
                                 onWithdraw = { withdrawingInvestment = inv },
+                                onClick = { editingId = inv.id },
                             )
                         }
                     }
@@ -220,24 +226,25 @@ private fun WithdrawDialog(
     }
 }
 
-/** Tarjeta de inversiÃ³n abierta: icono Â· nombre + subtÃ­tulo (cuenta, periodicidad) Â· monto por aporte
- * Â· retirar. Se elimina deslizando. */
+/** Tarjeta de inversión abierta: icono · nombre + subtítulo (cuenta, periodicidad) · monto por aporte
+ * · retirar. Tocar edita, deslizar elimina. */
 @Composable
 private fun InvestmentItem(
     investment: Investment,
     accountName: String,
     onWithdraw: () -> Unit,
+    onClick: () -> Unit,
 ) {
     val spacing = LocalSpacing.current
     val dateLocale = LocalDateLocale.current
     val subtitle = if (investment.periodic == 1L) {
-        val next = investment.nextContributionDate?.let { " Â· prÃ³ximo ${formatDiaMes(it, dateLocale)}" } ?: ""
+        val next = investment.nextContributionDate?.let { " · próximo ${formatDiaMes(it, dateLocale)}" } ?: ""
         "$accountName$next"
     } else {
-        "$accountName Â· puntual"
+        "$accountName · puntual"
     }
 
-    FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(16.dp)) {
+    FinanceCard(modifier = Modifier.fillMaxWidth(), onClick = onClick, contentPadding = PaddingValues(16.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconAvatar(Icons.Outlined.TrendingUp)
@@ -252,7 +259,7 @@ private fun InvestmentItem(
     }
 }
 
-/** Tarjeta de inversiÃ³n cerrada: aportado / retirado / rendimiento (verde si ganancia, rosa si pÃ©rdida). */
+/** Tarjeta de inversión cerrada: aportado / retirado / rendimiento (verde si ganancia, rosa si pérdida). */
 @Composable
 private fun ClosedInvestmentItem(investment: Investment, accountName: String) {
     val spacing = LocalSpacing.current

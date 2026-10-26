@@ -57,6 +57,7 @@ fun SubscriptionsScreen(
     val accounts by vm.accounts.collectAsState()
     val accountsById = remember(accounts) { accounts.associateBy { it.id } }
     var pendingDeleteIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
+    var editingId by remember { mutableStateOf<Long?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -69,7 +70,7 @@ fun SubscriptionsScreen(
             var undone = false
             try {
                 undone = snackbarHostState.showSnackbar(
-                    message = "SuscripciÃ³n eliminada",
+                    message = "Suscripción eliminada",
                     actionLabel = "Deshacer",
                     duration = SnackbarDuration.Short,
                 ) == SnackbarResult.ActionPerformed
@@ -78,6 +79,10 @@ fun SubscriptionsScreen(
                 pendingDeleteIds = pendingDeleteIds - sub.id
             }
         }
+    }
+
+    editingId?.let { id ->
+        TransactionFormScreen(transactionId = null, subscriptionId = id, onDismiss = { editingId = null })
     }
 
     Scaffold(
@@ -97,14 +102,14 @@ fun SubscriptionsScreen(
                             EmptyState(
                                 icon = LucideIcons.Repeat,
                                 title = "Sin suscripciones",
-                                subtitle = "CrÃ©ala desde Nuevo movimiento; el cobro se registrarÃ¡ en Movimientos.",
+                                subtitle = "Créala desde Nuevo movimiento; el cobro se registrará en Movimientos.",
                                 modifier = Modifier.padding(32.dp),
                             )
                         }
                     }
                 } else {
                     item {
-                        // Total mensual comprometido: la cifra que responde "Â¿cuÃ¡nto me cuestan al mes?".
+                        // Total mensual comprometido: la cifra que responde "¿cuánto me cuestan al mes?".
                         val monthlyCost = remember(subs) { DashboardViewModel.computeSubscriptionMonthlyCost(subs) }
                         FinanceCard(modifier = Modifier.fillMaxWidth(), size = BentoTileSize.Small) {
                             Row(
@@ -133,6 +138,7 @@ fun SubscriptionsScreen(
                                 currency = s.currency,
                                 accountName = accountsById[s.accountId]?.name,
                                 recurrenceText = recurrenceText(s.frequency, s.intervalCount),
+                                onClick = { editingId = s.id },
                             )
                         }
                     }
@@ -142,14 +148,14 @@ fun SubscriptionsScreen(
     }
 }
 
-/** Texto de recurrencia corto para la fila de suscripciÃ³n: "DÃ­a N" (mensual) o "Cada N dÃ­as". */
+/** Texto de recurrencia corto para la fila de suscripción: "Día N" (mensual) o "Cada N días". */
 private fun recurrenceText(frequency: String, intervalCount: Long): String = when (frequency) {
-    "MONTHLY" -> "DÃ­a $intervalCount"
-    "DAILY" -> "Cada $intervalCount dÃ­as"
+    "MONTHLY" -> "Día $intervalCount"
+    "DAILY" -> "Cada $intervalCount días"
     else -> frequency
 }
 
-/** Tarjeta de suscripciÃ³n: icono Â· nombre + cuenta Â· recurrencia Â· monto. Se elimina deslizando. */
+/** Tarjeta de suscripción: icono · nombre + cuenta · recurrencia · monto. Tocar edita, deslizar elimina. */
 @Composable
 private fun SubscriptionItem(
     name: String,
@@ -157,15 +163,16 @@ private fun SubscriptionItem(
     currency: String,
     accountName: String?,
     recurrenceText: String,
+    onClick: () -> Unit,
 ) {
     val finance = LocalFinanceColors.current
-    FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(16.dp)) {
+    FinanceCard(modifier = Modifier.fillMaxWidth(), onClick = onClick, contentPadding = PaddingValues(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconAvatar(Icons.Outlined.Subscriptions)
             Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
                 Text(name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
                 Text(
-                    listOfNotNull(accountName, recurrenceText).joinToString(" Â· "),
+                    listOfNotNull(accountName, recurrenceText).joinToString(" · "),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

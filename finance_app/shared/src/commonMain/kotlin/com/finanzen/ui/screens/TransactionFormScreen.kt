@@ -70,6 +70,9 @@ fun TransactionFormScreen(
     transactionId: Long?,
     onDismiss: () -> Unit,
     initialKind: String? = null,
+    // Abrir directo el maestro desde Suscripciones/Inversiones, sin pasar por un movimiento vinculado.
+    subscriptionId: Long? = null,
+    investmentId: Long? = null,
     vm: TransactionsViewModel = koinViewModel(),
     subVm: SubscriptionsViewModel = koinViewModel(),
     invVm: InvestmentsViewModel = koinViewModel(),
@@ -81,8 +84,12 @@ fun TransactionFormScreen(
     val existing = remember(transactionId) { transactionId?.let(vm::transactionById) }
     // Si este movimiento vino de una suscripción/inversión, se edita el maestro (nombre/monto/cuenta/
     // recurrencia) en vez del TransactionRow puntual.
-    val editingSubscription = remember(existing) { existing?.subscriptionId?.let(subVm::subscriptionById) }
-    val editingInvestment = remember(existing) { existing?.investmentId?.let(invVm::investmentById) }
+    val editingSubscription = remember(existing, subscriptionId) {
+        (subscriptionId ?: existing?.subscriptionId)?.let(subVm::subscriptionById)
+    }
+    val editingInvestment = remember(existing, investmentId) {
+        (investmentId ?: existing?.investmentId)?.let(invVm::investmentById)
+    }
     val isLinkedEdit = editingSubscription != null || editingInvestment != null
     var kind by remember { mutableStateOf(existing?.kind ?: initialKind ?: "EXPENSE") }
     var accountId by remember {
