@@ -11,11 +11,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.Backspace
 import androidx.compose.material.icons.outlined.Fingerprint
-import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -35,11 +32,13 @@ import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.finanzen.platform.rememberBiometricUnlock
+import com.finanzen.ui.icons.LucideIcons
+import com.finanzen.ui.theme.FinanZenShapes
 import com.finanzen.ui.theme.LocalFinanceColors
+import com.finanzen.ui.theme.LocalSpacing
+import com.finanzen.ui.theme.displayFontFamily
 import com.finanzen.viewmodel.SecurityViewModel
 
 private const val PIN_MAX = 8
@@ -71,20 +70,10 @@ fun LockScreen(vm: SecurityViewModel) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(20.dp),
+            verticalArrangement = Arrangement.spacedBy(LocalSpacing.current.xl),
         ) {
-            Icon(
-                Icons.Outlined.Lock,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(56.dp),
-            )
-            Text("Cauce", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold)
-            Text(
-                "Sigue el flujo de tus finanzas",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            LockIconBadge()
+            Text("Sage", style = MaterialTheme.typography.headlineSmall.copy(fontFamily = displayFontFamily()))
             Text(
                 "Introduce tu PIN (4–$PIN_MAX dígitos)",
                 style = MaterialTheme.typography.bodyMedium,
@@ -121,11 +110,69 @@ fun LockScreen(vm: SecurityViewModel) {
             )
             if (biometric.available) {
                 TextButton(onClick = { biometric.authenticate { vm.unlockBiometric() } }) {
-                    Icon(Icons.Outlined.Fingerprint, contentDescription = null, modifier = Modifier.size(20.dp))
-                    Text("  Usar biometría")
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(LocalSpacing.current.xs),
+                    ) {
+                        // Sin glifo de huella en el set Lucide (39 iconos) — único uso Material
+                        // intencional, ver LucideIcons.kt.
+                        Icon(Icons.Outlined.Fingerprint, contentDescription = null, modifier = Modifier.size(20.dp))
+                        Text("Usar biometría")
+                    }
                 }
             }
         }
+    }
+}
+
+/**
+ * Vista previa del bloqueo (Apariencia > Seguridad > "Vista previa del bloqueo"): mismo look que
+ * [LockScreen] pero sin verificar nada contra el PIN real — el dígito tecleado solo llena los
+ * puntos de progreso y se reinicia solo, para que el usuario vea el flujo sin arriesgar un intento
+ * fallido real.
+ */
+@Composable
+fun PinPreviewScreen(onCancel: () -> Unit) {
+    var entered by remember { mutableStateOf("") }
+
+    Box(
+        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(LocalSpacing.current.xl),
+        ) {
+            LockIconBadge()
+            Text(
+                "Introduce tu PIN (4–$PIN_MAX dígitos)",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            PinDots(entered.length, max = PIN_MAX)
+            Keypad(
+                onDigit = { d -> if (entered.length < PIN_MAX) entered += d },
+                onBackspace = { entered = entered.dropLast(1) },
+                onSubmit = { entered = "" },
+            )
+            TextButton(onClick = onCancel) { Text("Cancelar vista previa") }
+        }
+    }
+}
+
+@Composable
+private fun LockIconBadge() {
+    Box(
+        modifier = Modifier.size(64.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            LucideIcons.Lock,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+            modifier = Modifier.size(28.dp),
+        )
     }
 }
 
@@ -187,14 +234,14 @@ private fun Keypad(onDigit: (String) -> Unit, onBackspace: () -> Unit, onSubmit:
 @Composable
 private fun KeypadCell(label: String, modifier: Modifier, onClick: () -> Unit) {
     Surface(
-        modifier = modifier.clip(RoundedCornerShape(12.dp)),
+        modifier = modifier.clip(FinanZenShapes.small),
         color = MaterialTheme.colorScheme.surfaceVariant,
         onClick = onClick,
     ) {
         Box(contentAlignment = Alignment.Center) {
             when (label) {
-                "←" -> Icon(Icons.AutoMirrored.Outlined.Backspace, contentDescription = "Borrar dígito")
-                else -> Text(label, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+                "←" -> Icon(LucideIcons.Backspace, contentDescription = "Borrar dígito")
+                else -> Text(label, style = MaterialTheme.typography.headlineSmall)
             }
         }
     }

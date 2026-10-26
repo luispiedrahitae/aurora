@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.finanzen.ui.theme.LocalMoneyFormat
+import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.ui.theme.PillShape
 import com.finanzen.viewmodel.FrequentExpense
 
@@ -42,8 +43,8 @@ fun TopFrequentExpensesList(items: List<FrequentExpense>, currency: String, modi
 
     val density = LocalDensity.current
     val measurer = rememberTextMeasurer()
-    val chipStyle = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
-    val amountStyle = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
+    val chipStyle = MaterialTheme.typography.labelMedium
+    val amountStyle = MaterialTheme.typography.bodyMedium
     val fmt = LocalMoneyFormat.current
 
     val chipColumnWidth = remember(items, chipStyle) {
@@ -67,7 +68,7 @@ fun TopFrequentExpensesList(items: List<FrequentExpense>, currency: String, modi
                         Text(
                             item.subcategoryName ?: item.name,
                             style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Medium,
+                            fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -88,7 +89,7 @@ fun TopFrequentExpensesList(items: List<FrequentExpense>, currency: String, modi
                     ) {
                         Text(
                             "×${item.count}",
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = LocalSpacing.current.sm, vertical = LocalSpacing.current.xs),
                             style = chipStyle,
                             textAlign = TextAlign.Center,
                             color = MaterialTheme.colorScheme.onSurface,

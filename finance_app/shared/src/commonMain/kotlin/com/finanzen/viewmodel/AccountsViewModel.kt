@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.finanzen.data.AccountRepository
 import com.finanzen.data.CardRepository
 import com.finanzen.data.InstallmentPlanRepository
+import com.finanzen.data.InvestmentRepository
 import com.finanzen.data.SettingsRepository
+import com.finanzen.data.SubscriptionRepository
 import com.finanzen.data.TransactionRepository
 import com.finanzen.db.Account
 import com.finanzen.db.Card
@@ -30,6 +32,8 @@ class AccountsViewModel(
     private val txRepo: TransactionRepository,
     private val cardRepo: CardRepository,
     private val planRepo: InstallmentPlanRepository,
+    private val subscriptionRepo: SubscriptionRepository,
+    private val investmentRepo: InvestmentRepository,
     private val settingsRepo: SettingsRepository,
     private val scheduler: NotificationScheduler,
 ) : ViewModel() {
@@ -164,7 +168,9 @@ class AccountsViewModel(
      * Borra la cuenta, sus transacciones, y su tarjeta de respaldo con los planes de cuotas asociados
      * (si es de crédito) — el diálogo de confirmación promete borrar "movimientos y planes de cuotas
      * asociados", así que la cascada se hace a mano en vez de depender de ON DELETE CASCADE porque el
-     * enforcement de FKs no está garantizado en SQLite.
+     * enforcement de FKs no está garantizado en SQLite. Las suscripciones e inversiones que apuntaban
+     * a esta cuenta no se borran (no son "de" la cuenta, solo la referencian para cargos/aportes) —
+     * solo se desvincula el accountId para no dejar una referencia colgante.
      */
     fun delete(id: Long) {
         txRepo.deleteByAccount(id)
@@ -172,6 +178,8 @@ class AccountsViewModel(
             planRepo.deleteByCard(card.id)
             cardRepo.delete(card.id)
         }
+        subscriptionRepo.clearAccount(id)
+        investmentRepo.clearAccount(id)
         accountRepo.delete(id)
     }
 

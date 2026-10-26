@@ -44,10 +44,10 @@ compose.desktop {
         nativeDistributions {
             // Preview de desarrollo en Windows. No se distribuye en stores.
             targetFormats(TargetFormat.Msi, TargetFormat.Exe)
-            packageName = "Cauce Preview"
+            packageName = "Sage Preview"
             packageVersion = "0.1.0"
-            description = "Cauce — preview de UI (no para distribución)"
-            vendor = "Cauce"
+            description = "Sage — preview de UI (no para distribución)"
+            vendor = "Sage"
         }
     }
 }

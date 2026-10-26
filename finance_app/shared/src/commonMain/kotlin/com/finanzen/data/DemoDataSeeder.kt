@@ -9,6 +9,7 @@ import kotlinx.datetime.plus
 import kotlin.random.Random
 
 private const val KEY_DEMO_SEEDED = "demoDataSeeded"
+private const val KEY_DEMO_DATA_CLEANED = "demoDataCleaned"
 
 /** Movimientos "sueltos" (ingreso/gasto/transferencia/ajuste) que genera [seedMonth] por mes. Junto
  * con los 3 movimientos recurrentes (suscripción, aporte de inversión, cuota) que arma
@@ -57,8 +58,9 @@ private val ADJUSTMENT_RANGE = 10L..150L
  * plan de cuotas, aporte de inversión) — ver
  * [seedRecurringInstruments] para los tres últimos, que solo se crean una vez y se backfillean con
  * la misma lógica de recurrencia que usa la app en producción. Solo para poblar un dispositivo de
- * prueba — idempotente vía bandera en Setting, pero no pensado para correr en producción (ver
- * AppModule.kt).
+ * prueba a mano durante desarrollo — idempotente vía bandera en Setting, pero deliberadamente NO
+ * se invoca desde AppModule.kt (nunca debe correr sola en una instalación real; ver
+ * [cleanupLeakedDemoData] para la limpieza de instalaciones que ya la recibieron por error).
  */
 fun seedDemoTransactions(db: FinanzenDb, today: LocalDate) {
     if (db.settingQueries.get(KEY_DEMO_SEEDED).executeAsOneOrNull() != null) return
@@ -118,6 +120,51 @@ fun seedDemoTransactions(db: FinanzenDb, today: LocalDate) {
                 year++
             }
         }
+    }
+}
+
+/**
+ * Limpieza única de las entidades del sembrado de demo que se filtraron a producción antes de que
+ * [seedDemoTransactions] dejara de invocarse automáticamente (ver AppModule.kt): identifica por
+ * nombre + parámetros exactos del seed (poco probable que un usuario real los replique por
+ * casualidad) la suscripción "Streaming Plus", la inversión "Fondo indexado" y el plan de cuotas
+ * "Electrodoméstico", y borra esas entidades junto con sus movimientos asociados (vía
+ * subscriptionId/investmentId/installmentPlanId). Deliberadamente NO toca las 3 cuentas ni los
+ * ~960 movimientos sueltos aleatorios del sembrado — no hay ningún marcador que los distinga de
+ * datos reales del usuario después del hecho; esos se revisan y borran a mano desde la app.
+ */
+fun cleanupLeakedDemoData(db: FinanzenDb) {
+    if (db.settingQueries.get(KEY_DEMO_SEEDED).executeAsOneOrNull() == null) return
+    if (db.settingQueries.get(KEY_DEMO_DATA_CLEANED).executeAsOneOrNull() != null) return
+
+    db.transaction {
+        db.settingQueries.put(KEY_DEMO_DATA_CLEANED, "true")
+
+        val txRepo = TransactionRepository(db)
+        val subsRepo = SubscriptionRepository(db)
+        val investRepo = InvestmentRepository(db)
+        val planRepo = InstallmentPlanRepository(db)
+
+        subsRepo.all()
+            .filter { it.name == "Streaming Plus" && it.frequency == "MONTHLY" && it.intervalCount == 6L }
+            .forEach { sub ->
+                txRepo.all().filter { it.subscriptionId == sub.id }.forEach { txRepo.delete(it.id) }
+                subsRepo.delete(sub.id)
+            }
+
+        investRepo.all()
+            .filter { it.name == "Fondo indexado" && it.frequency == "MONTHLY" && it.intervalCount == 9L }
+            .forEach { inv ->
+                txRepo.all().filter { it.investmentId == inv.id }.forEach { txRepo.delete(it.id) }
+                investRepo.delete(inv.id)
+            }
+
+        db.installmentPlanQueries.selectAll().executeAsList()
+            .filter { it.description == "Electrodoméstico" && it.installments == 24L && it.interestRate == 18.0 }
+            .forEach { plan ->
+                txRepo.all().filter { it.installmentPlanId == plan.id }.forEach { txRepo.delete(it.id) }
+                planRepo.delete(plan.id)
+            }
     }
 }
 

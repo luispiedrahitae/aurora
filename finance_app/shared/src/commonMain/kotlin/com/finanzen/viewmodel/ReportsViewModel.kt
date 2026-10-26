@@ -6,6 +6,7 @@ import com.finanzen.data.BudgetSummaryRow
 import com.finanzen.data.CategoryRepository
 import com.finanzen.data.InvestmentRepository
 import com.finanzen.data.ReportBuilder
+import com.finanzen.data.SubscriptionRepository
 import com.finanzen.db.Budget
 import com.finanzen.db.Category
 import com.finanzen.db.FinanzenDb
@@ -35,6 +36,7 @@ class ReportsViewModel(
     private val accountRepo: AccountRepository,
     private val categoryRepo: CategoryRepository,
     private val investRepo: InvestmentRepository,
+    private val subscriptionRepo: SubscriptionRepository,
     private val exporter: ReportExporter,
 ) : ViewModel() {
 
@@ -78,7 +80,7 @@ class ReportsViewModel(
         val rows = filterByPeriod(allTxs, _mode.value, _month.value, _year.value)
         val cats = db.categoryQueries.selectAll().executeAsList()
         val accs = accountRepo.allIncludingArchived().associate { it.id to it.name }
-        val csv = ReportBuilder.transactionsCsv(rows, cats, accs)
+        val csv = ReportBuilder.transactionsCsv(rows, cats, accs, subscriptionRepo.all(), investRepo.all())
         val result = exporter.saveCsv("finanzen-movimientos-${periodSuffix()}", csv)
         _status.value = ExportStatus(result, isError = result.startsWith("error") || result.startsWith("stub"))
     }
@@ -109,6 +111,8 @@ class ReportsViewModel(
             budgetRows = budgetRows,
             netWorthMinor = netWorthMinor,
             openInvestments = investRepo.openNow(),
+            subscriptions = subscriptionRepo.all(),
+            investments = investRepo.all(),
         )
         val result = exporter.savePdf("finanzen-resumen-${periodSuffix()}", lines)
         _status.value = ExportStatus(result, isError = result.startsWith("error") || result.startsWith("stub"))

@@ -47,12 +47,6 @@ object BackupSerializer {
                 it.withdrawnAmountMinor, it.closedDate, it.yieldMinor,
             )
         },
-        recurringExpenses = db.recurringExpenseQueries.selectAll().executeAsList().map {
-            RecurringExpenseDto(
-                it.id, it.name, it.amountMinor, it.currency, it.categoryId, it.accountId,
-                it.frequency, it.intervalCount, it.nextChargeDate, it.remindDaysBefore, it.active,
-            )
-        },
         budgets = db.budgetQueries.selectAll().executeAsList().map {
             BudgetDto(it.id, it.categoryId, it.periodMonth, it.limitMinor)
         },
@@ -80,7 +74,6 @@ object BackupSerializer {
             db.investmentQueries.selectClosed().executeAsList().forEach { db.investmentQueries.delete(it.id) }
             db.installmentPlanQueries.selectAll().executeAsList().forEach { db.installmentPlanQueries.delete(it.id) }
             db.subscriptionQueries.selectAll().executeAsList().forEach { db.subscriptionQueries.delete(it.id) }
-            db.recurringExpenseQueries.selectAll().executeAsList().forEach { db.recurringExpenseQueries.delete(it.id) }
             db.budgetQueries.selectAll().executeAsList().forEach { db.budgetQueries.delete(it.id) }
             db.cardQueries.selectAll().executeAsList().forEach { db.cardQueries.delete(it.id) }
             db.categoryQueries.selectAll().executeAsList().forEach { db.categoryQueries.delete(it.id) }
@@ -190,12 +183,6 @@ object BackupSerializer {
                     it.installmentPlanId?.let { p -> planIdMap[p] },
                     it.investmentId?.let { i -> investmentIdMap[i] },
                     it.subscriptionId?.let { s -> subscriptionIdMap[s] },
-                )
-            }
-            snap.recurringExpenses.forEach {
-                db.recurringExpenseQueries.insert(
-                    it.name, it.amountMinor, it.currency, it.categoryId?.let { c -> categoryIdMap[c] }, it.accountId?.let { a -> accountIdMap[a] },
-                    it.frequency, it.intervalCount, it.nextChargeDate, it.remindDaysBefore, it.active,
                 )
             }
             snap.budgets.forEach { db.budgetQueries.upsert(categoryIdMap.getValue(it.categoryId), it.periodMonth, it.limitMinor) }

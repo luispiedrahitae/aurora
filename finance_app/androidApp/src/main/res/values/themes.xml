@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Modo claro. La variante oscura vive en values-night/themes.xml. -->
-    <style name="Theme.FinanZen" parent="android:Theme.Material.Light.NoActionBar">
+    <style name="Theme.Sage" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:windowBackground">@color/window_background</item>
     </style>
 </resources>

@@ -1,14 +1,17 @@
 package com.finanzen.ui.components
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
@@ -18,9 +21,15 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.unit.dp
 import com.finanzen.data.CurrencyLocaleInfo
 import com.finanzen.ui.format.formatFechaCorta
+import com.finanzen.ui.icons.LucideIcons
 import com.finanzen.ui.theme.LocalDateLocale
 
 private const val MILLIS_PER_DAY = 86_400_000L
@@ -37,6 +46,11 @@ fun DateField(
     onEpochDayChange: (Long) -> Unit,
     modifier: Modifier = Modifier,
     dateLocale: CurrencyLocaleInfo = LocalDateLocale.current,
+    // Look "Sage" del handoff: caja plana igual a los demás campos (ver `sageFieldColors()` en
+    // MoneyField.kt) con el ícono de calendario al final, en vez de un OutlinedButton con ícono
+    // líder. Por ahora solo lo usa TransactionFormScreen; Suscripciones/Inversiones siguen con el
+    // botón de siempre.
+    plain: Boolean = false,
 ) {
     var showPicker by remember { mutableStateOf(false) }
 
@@ -57,9 +71,37 @@ fun DateField(
         ) { DatePicker(state = dpState) }
     }
 
-    OutlinedButton(onClick = { showPicker = true }, modifier = modifier) {
-        Icon(Icons.Outlined.CalendarMonth, contentDescription = null)
-        Spacer(Modifier.width(8.dp))
-        Text(formatFechaCorta(epochDay, dateLocale))
+    if (!plain) {
+        OutlinedButton(onClick = { showPicker = true }, modifier = modifier) {
+            Icon(LucideIcons.Calendar, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text(formatFechaCorta(epochDay, dateLocale))
+        }
+        return
+    }
+
+    val formatted = formatFechaCorta(epochDay, dateLocale)
+    Box(modifier) {
+        OutlinedTextField(
+            value = formatted,
+            onValueChange = {},
+            readOnly = true,
+            trailingIcon = { Icon(LucideIcons.Calendar, contentDescription = null) },
+            shape = MaterialTheme.shapes.medium,
+            colors = sageFieldColors(),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        // Mismo truco de PickerField: el OutlinedTextField readOnly no expone onClick, así que un
+        // overlay transparente captura el toque y expone la semántica de botón para TalkBack.
+        Box(
+            Modifier
+                .matchParentSize()
+                .clip(MaterialTheme.shapes.medium)
+                .clickable(onClickLabel = "Abrir calendario") { showPicker = true }
+                .clearAndSetSemantics {
+                    role = Role.Button
+                    contentDescription = "Fecha: $formatted"
+                },
+        )
     }
 }

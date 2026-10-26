@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -26,8 +27,6 @@ import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.Cake
 import androidx.compose.material.icons.outlined.Category
 import androidx.compose.material.icons.outlined.Checkroom
-import androidx.compose.material.icons.outlined.ChevronLeft
-import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.ChildCare
 import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.Commute
@@ -45,7 +44,6 @@ import androidx.compose.material.icons.outlined.Forum
 import androidx.compose.material.icons.outlined.GasMeter
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Icecream
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.LiveTv
 import androidx.compose.material.icons.outlined.LocalBar
@@ -91,16 +89,17 @@ import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material.icons.outlined.WineBar
 import androidx.compose.material.icons.outlined.Work
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButtonDefaults
-import androidx.compose.material3.FloatingActionButtonElevation
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -110,6 +109,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -123,83 +124,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
-import cauce.shared.generated.resources.Res
-import cauce.shared.generated.resources.brand_airbnb
-import cauce.shared.generated.resources.brand_aliexpress
-import cauce.shared.generated.resources.brand_amazon
-import cauce.shared.generated.resources.brand_americanairlines
-import cauce.shared.generated.resources.brand_applemusic
-import cauce.shared.generated.resources.brand_appletv
-import cauce.shared.generated.resources.brand_avianca
-import cauce.shared.generated.resources.brand_battledotnet
-import cauce.shared.generated.resources.brand_bookingdotcom
-import cauce.shared.generated.resources.brand_coursera
-import cauce.shared.generated.resources.brand_crunchyroll
-import cauce.shared.generated.resources.brand_deezer
-import cauce.shared.generated.resources.brand_delta
-import cauce.shared.generated.resources.brand_discord
-import cauce.shared.generated.resources.brand_duolingo
-import cauce.shared.generated.resources.brand_ea
-import cauce.shared.generated.resources.brand_easyjet
-import cauce.shared.generated.resources.brand_edx
-import cauce.shared.generated.resources.brand_emirates
-import cauce.shared.generated.resources.brand_epicgames
-import cauce.shared.generated.resources.brand_facebook
-import cauce.shared.generated.resources.brand_gmail
-import cauce.shared.generated.resources.brand_google
-import cauce.shared.generated.resources.brand_googlecalendar
-import cauce.shared.generated.resources.brand_googlechrome
-import cauce.shared.generated.resources.brand_googleclassroom
-import cauce.shared.generated.resources.brand_googledrive
-import cauce.shared.generated.resources.brand_googlemaps
-import cauce.shared.generated.resources.brand_googlemeet
-import cauce.shared.generated.resources.brand_googlephotos
-import cauce.shared.generated.resources.brand_googleplay
-import cauce.shared.generated.resources.brand_googletranslate
-import cauce.shared.generated.resources.brand_grab
-import cauce.shared.generated.resources.brand_hbomax
-import cauce.shared.generated.resources.brand_hulu
-import cauce.shared.generated.resources.brand_ifood
-import cauce.shared.generated.resources.brand_instagram
-import cauce.shared.generated.resources.brand_kfc
-import cauce.shared.generated.resources.brand_khanacademy
-import cauce.shared.generated.resources.brand_lufthansa
-import cauce.shared.generated.resources.brand_lyft
-import cauce.shared.generated.resources.brand_mcdonalds
-import cauce.shared.generated.resources.brand_mercadopago
-import cauce.shared.generated.resources.brand_microsoftteams
-import cauce.shared.generated.resources.brand_netflix
-import cauce.shared.generated.resources.brand_nintendo
-import cauce.shared.generated.resources.brand_nintendoswitch
-import cauce.shared.generated.resources.brand_notion
-import cauce.shared.generated.resources.brand_nubank
-import cauce.shared.generated.resources.brand_openai
-import cauce.shared.generated.resources.brand_paramountplus
-import cauce.shared.generated.resources.brand_platzi
-import cauce.shared.generated.resources.brand_playstation
-import cauce.shared.generated.resources.brand_primevideo
-import cauce.shared.generated.resources.brand_quizlet
-import cauce.shared.generated.resources.brand_riotgames
-import cauce.shared.generated.resources.brand_ryanair
-import cauce.shared.generated.resources.brand_skillshare
-import cauce.shared.generated.resources.brand_spotify
-import cauce.shared.generated.resources.brand_steam
-import cauce.shared.generated.resources.brand_telegram
-import cauce.shared.generated.resources.brand_tiktok
-import cauce.shared.generated.resources.brand_twitch
-import cauce.shared.generated.resources.brand_uber
-import cauce.shared.generated.resources.brand_ubisoft
-import cauce.shared.generated.resources.brand_udacity
-import cauce.shared.generated.resources.brand_udemy
-import cauce.shared.generated.resources.brand_waze
-import cauce.shared.generated.resources.brand_whatsapp
-import cauce.shared.generated.resources.brand_wikipedia
-import cauce.shared.generated.resources.brand_x
-import cauce.shared.generated.resources.brand_xbox
-import cauce.shared.generated.resources.brand_youtube
 import com.finanzen.domain.Money
 import com.finanzen.ui.format.PeriodMode
+import com.finanzen.ui.icons.LucideIcons
 import com.finanzen.ui.theme.FinanceColors
 import com.finanzen.ui.theme.LightCategoryColors
 import com.finanzen.ui.theme.LocalAccentColor
@@ -207,29 +136,98 @@ import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.ui.theme.PillShape
-import com.finanzen.ui.theme.glassSurface
+import com.finanzen.ui.theme.displayFontFamily
 import com.finanzen.ui.theme.motionTween
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.DrawableResource
-import org.jetbrains.compose.resources.painterResource
+import sage.shared.generated.resources.Res
+import sage.shared.generated.resources.brand_airbnb
+import sage.shared.generated.resources.brand_aliexpress
+import sage.shared.generated.resources.brand_amazon
+import sage.shared.generated.resources.brand_americanairlines
+import sage.shared.generated.resources.brand_applemusic
+import sage.shared.generated.resources.brand_appletv
+import sage.shared.generated.resources.brand_avianca
+import sage.shared.generated.resources.brand_battledotnet
+import sage.shared.generated.resources.brand_bookingdotcom
+import sage.shared.generated.resources.brand_coursera
+import sage.shared.generated.resources.brand_crunchyroll
+import sage.shared.generated.resources.brand_deezer
+import sage.shared.generated.resources.brand_delta
+import sage.shared.generated.resources.brand_discord
+import sage.shared.generated.resources.brand_duolingo
+import sage.shared.generated.resources.brand_ea
+import sage.shared.generated.resources.brand_easyjet
+import sage.shared.generated.resources.brand_edx
+import sage.shared.generated.resources.brand_emirates
+import sage.shared.generated.resources.brand_epicgames
+import sage.shared.generated.resources.brand_facebook
+import sage.shared.generated.resources.brand_gmail
+import sage.shared.generated.resources.brand_google
+import sage.shared.generated.resources.brand_googlecalendar
+import sage.shared.generated.resources.brand_googlechrome
+import sage.shared.generated.resources.brand_googleclassroom
+import sage.shared.generated.resources.brand_googledrive
+import sage.shared.generated.resources.brand_googlemaps
+import sage.shared.generated.resources.brand_googlemeet
+import sage.shared.generated.resources.brand_googlephotos
+import sage.shared.generated.resources.brand_googleplay
+import sage.shared.generated.resources.brand_googletranslate
+import sage.shared.generated.resources.brand_grab
+import sage.shared.generated.resources.brand_hbomax
+import sage.shared.generated.resources.brand_hulu
+import sage.shared.generated.resources.brand_ifood
+import sage.shared.generated.resources.brand_instagram
+import sage.shared.generated.resources.brand_kfc
+import sage.shared.generated.resources.brand_khanacademy
+import sage.shared.generated.resources.brand_lufthansa
+import sage.shared.generated.resources.brand_lyft
+import sage.shared.generated.resources.brand_mcdonalds
+import sage.shared.generated.resources.brand_mercadopago
+import sage.shared.generated.resources.brand_microsoftteams
+import sage.shared.generated.resources.brand_netflix
+import sage.shared.generated.resources.brand_nintendo
+import sage.shared.generated.resources.brand_nintendoswitch
+import sage.shared.generated.resources.brand_notion
+import sage.shared.generated.resources.brand_nubank
+import sage.shared.generated.resources.brand_openai
+import sage.shared.generated.resources.brand_paramountplus
+import sage.shared.generated.resources.brand_platzi
+import sage.shared.generated.resources.brand_playstation
+import sage.shared.generated.resources.brand_primevideo
+import sage.shared.generated.resources.brand_quizlet
+import sage.shared.generated.resources.brand_riotgames
+import sage.shared.generated.resources.brand_ryanair
+import sage.shared.generated.resources.brand_skillshare
+import sage.shared.generated.resources.brand_spotify
+import sage.shared.generated.resources.brand_steam
+import sage.shared.generated.resources.brand_telegram
+import sage.shared.generated.resources.brand_tiktok
+import sage.shared.generated.resources.brand_twitch
+import sage.shared.generated.resources.brand_uber
+import sage.shared.generated.resources.brand_ubisoft
+import sage.shared.generated.resources.brand_udacity
+import sage.shared.generated.resources.brand_udemy
+import sage.shared.generated.resources.brand_waze
+import sage.shared.generated.resources.brand_whatsapp
+import sage.shared.generated.resources.brand_wikipedia
+import sage.shared.generated.resources.brand_x
+import sage.shared.generated.resources.brand_xbox
+import sage.shared.generated.resources.brand_youtube
 import kotlin.math.roundToInt
 
 /** Los tres tamaños de tile bento (DESIGN.md, sección "Bento Tiles"). Fija radio/padding/tono por defecto. */
 enum class BentoTileSize { Hero, Medium, Small }
 
 /**
- * Superficie base de todos los tiles bento: tonal (sin sombras pesadas), radio y padding derivados
- * de [size]. Centraliza la apariencia para no repetir Card+padding en cada pantalla.
- *
- * [glass] activa el material de vidrio ([Modifier.glassSurface]) — reservado para **un solo** tile
- * por pantalla (DESIGN.md, "The One Glass Tile Rule"); el resto de tiles se queda plano/tonal.
+ * Superficie base de todos los tiles bento: plana con sombra suave, radio y padding derivados de
+ * [size]. Centraliza la apariencia para no repetir Card+padding en cada pantalla.
  */
 @Composable
 fun FinanceCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     size: BentoTileSize = BentoTileSize.Medium,
-    glass: Boolean = false,
     color: Color = when (size) {
         BentoTileSize.Hero -> MaterialTheme.colorScheme.surfaceContainerHigh
         BentoTileSize.Medium -> MaterialTheme.colorScheme.surfaceContainer
@@ -242,19 +240,58 @@ fun FinanceCard(
     },
     content: @Composable () -> Unit,
 ) {
-    val shape = when (size) {
-        BentoTileSize.Hero -> MaterialTheme.shapes.extraLarge
-        BentoTileSize.Medium -> MaterialTheme.shapes.medium
-        BentoTileSize.Small -> MaterialTheme.shapes.small
+    // Sage converge todas las bento tiles al radio base de 16dp (ver DESIGN.md, Bento Tiles) en vez
+    // de escalar el radio por tamaño — el tamaño y la sombra hacen la jerarquía, no la forma.
+    val shape = MaterialTheme.shapes.medium
+    // Vocabulario de sombra suave de Sage (DESIGN.md, shadow-sm/md/lg) en vez de vidrio/hairline.
+    val shadowElevation = when (size) {
+        BentoTileSize.Hero -> 6.dp
+        BentoTileSize.Medium -> 3.dp
+        BentoTileSize.Small -> 1.dp
     }
-    val surfaceModifier = if (glass) modifier.glassSurface(shape) else modifier
-    val surfaceColor = if (glass) Color.Transparent else color
     val inner: @Composable () -> Unit = { Box(Modifier.padding(contentPadding)) { content() } }
     if (onClick != null) {
-        Surface(onClick = onClick, modifier = surfaceModifier, shape = shape, color = surfaceColor, content = inner)
+        Surface(
+            onClick = onClick,
+            modifier = modifier,
+            shape = shape,
+            color = color,
+            shadowElevation = shadowElevation,
+            content = inner,
+        )
     } else {
-        Surface(modifier = surfaceModifier, shape = shape, color = surfaceColor, content = inner)
+        Surface(
+            modifier = modifier,
+            shape = shape,
+            color = color,
+            shadowElevation = shadowElevation,
+            content = inner,
+        )
     }
+}
+
+/**
+ * Variante de `contentPadding` para [FinanceCard] cuando el último elemento de la fila es un
+ * `IconButton` (p. ej. un chevron de expandir/contraer). Un `IconButton` sin modificadores
+ * reserva un target táctil de 48dp con el ícono de 24dp centrado adentro — sin este ajuste, el
+ * glifo queda ~12dp más lejos del borde que en filas sin `IconButton` (p. ej. `DayHeader` en
+ * Movimientos, a `spacing.lg` = 16dp plano). Este helper recorta el padding final para que ambos
+ * casos terminen al mismo margen visual, sin tocar el tamaño estándar del ícono/botón.
+ *
+ * Esto solo arregla el lado del borde de la tarjeta. Del otro lado (entre el `IconButton` y el
+ * contenido que lo precede, p. ej. el saldo), el propio padding interno del botón (~12dp) ya hace
+ * de separación — si además ese `IconButton` va dentro de un `Row` con `Arrangement.spacedBy`, el
+ * hueco se duplica. Ponlo en su propio `Row` sin `horizontalArrangement` (spacing 0 por defecto)
+ * junto al elemento anterior, para que solo el padding del botón separe ambos — ver `AccountRow`
+ * en `AccountsTabScreen.kt`.
+ */
+fun trailingIconButtonPadding(size: BentoTileSize = BentoTileSize.Medium): PaddingValues {
+    val edge = when (size) {
+        BentoTileSize.Hero -> 20.dp
+        BentoTileSize.Medium -> 16.dp
+        BentoTileSize.Small -> 12.dp
+    }
+    return PaddingValues(start = edge, top = edge, bottom = edge, end = 4.dp)
 }
 
 /**
@@ -331,11 +368,23 @@ fun AutoSizeText(
 @Composable
 fun SectionHeader(text: String, modifier: Modifier = Modifier) {
     Text(
-        text,
+        // Sage.dc.html renderiza estos h6 en mayúsculas (el texto fuente va en minúsculas) sobre
+        // un color atenuado (~55% del ink) y con la fuente display (Caprasimo), pero sin
+        // font-size inline -- medí el cap-height real en screenshots/03-cuentas.png contra el H1
+        // "Cuentas" (22px conocidos, misma fuente): ~15px de cap-height para 22px de font-size
+        // (ratio 0.68) vs ~8-9px de cap-height para el h6 "TARJETAS DE CRÉDITO", lo que da un
+        // font-size de mockup de ~12-13px -- muy lejos de los 20sp (rol `title`) que documenta
+        // DESIGN.md, que está desactualizado. 13sp puro (rol `label`) igual se vio demasiado
+        // chico en dispositivo real (Caprasimo tiene menos cap-height por punto que Figtree), así
+        // que 15sp es el punto intermedio elegido en vez de reusar un rol tal cual.
+        text.uppercase(),
         modifier = modifier.padding(top = LocalSpacing.current.xs),
-        style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.onSurface,
-        fontWeight = FontWeight.SemiBold,
+        style = MaterialTheme.typography.labelLarge.copy(
+            fontFamily = displayFontFamily(),
+            fontSize = 15.sp,
+            letterSpacing = 0.04.em,
+        ),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }
 
@@ -355,11 +404,11 @@ fun MonthSelector(
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         IconButton(onClick = onPrev) {
-            Icon(Icons.Outlined.ChevronLeft, contentDescription = "Mes anterior", tint = MaterialTheme.colorScheme.primary)
+            Icon(LucideIcons.ChevronLeft, contentDescription = "Mes anterior", tint = MaterialTheme.colorScheme.primary)
         }
         SelectorLabel(label, onLabelClick, onClickLabel = "Volver al mes actual")
         IconButton(onClick = onNext) {
-            Icon(Icons.Outlined.ChevronRight, contentDescription = "Mes siguiente", tint = MaterialTheme.colorScheme.primary)
+            Icon(LucideIcons.ChevronRight, contentDescription = "Mes siguiente", tint = MaterialTheme.colorScheme.primary)
         }
     }
 }
@@ -380,11 +429,11 @@ fun YearSelector(
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         IconButton(onClick = onPrev) {
-            Icon(Icons.Outlined.ChevronLeft, contentDescription = "Anio anterior", tint = MaterialTheme.colorScheme.primary)
+            Icon(LucideIcons.ChevronLeft, contentDescription = "Anio anterior", tint = MaterialTheme.colorScheme.primary)
         }
         SelectorLabel(label, onLabelClick, onClickLabel = "Volver al anio actual")
         IconButton(onClick = onNext) {
-            Icon(Icons.Outlined.ChevronRight, contentDescription = "Anio siguiente", tint = MaterialTheme.colorScheme.primary)
+            Icon(LucideIcons.ChevronRight, contentDescription = "Anio siguiente", tint = MaterialTheme.colorScheme.primary)
         }
     }
 }
@@ -413,13 +462,62 @@ fun PeriodModeChip(mode: PeriodMode, onToggle: () -> Unit, modifier: Modifier = 
         shape = PillShape,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
     ) {
-        Text(
-            label,
+        Row(
             modifier = Modifier.padding(horizontal = LocalSpacing.current.md, vertical = LocalSpacing.current.xs),
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.SemiBold,
-        )
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(LocalSpacing.current.xs),
+        ) {
+            Text(label, style = MaterialTheme.typography.labelLarge)
+            Icon(
+                LucideIcons.ChevronsUpDown,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
+}
+
+/**
+ * Envuelve [content] en un gesto de deslizar-para-eliminar (deslizar de derecha a izquierda revela
+ * un fondo rojo con el icono de papelera), el mismo patrón ya usado en Movimientos y Cuentas —
+ * evita triplicarlo inline en cada pantalla de "Más" que tenía en su lugar un botón de papelera
+ * suelto en la tarjeta. [onSwipeToDelete] decide si el gesto se consuma (`true`, la fila desaparece)
+ * o si vuelve a su sitio (`false`) — p. ej. para abrir un diálogo de confirmación en vez de borrar
+ * directo. [shape] recorta el fondo rojo al mismo radio que la tarjeta que envuelve (por defecto el
+ * de [FinanceCard]).
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SwipeToDeleteRow(
+    onSwipeToDelete: () -> Boolean,
+    modifier: Modifier = Modifier,
+    shape: Shape = MaterialTheme.shapes.medium,
+    content: @Composable () -> Unit,
+) {
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = {
+            if (it == SwipeToDismissBoxValue.EndToStart) onSwipeToDelete() else false
+        },
+    )
+    SwipeToDismissBox(
+        state = dismissState,
+        modifier = modifier,
+        enableDismissFromStartToEnd = false,
+        backgroundContent = {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(shape)
+                    .background(MaterialTheme.colorScheme.errorContainer)
+                    .padding(horizontal = LocalSpacing.current.lg),
+                contentAlignment = Alignment.CenterEnd,
+            ) {
+                Icon(LucideIcons.Trash, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.onErrorContainer)
+            }
+        },
+        content = { content() },
+    )
 }
 
 /** Etiqueta central de los selectores de periodo; tocable como boton cuando hay accion "hoy". */
@@ -433,7 +531,7 @@ private fun SelectorLabel(label: String, onClick: (() -> Unit)?, onClickLabel: S
     } else {
         Modifier
     }
-    Text(label, modifier = clickable, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+    Text(label, modifier = clickable, style = MaterialTheme.typography.titleMedium)
 }
 
 /**
@@ -453,7 +551,7 @@ fun InfoTooltip(text: String, contentDescription: String = "Más información", 
     ) {
         IconButton(onClick = { scope.launch { state.show() } }) {
             Icon(
-                Icons.Outlined.Info,
+                LucideIcons.Info,
                 contentDescription = contentDescription,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp),
@@ -473,14 +571,24 @@ fun CategoryProgressRow(
     modifier: Modifier = Modifier,
 ) {
     val animatedPct by animateFloatAsState(targetValue = pct.coerceIn(0f, 1f), animationSpec = motionTween(400))
-    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(LocalSpacing.current.sm)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(name, fontWeight = FontWeight.Medium, style = MaterialTheme.typography.bodyLarge)
-            MoneyText(amountMinor, currency, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(Modifier.size(8.dp).clip(CircleShape).background(color))
+                Text(name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "${(pct.coerceIn(0f, 1f) * 100).roundToInt()}%",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                MoneyText(amountMinor, currency, style = MaterialTheme.typography.bodyMedium)
+            }
         }
         Box(
             modifier = Modifier
@@ -529,9 +637,12 @@ private fun vec(image: ImageVector): CategoryGlyph = CategoryGlyph.Vec(image)
 data class IconGroup(val title: String, val icons: List<Pair<String, CategoryGlyph>>)
 
 /**
- * Iconos ofrecidos al crear una categoría, organizados en subcategorías. Generales = Material Outlined
- * (material-icons-extended); marcas = logos Simple Icons (CC0). La clave (string) va en Category.icon;
- * las claves existentes se conservan para no romper datos sembrados.
+ * Catálogo de iconos por categoría (generales = Material Outlined vía material-icons-extended;
+ * marcas = logos Simple Icons CC0). La clave (string) va en Category.icon; las claves existentes
+ * se conservan para no romper datos sembrados.
+ *
+ * ponytail: sin selector de UI que lo use hoy (los avatares muestran la inicial del nombre, no un
+ * icono) — se conserva íntegro por si una futura pantalla vuelve a ofrecer selección de icono.
  */
 val iconGroups: List<IconGroup> = listOf(
     IconGroup(
@@ -756,21 +867,22 @@ private val glyphByKey = categoryIcons.toMap()
 fun glyphForKey(key: String): CategoryGlyph = glyphByKey[key] ?: CategoryGlyph.Vec(Icons.Outlined.Category)
 
 /**
- * Glifo blanco (vector Material o logo de marca) dentro de un círculo del color de acento de
- * Apariencia — mismo tratamiento uniforme que [AccountTypeAvatar], la categoría se distingue por
- * el icono, no por un color propio. Avatar único.
+ * Inicial en negrilla y blanco dentro de un círculo del color de acento de Apariencia — mismo
+ * tratamiento uniforme que [AccountTypeAvatar], la categoría/subcategoría se distingue por su
+ * nombre, no por un icono propio. Avatar único.
  */
 @Composable
-fun CategoryAvatar(icon: String, modifier: Modifier = Modifier, size: Dp = 36.dp) {
+fun CategoryAvatar(name: String, modifier: Modifier = Modifier, size: Dp = 36.dp) {
     Box(
         modifier = modifier.size(size).clip(CircleShape).background(LocalAccentColor.current),
         contentAlignment = Alignment.Center,
     ) {
-        val glyphModifier = Modifier.size(size * 0.58f)
-        when (val glyph = glyphForKey(icon)) {
-            is CategoryGlyph.Vec -> Icon(glyph.image, contentDescription = null, tint = Color.White, modifier = glyphModifier)
-            is CategoryGlyph.Res -> Icon(painterResource(glyph.drawable), contentDescription = null, tint = Color.White, modifier = glyphModifier)
-        }
+        Text(
+            text = name.trim().take(1).uppercase(),
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            fontSize = (size.value * 0.42f).sp,
+        )
     }
 }
 
@@ -836,17 +948,18 @@ fun signedAmountAndColor(kind: String, amountMinor: Long, finance: FinanceColors
     return signedAmount to color
 }
 
-/** Avatar por tipo de cuenta: círculo con el contenedor primario + icono del tipo. */
+/** Avatar por tipo de cuenta: círculo del color de acento de Apariencia + icono blanco del tipo,
+ * mismo tratamiento que [CategoryAvatar]/[KindAvatar]. */
 @Composable
 fun AccountTypeAvatar(type: String, modifier: Modifier = Modifier, size: Dp = 40.dp) {
     Box(
-        modifier.size(size).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer),
+        modifier.size(size).clip(CircleShape).background(LocalAccentColor.current),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             accountTypeIcon(type),
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+            tint = Color.White,
             modifier = Modifier.size(size * 0.5f),
         )
     }
@@ -864,60 +977,67 @@ fun kpiDelta(current: Long, previous: Long, vsLabel: String, upIsGood: Boolean):
     return KpiDelta(pct = pct, isGood = isGood, vsLabel = vsLabel)
 }
 
-/** Línea secundaria de variación: flecha + "+X% vs <período>". Flecha e importe firmado juntos —
- * el color nunca es la única señal. */
-@Composable
-fun KpiDeltaLine(delta: KpiDelta, modifier: Modifier = Modifier) {
-    val finance = LocalFinanceColors.current
-    val color = if (delta.isGood) finance.income else finance.expense
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(2.dp),
-    ) {
-        Icon(
-            if (delta.pct >= 0) Icons.Outlined.ArrowUpward else Icons.Outlined.ArrowDownward,
-            contentDescription = null,
-            tint = color,
-            modifier = Modifier.size(12.dp),
-        )
-        Text(
-            "${if (delta.pct >= 0) "+" else ""}${delta.pct}% vs ${delta.vsLabel}",
-            style = MaterialTheme.typography.labelSmall,
-            color = color,
-            maxLines = 1,
-        )
-    }
-}
-
 /**
- * Avatar genérico neutro (círculo `surfaceContainerHighest` + icono), para filas cuyo icono no es
- * una categoría ni un tipo de cuenta (suscripciones, inversiones). Un solo lugar en vez de un Box
- * ad-hoc copiado por pantalla.
+ * Avatar genérico (círculo del color de acento de Apariencia + icono blanco), para filas cuyo
+ * icono no es una categoría ni un tipo de cuenta (suscripciones, inversiones) — mismo tratamiento
+ * que [CategoryAvatar]/[KindAvatar]/[AccountTypeAvatar]. Un solo lugar en vez de un Box ad-hoc
+ * copiado por pantalla.
  */
 @Composable
 fun IconAvatar(icon: ImageVector, modifier: Modifier = Modifier, size: Dp = 40.dp) {
     Box(
-        modifier.size(size).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHighest),
+        modifier.size(size).clip(CircleShape).background(LocalAccentColor.current),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             icon,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            tint = Color.White,
             modifier = Modifier.size(size * 0.55f),
         )
     }
 }
 
-/** Elevación cero para todo FAB: la regla Flat-By-Default no admite sombras en reposo. */
+/**
+ * FAB de captura rápida ("+ Movimiento", "+ Cuenta", "+ Presupuesto"...), unificado entre las 5
+ * pantallas que lo usan. `Surface` a mano en vez de `ExtendedFloatingActionButton` de M3: el color
+ * sólido de acento (primary/onPrimary, el mismo que el resto de los CTA de la app — no el
+ * primaryContainer pálido por defecto), plano en reposo (regla Flat-By-Default, sin sombra), la
+ * fuente display (Caprasimo, que Sage.dc.html usa también en los botones, no solo en los títulos
+ * H1) a un tamaño bodyLarge (M3 solo da labelLarge/13sp para el texto del slot, sin forma de
+ * agrandarlo), y un gap icono-texto de 6dp propio en vez del ~12dp fijo e inajustable del
+ * ExtendedFloatingActionButton.
+ */
 @Composable
-fun flatFabElevation(): FloatingActionButtonElevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp)
+fun AddFab(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier,
+        shape = PillShape,
+        color = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary,
+        shadowElevation = 0.dp,
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 20.dp, end = 24.dp, top = 10.dp, bottom = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Icon(LucideIcons.Plus, null)
+            Text(
+                label,
+                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 14.sp),
+                fontFamily = displayFontFamily(),
+            )
+        }
+    }
+}
 
-/** Estado vacío reutilizable: icono + título + subtítulo. */
+/** Estado vacío reutilizable: icono + título + subtítulo. [icon] es un `Painter` (LucideIcons) —
+ * este chrome no es un glifo de categoría, así que siempre debe migrar al set Lucide. */
 @Composable
 fun EmptyState(
-    icon: ImageVector,
+    icon: Painter,
     title: String,
     subtitle: String,
     modifier: Modifier = Modifier,
@@ -925,20 +1045,20 @@ fun EmptyState(
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(LocalSpacing.current.md),
     ) {
         Surface(shape = PillShape, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
             Icon(
                 icon,
                 contentDescription = null,
-                modifier = Modifier.padding(20.dp).size(40.dp),
+                modifier = Modifier.padding(LocalSpacing.current.lg).size(40.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        Text(title, style = MaterialTheme.typography.titleMedium)
         Text(
             subtitle,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )

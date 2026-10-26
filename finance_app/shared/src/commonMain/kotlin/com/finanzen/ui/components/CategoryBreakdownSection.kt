@@ -10,10 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ExpandLess
-import androidx.compose.material.icons.outlined.ExpandMore
-import androidx.compose.material.icons.outlined.PieChart
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -25,8 +21,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.finanzen.ui.icons.LucideIcons
 import com.finanzen.ui.theme.LocalCategoryColors
 import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.ui.theme.LocalSpacing
@@ -48,13 +44,12 @@ fun CategoryBreakdownSection(spend: List<CategorySpend>, currency: String, modif
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(spacing.md)) {
         if (spend.isEmpty()) {
             EmptyState(
-                icon = Icons.Outlined.PieChart,
+                icon = LucideIcons.PieChart,
                 title = "Sin gastos en este período",
                 subtitle = "Añade movimientos desde la pestaña Movimientos.",
                 modifier = Modifier.padding(spacing.xl),
             )
         } else {
-            CategoryDonutChart(spend.map { CategorySlice(it.name, it.amountMinor, it.pct, it.color) }, currency)
             Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
                 spend.forEach { CategoryBreakdownRow(it, currency) }
             }
@@ -96,7 +91,7 @@ private fun CategoryBreakdownRow(spend: CategorySpend, currency: String) {
                 Box(modifier = Modifier.size(24.dp), contentAlignment = Alignment.Center) {
                     if (expandable) {
                         Icon(
-                            if (expanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
+                            if (expanded) LucideIcons.ChevronUp else LucideIcons.ChevronDown,
                             contentDescription = if (expanded) "Contraer" else "Expandir",
                             tint = MaterialTheme.colorScheme.primary,
                         )
@@ -131,8 +126,8 @@ private fun SubcategoryRow(slice: CategorySlice, currency: String) {
         horizontalArrangement = Arrangement.spacedBy(spacing.sm),
     ) {
         Box(Modifier.size(8.dp).clip(CircleShape).background(categoryColor(slice.name, slice.color, palette)))
-        Text(slice.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, maxLines = 1)
-        Text("${(slice.pct * 100).roundToInt()}%", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
+        Text(slice.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelLarge, maxLines = 1)
+        Text("${(slice.pct * 100).roundToInt()}%", style = MaterialTheme.typography.labelSmall)
         Text(
             fmt.format(slice.amountMinor, currency),
             style = MaterialTheme.typography.labelSmall,

@@ -61,6 +61,15 @@ class SubscriptionsViewModel(
         subsRepo.byId(id)?.let { catchUp.runFor(it) }
     }
 
+    fun subscriptionById(id: Long): Subscription? = subsRepo.byId(id)
+
+    /** Cambia nombre/monto/cuenta/recurrencia hacia adelante — no toca `nextChargeDate`, el próximo
+     * cobro sigue el calendario ya programado. */
+    fun updateSubscription(id: Long, name: String, amountMinor: Long, frequency: String, interval: Long, accountId: Long?) {
+        val account = accountId?.let { aid -> accountRepo.all().firstOrNull { it.id == aid } } ?: accountRepo.ensureAny()
+        subsRepo.update(id, name, amountMinor, account.currency, account.id, frequency, interval)
+    }
+
     fun deleteSubscription(id: Long) {
         subsRepo.delete(id)
         scheduler.cancel(id)

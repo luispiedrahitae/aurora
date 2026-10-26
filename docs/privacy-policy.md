@@ -1,9 +1,9 @@
-# Política de Privacidad — Cauce
+# Política de Privacidad — Sage
 
 **Última actualización:** 25 de junio de 2026
 
-Cauce es una aplicación de finanzas personales. Esta política explica qué información
-maneja la app y cómo se protege. En resumen: **Cauce no recopila, no transmite y no
+Sage es una aplicación de finanzas personales. Esta política explica qué información
+maneja la app y cómo se protege. En resumen: **Sage no recopila, no transmite y no
 comparte ningún dato personal.**
 
 ## Qué datos maneja la app
@@ -41,7 +41,7 @@ biométrico.
 
 ## Niños
 
-Cauce no está dirigida a menores de 13 años y no recopila datos de ellos (ni de nadie).
+Sage no está dirigida a menores de 13 años y no recopila datos de ellos (ni de nadie).
 
 ## Cambios en esta política
 

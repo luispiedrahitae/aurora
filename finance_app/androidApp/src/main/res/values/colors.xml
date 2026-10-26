@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Fondo de ventana antes de que Compose dibuje (evita flash blanco en modo oscuro). -->
-    <color name="window_background">#FFFBFE</color>
-    <!-- Negro OLED de marca para el icono adaptativo. -->
-    <color name="ic_launcher_background">#111114</color>
+    <!-- Fondo de ventana antes de que Compose dibuje (evita flash del color equivocado al abrir). -->
+    <color name="window_background">#F5EAD8</color>
+    <!-- Crema cálido de marca Sage para el icono adaptativo. -->
+    <color name="ic_launcher_background">#F5EAD8</color>
 </resources>

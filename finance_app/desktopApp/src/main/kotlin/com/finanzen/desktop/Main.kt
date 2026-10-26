@@ -13,7 +13,7 @@ fun main() {
     application {
         Window(
             onCloseRequest = ::exitApplication,
-            title = "Cauce — Preview",
+            title = "Sage — Preview",
             state = rememberWindowState(width = 412.dp, height = 892.dp),
         ) {
             App()

@@ -6,39 +6,49 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 /**
- * Sistema Swiss Modernism 2.0 / OLED — ver DESIGN.md. Oscuro es fondo negro puro (#000000, no un
- * casi-negro con tinte) con una rampa tonal de 4 escalones para profundidad; claro es un blanco frío
- * verdadero, no crema cálido. El acento (teal) y los neutros conviven aquí; los otros 9 presets
- * reescriben solo la tríada de acento sobre esta base vía [withAccent].
+ * Paleta Sage (Fase 1 del rediseño) — claro es crema cálido (`#F5EAD8`) con acento terracotta;
+ * oscuro es un orgánico cálido (`#221F19`), no negro OLED puro. El acento terracotta y los neutros
+ * conviven aquí; el preset Sage reescribe solo la tríada de acento sobre esta base vía [withAccent].
  */
 internal val FinanZenLightScheme = lightColorScheme(
-    primary = Color(0xFF0F766E),
+    // Oscurecido desde 0xFFC67139 (mismo H/S, ΔL≈6.2) para llegar a 4.5:1 blanco-sobre-primary —
+    // ver LocalAccentColor / el check blanco de AccentSwatch.
+    primary = Color(0xFFAD6332),
     onPrimary = Color.White,
-    primaryContainer = Color(0xFFA8F2DE),
-    onPrimaryContainer = Color(0xFF00201A),
-    secondary = Color(0xFF0F766E),
+    primaryContainer = Color(0xFFF7EBE3),
+    onPrimaryContainer = Color(0xFF7F4824),
+    secondary = Color(0xFF79895D),
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFFA8F2DE),
-    onSecondaryContainer = Color(0xFF00201A),
-    tertiary = Color(0xFF0F766E),
+    secondaryContainer = Color(0xFFE7EAE1),
+    onSecondaryContainer = Color(0xFF4B553A),
+    tertiary = Color(0xFF79895D),
     onTertiary = Color.White,
-    tertiaryContainer = Color(0xFFA8F2DE),
-    onTertiaryContainer = Color(0xFF00201A),
-    background = Color(0xFFFAFAFA),
-    onBackground = Color(0xFF101012),
-    surface = Color(0xFFFFFFFF),
-    onSurface = Color(0xFF101012),
-    surfaceVariant = Color(0xFFE4E4E7),
-    onSurfaceVariant = Color(0xFF55565C),
-    surfaceDim = Color(0xFFE4E4E7),
-    surfaceBright = Color(0xFFFFFFFF),
-    surfaceContainerLowest = Color(0xFFFFFFFF),
-    surfaceContainerLow = Color(0xFFF4F4F5),
-    surfaceContainer = Color(0xFFEDEDEF),
-    surfaceContainerHigh = Color(0xFFE4E4E7),
-    surfaceContainerHighest = Color(0xFFDADADD),
-    outline = Color(0xFF8A8B90),
-    outlineVariant = Color(0xFFD4D4D8),
+    tertiaryContainer = Color(0xFFE7EAE1),
+    onTertiaryContainer = Color(0xFF4B553A),
+    background = Color(0xFFF5EAD8),
+    onBackground = Color(0xFF201E1D),
+    surface = Color(0xFFFAF3E6),
+    onSurface = Color(0xFF201E1D),
+    // surfaceVariant es el track de las barras de progreso (AccountBalanceBars, SavingsRateGauge,
+    // BudgetProgressCard) — antes coincidía en valor con surfaceContainerHigh, lo que era inofensivo
+    // mientras las tarjetas Medium usaban un tono distinto (surfaceContainer) pero se volvió
+    // invisible al unificar todas las tarjetas a ese mismo tono (ver surfaceContainer* abajo). El
+    // pixel real del handoff (03-cuentas.png, barra "Cupo") mide ~#EDE6D4 — muy cerca del antiguo
+    // surfaceContainer, que se reutiliza aquí.
+    surfaceVariant = Color(0xFFF2E6D2),
+    onSurfaceVariant = Color(0xFF5B5450),
+    surfaceDim = Color(0xFFECDCC2),
+    surfaceBright = Color(0xFFFAF3E6),
+    surfaceContainerLowest = Color(0xFFFAF3E6),
+    // surfaceContainerLow/Container comparten el tono de ContainerHigh: los screenshots del handoff
+    // (01-resumen.png, 02-movimientos.png) muestran una única tarjeta ~#EADEC8 para hero/KPI/día,
+    // no una escala de 3 tonos crecientes — la escala M3 de 5 pasos aquí quedaba demasiado clara.
+    surfaceContainerLow = Color(0xFFECDCC2),
+    surfaceContainer = Color(0xFFECDCC2),
+    surfaceContainerHigh = Color(0xFFECDCC2),
+    surfaceContainerHighest = Color(0xFFE4CDA9),
+    outline = Color(0xFFD8C9AE),
+    outlineVariant = Color(0xFFD8C9AE),
     error = Color(0xFFBA1A1A),
     onError = Color.White,
     errorContainer = Color(0xFFFFDAD6),
@@ -46,33 +56,34 @@ internal val FinanZenLightScheme = lightColorScheme(
 )
 
 internal val FinanZenDarkScheme = darkColorScheme(
-    primary = Color(0xFF2DD4BF),
-    onPrimary = Color(0xFF06211D),
-    primaryContainer = Color(0xFF0F4A42),
-    onPrimaryContainer = Color(0xFFA8F2DE),
-    secondary = Color(0xFF2DD4BF),
-    onSecondary = Color(0xFF06211D),
-    secondaryContainer = Color(0xFF0F4A42),
-    onSecondaryContainer = Color(0xFFA8F2DE),
-    tertiary = Color(0xFF2DD4BF),
-    onTertiary = Color(0xFF06211D),
-    tertiaryContainer = Color(0xFF0F4A42),
-    onTertiaryContainer = Color(0xFFA8F2DE),
-    background = Color(0xFF000000),
-    onBackground = Color(0xFFF2F2F3),
-    surface = Color(0xFF000000),
-    onSurface = Color(0xFFF2F2F3),
-    surfaceVariant = Color(0xFF1A1A1E),
-    onSurfaceVariant = Color(0xFFA9AAB0),
-    surfaceDim = Color(0xFF000000),
-    surfaceBright = Color(0xFF232328),
-    surfaceContainerLowest = Color(0xFF000000),
-    surfaceContainerLow = Color(0xFF0A0A0C),
-    surfaceContainer = Color(0xFF111114),
-    surfaceContainerHigh = Color(0xFF1A1A1E),
-    surfaceContainerHighest = Color(0xFF232328),
-    outline = Color(0xFF4A4B50),
-    outlineVariant = Color(0xFF2E2F33),
+    primary = Color(0xFFD79B74),
+    onPrimary = Color(0xFF372010),
+    primaryContainer = Color(0xFF573219),
+    onPrimaryContainer = Color(0xFFE4BBA0),
+    secondary = Color(0xFF99A880),
+    onSecondary = Color(0xFF23271B),
+    secondaryContainer = Color(0xFF363D29),
+    onSecondaryContainer = Color(0xFFBBC5AA),
+    tertiary = Color(0xFF99A880),
+    onTertiary = Color(0xFF23271B),
+    tertiaryContainer = Color(0xFF363D29),
+    onTertiaryContainer = Color(0xFFBBC5AA),
+    background = Color(0xFF221F19),
+    onBackground = Color(0xFFFBF7F0),
+    surface = Color(0xFF2B2720),
+    onSurface = Color(0xFFFBF7F0),
+    // Ver nota equivalente en FinanZenLightScheme: track distinto del tono ya unificado de tarjeta.
+    surfaceVariant = Color(0xFF382F23),
+    onSurfaceVariant = Color(0xFFC4B9A5),
+    surfaceDim = Color(0xFF221F19),
+    surfaceBright = Color(0xFF4A4030),
+    surfaceContainerLowest = Color(0xFF221F19),
+    surfaceContainerLow = Color(0xFF413B2F),
+    surfaceContainer = Color(0xFF413B2F),
+    surfaceContainerHigh = Color(0xFF413B2F),
+    surfaceContainerHighest = Color(0xFF4A4030),
+    outline = Color(0xFF5A4F3C),
+    outlineVariant = Color(0xFF5A4F3C),
     error = Color(0xFFFFB4AB),
     onError = Color(0xFF690005),
     errorContainer = Color(0xFF93000A),
@@ -84,9 +95,6 @@ internal val FinanZenDarkScheme = darkColorScheme(
  * ingreso=verde / gasto=rojo deben sobrevivir al color dinámico Material You (que reescribe primary).
  * Ninguno es la única codificación de estado — cada uso va acompañado de un ícono o etiqueta (ver
  * DESIGN.md, regla "The No-Shame Rule": gasto/sobregiro nunca usa rojo de alarma ni parpadeo).
- *
- * [glassSurface]/[glassBorder] son el material del único tile de vidrio permitido por pantalla
- * (DESIGN.md, "The One Glass Tile Rule") — alpha ya incluido, no tonos planos de Material.
  */
 data class FinanceColors(
     val income: Color,
@@ -96,76 +104,71 @@ data class FinanceColors(
     val neutral: Color,
     val warning: Color,
     val warningContainer: Color,
-    val glassSurface: Color,
-    val glassBorder: Color,
 )
 
 internal val LightFinanceColors = FinanceColors(
-    // Croma/L igualados a los del acento teal claro (~L51 C0.09) para que ingreso/gasto lean como la
-    // misma familia restringida en vez de resaltar por separado; matiz original conservado (verde/rosa).
-    // 1F7759 da 5.5:1 sobre blanco, por encima del mínimo AA de 4.5:1 para texto normal.
-    income = Color(0xFF1F7759),
+    // Sage 700 (ingreso) / terracotta 700 (gasto) — ver Task 2 del brief de rediseño Sage.
+    income = Color(0xFF4B553A),
     incomeContainer = Color(0xFFCDEFDE),
-    expense = Color(0xFF994A4F),
+    expense = Color(0xFF7F4824),
     expenseContainer = Color(0xFFFADDE2),
     neutral = Color(0xFF55565C),
     warning = Color(0xFFB45309),
     warningContainer = Color(0xFFFBEAC6),
-    glassSurface = Color(0x8CFFFFFF),
-    glassBorder = Color(0x33000000),
 )
 
 internal val DarkFinanceColors = FinanceColors(
-    // Croma/L igualados a los del acento teal oscuro (~L78 C0.13); matiz original conservado.
-    income = Color(0xFF59CA9A),
+    // Sage 300 (ingreso) / terracotta 300 (gasto) — ver Task 2 del brief de rediseño Sage.
+    income = Color(0xFFBBC5AA),
     incomeContainer = Color(0xFF1B3D30),
-    expense = Color(0xFFF58E9A),
+    expense = Color(0xFFE4BBA0),
     expenseContainer = Color(0xFF512530),
     neutral = Color(0xFFA9AAB0),
     warning = Color(0xFFFBBF24),
     warningContainer = Color(0xFF4A3410),
-    glassSurface = Color(0x8C232328),
-    glassBorder = Color(0x33FFFFFF),
 )
 
 val LocalFinanceColors = staticCompositionLocalOf { LightFinanceColors }
 
 /**
- * Paleta de codificación de datos para los charts de categoría (donut, desglose): 12 matices
- * repartidos por la rueda de color, misma receta H/S/L dentro de cada tema (no Tailwind/Material
- * genérico) para que se sientan primas del acento y los semánticos — oscuro con L alta (brilla
- * sobre el negro OLED puro, igual que [DarkFinanceColors]/el acento en oscuro), claro con L baja
- * (contraste ≥3:1 sobre blanco, igual que [LightFinanceColors]/el acento en claro). Nunca la única
- * codificación: cada porción/fila va acompañada de nombre y porcentaje.
+ * Paleta de codificación de datos para los charts de categoría (donut, desglose): 12 matices, todos
+ * dentro de la banda cálida de la marca (terracotta/ochre/olive/moss/fern en el lado verde-amarillo,
+ * rose/clay/amber/sienna en el lado rojo-naranja) — nunca azules, violetas ni cianes, para que cada
+ * categoría lea como prima del acento y los semánticos en vez de un arcoíris genérico (la versión
+ * previa cubría toda la rueda de 360° incluyendo teal/slate/denim/plum/mauve, que seguían leyéndose
+ * frías pese a la mezcla). Oscuro con L alta (contraste sobre el fondo orgánico oscuro, igual que
+ * [DarkFinanceColors]/el acento en oscuro), claro con L baja (contraste ≥3:1 sobre el fondo crema,
+ * igual que [LightFinanceColors]/el acento en claro). Nunca la única codificación: cada
+ * porción/fila va acompañada de nombre y porcentaje.
  */
 val LightCategoryColors = listOf(
-    Color(0xFFAA1830), // rose
-    Color(0xFFAA4918), // orange
-    Color(0xFF8F7A14), // amber
-    Color(0xFF668F14), // lime
-    Color(0xFF298F14), // green
-    Color(0xFF18AA49), // emerald
-    Color(0xFF18AA91), // teal
-    Color(0xFF1879AA), // cyan
-    Color(0xFF1830AA), // blue
-    Color(0xFF4918AA), // indigo
-    Color(0xFF9118AA), // violet
-    Color(0xFFAA1879), // fuchsia
+    Color(0xFF875F44), // terracotta
+    Color(0xFF877F44), // ochre
+    Color(0xFF6E8644), // olive
+    Color(0xFF4E8644), // moss
+    Color(0xFF47865E), // fern
+    Color(0xFF8C6B32), // amber
+    Color(0xFF954935), // sienna
+    Color(0xFF5E6B34), // dark olive
+    Color(0xFF8A5A5A), // dusty rose
+    Color(0xFFA37656), // light terracotta
+    Color(0xFF87456B), // rose
+    Color(0xFF87454B), // clay
 )
 
 val DarkCategoryColors = listOf(
-    Color(0xFFDC6A7D), // rose
-    Color(0xFFDC906A), // orange
-    Color(0xFFD4BD49), // amber
-    Color(0xFFA6D449), // lime
-    Color(0xFF60D449), // green
-    Color(0xFF6ADC90), // emerald
-    Color(0xFF6ADCC9), // teal
-    Color(0xFF6AB6DC), // cyan
-    Color(0xFF6A7DDC), // blue
-    Color(0xFF906ADC), // indigo
-    Color(0xFFC96ADC), // violet
-    Color(0xFFDC6AB6), // fuchsia
+    Color(0xFFCAAC94), // terracotta
+    Color(0xFFCAC394), // ochre
+    Color(0xFFB8C794), // olive
+    Color(0xFFA1C794), // moss
+    Color(0xFF9CC7A7), // fern
+    Color(0xFFD2B682), // amber
+    Color(0xFFDB9485), // sienna
+    Color(0xFFA4B684), // dark olive
+    Color(0xFFD0A5AA), // dusty rose
+    Color(0xFFE9C1A6), // light terracotta
+    Color(0xFFCA99B0), // rose
+    Color(0xFFCA9999), // clay
 )
 
 val LocalCategoryColors = staticCompositionLocalOf { LightCategoryColors }

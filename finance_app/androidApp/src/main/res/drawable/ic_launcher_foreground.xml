@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Glifo: cauce/cinta de flujo, teal de marca sobre el fondo negro OLED. -->
+<!-- Glifo: cauce/cinta de flujo, terracotta de marca Sage sobre el fondo crema. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
     <path
-        android:strokeColor="#2DD4BF"
+        android:strokeColor="#C67139"
         android:strokeWidth="11"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"

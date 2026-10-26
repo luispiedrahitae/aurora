@@ -34,6 +34,9 @@ SELECT last_insert_rowid();
 updateNextCharge:
 UPDATE Subscription SET nextChargeDate = ? WHERE id = ?;
 
+update:
+UPDATE Subscription SET name = ?, amountMinor = ?, currency = ?, accountId = ?, frequency = ?, intervalCount = ? WHERE id = ?;
+
 delete:
 DELETE FROM Subscription WHERE id = ?;
 
@@ -42,3 +45,6 @@ DELETE FROM Subscription WHERE categoryId = ?;
 
 reassignCategory:
 UPDATE Subscription SET categoryId = :newCategoryId WHERE categoryId != :newCategoryId;
+
+clearAccount:
+UPDATE Subscription SET accountId = NULL WHERE accountId = ?;

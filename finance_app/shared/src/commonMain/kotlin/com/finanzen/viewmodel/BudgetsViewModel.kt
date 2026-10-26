@@ -87,12 +87,22 @@ class BudgetsViewModel(
                 .groupBy { it.categoryId }
                 .mapValues { (_, list) -> list.sumOf { it.amountMinor } }
             val catById = cats.associateBy { it.id }
+            // Las transacciones siempre guardan el id de una subcategoría hoja (ver Transaction.sq),
+            // nunca el de la categoría padre. El gasto de una fila "categoría completa"
+            // (parentId == null) debe sumar también el de sus hijas, o quedaría siempre en 0 aunque
+            // haya movimientos reales.
+            val childrenByParent: Map<Long, List<Category>> = cats.filter { it.parentId != null }.groupBy { it.parentId!! }
             val rows = cats.filter { it.kind == "EXPENSE" }.map { cat ->
+                val spent = if (cat.parentId == null) {
+                    (spentByCat[cat.id] ?: 0L) + childrenByParent[cat.id].orEmpty().sumOf { spentByCat[it.id] ?: 0L }
+                } else {
+                    spentByCat[cat.id] ?: 0L
+                }
                 BudgetRow(
                     categoryId = cat.id,
                     categoryName = cat.name,
                     limitMinor = limitByCat[cat.id] ?: 0L,
-                    spentMinor = spentByCat[cat.id] ?: 0L,
+                    spentMinor = spent,
                     icon = cat.icon,
                     color = cat.color,
                     parentName = cat.parentId?.let { catById[it]?.name },

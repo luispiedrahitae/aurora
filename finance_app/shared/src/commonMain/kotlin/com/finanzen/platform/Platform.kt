@@ -30,9 +30,18 @@ sealed interface ReportLine {
     data class Title(val text: String) : ReportLine
     data class Section(val text: String) : ReportLine
 
+    /** Tono semántico de una fila — "No-Shame Rule" del DESIGN.md: el gasto nunca se pinta en rojo
+     * de alarma, así que [Negative] usa el acento terracota de marca, no un rojo de error. */
+    enum class RowTone { Neutral, Positive, Negative, Warning }
+
     /** [value] vacío = línea de texto corrido; no vacío = fila de dos columnas (label a la
      * izquierda, value pegado al margen derecho — para montos/porcentajes). */
-    data class Row(val label: String, val value: String = "", val emphasis: Boolean = false) : ReportLine
+    data class Row(
+        val label: String,
+        val value: String = "",
+        val emphasis: Boolean = false,
+        val tone: RowTone = RowTone.Neutral,
+    ) : ReportLine
     data object Divider : ReportLine
     data object Blank : ReportLine
 }

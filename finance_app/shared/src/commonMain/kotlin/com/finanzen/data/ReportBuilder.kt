@@ -2,6 +2,7 @@ package com.finanzen.data
 
 import com.finanzen.db.Category
 import com.finanzen.db.Investment
+import com.finanzen.db.Subscription
 import com.finanzen.db.TransactionRow
 import com.finanzen.domain.Money
 import com.finanzen.platform.ReportLine
@@ -24,22 +25,35 @@ data class BudgetSummaryRow(
  */
 object ReportBuilder {
 
-    /** CSV RFC 4180-ish. Headers: id,date,account,category,subcategory,kind,amount,currency,note */
-    fun transactionsCsv(rows: List<TransactionRow>, categories: List<Category>, accountNameById: Map<Long, String>): String {
+    /** CSV RFC 4180-ish, en español para lectura directa en hojas de cálculo. Headers:
+     * Fecha,Tipo,Categoría,Subcategoría,Cuenta,Monto,Moneda,Nota (sin id: no hay reimportación). */
+    fun transactionsCsv(
+        rows: List<TransactionRow>,
+        categories: List<Category>,
+        accountNameById: Map<Long, String>,
+        subscriptions: List<Subscription> = emptyList(),
+        investments: List<Investment> = emptyList(),
+    ): String {
         val catById = categories.associateBy { it.id }
+        val subById = subscriptions.associateBy { it.id }
+        val invById = investments.associateBy { it.id }
         val sb = StringBuilder()
-        sb.append("id,date,account,category,subcategory,kind,amount,currency,note\n")
+        sb.append("Fecha,Tipo,Categoría,Subcategoría,Cuenta,Monto,Moneda,Nota\n")
         for (r in rows) {
             val leaf = catById[r.categoryId]
             val parent = leaf?.parentId?.let { catById[it] }
             val category = parent?.name ?: leaf?.name ?: ""
-            val subcategory = if (parent != null) leaf?.name ?: "" else ""
-            sb.append(r.id).append(',')
-                .append(r.date).append(',')
-                .append(csv(accountNameById[r.accountId] ?: "?")).append(',')
+            val subcategory = when {
+                r.subscriptionId != null -> subById[r.subscriptionId]?.name ?: leaf?.name ?: ""
+                r.investmentId != null -> invById[r.investmentId]?.name ?: leaf?.name ?: ""
+                parent != null -> leaf?.name ?: ""
+                else -> ""
+            }
+            sb.append(r.date).append(',')
+                .append(kindLabel(r.kind)).append(',')
                 .append(csv(category)).append(',')
                 .append(csv(subcategory)).append(',')
-                .append(r.kind).append(',')
+                .append(csv(accountNameById[r.accountId] ?: "?")).append(',')
                 .append(Money(r.amountMinor, r.currency).format()).append(',')
                 .append(r.currency).append(',')
                 .append(csv(r.note))
@@ -60,61 +74,80 @@ object ReportBuilder {
         budgetRows: List<BudgetSummaryRow>,
         netWorthMinor: Long,
         openInvestments: List<Investment>,
+        subscriptions: List<Subscription> = emptyList(),
+        investments: List<Investment> = emptyList(),
     ): List<ReportLine> {
         val income = rows.filter { it.kind == "INCOME" }.sumOf { it.amountMinor }
         val expense = rows.filter { it.kind == "EXPENSE" }.sumOf { it.amountMinor }
         val net = income - expense
         val catName = categories.associate { it.id to it.name }
         val catById = categories.associateBy { it.id }
+        val subscriptionById = subscriptions.associateBy { it.id }
+        val investmentById = investments.associateBy { it.id }
 
-        /** Ingresos/gastos por categoría, anidado: la categoría padre con su total (% del total del
-         * periodo) y debajo cada subcategoría con su % dentro de esa categoría (no del total). Las
-         * transacciones siempre apuntan a una subcategoría (hoja), así que agrupar por `parentId`
-         * reconstruye la jerarquía sin depender de un campo adicional. */
-        fun breakdownLines(kind: String, total: Long, emptyMessage: String): List<ReportLine> {
-            val byLeaf = rows.filter { it.kind == kind }
-                .groupBy { it.categoryId }
-                .mapValues { (_, list) -> list.sumOf { it.amountMinor } }
-            if (byLeaf.isEmpty()) return listOf(ReportLine.Row(emptyMessage))
+        /** Ingresos/gastos por categoría, anidado: la categoría padre con su total y debajo cada
+         * subcategoría. Las transacciones siempre apuntan a una subcategoría (hoja), así que agrupar
+         * por `parentId` reconstruye la jerarquía sin depender de un campo adicional.
+         *
+         * Caso especial "Suscripciones"/"Inversiones": todas comparten una única subcategoría de
+         * sistema (ver [DefaultSeed]), así que agruparían en una sola fila genérica. En su lugar, se
+         * desglosa por suscripción/inversión individual (nombre propio), igual que
+         * [com.finanzen.viewmodel.DashboardViewModel.computeCategoryBreakdown] hace para suscripciones
+         * en el dashboard. */
+        fun breakdownLines(kind: String, emptyMessage: String): List<ReportLine> {
+            val tone = if (kind == "INCOME") ReportLine.RowTone.Positive else ReportLine.RowTone.Negative
+            val filtered = rows.filter { it.kind == kind }
+            if (filtered.isEmpty()) return listOf(ReportLine.Row(emptyMessage))
 
-            val byParent = byLeaf.entries.groupBy { (catId, _) -> catById[catId]?.parentId ?: catId }
-                .mapValues { (_, leaves) -> leaves.sumOf { it.value } }
-                .entries.sortedByDescending { it.value }
+            val byParent = filtered.groupBy { catById[it.categoryId]?.parentId ?: it.categoryId }
+                .entries.sortedByDescending { (_, list) -> list.sumOf { it.amountMinor } }
 
             val lines = mutableListOf<ReportLine>()
-            byParent.forEach { (parentId, parentTotal) ->
-                val parentPct = if (total > 0) (parentTotal * 100 / total) else 0L
-                lines += ReportLine.Row(catName.getValue(parentId), "${money(parentTotal, currency)} ($parentPct%)", emphasis = true)
+            byParent.forEach { (parentId, parentRows) ->
+                val parentName = catName.getValue(parentId)
+                val parentTotal = parentRows.sumOf { it.amountMinor }
+                lines += ReportLine.Row(parentName, money(parentTotal, currency), emphasis = true, tone = tone)
 
-                byLeaf.entries
-                    .filter { (catId, _) -> catId != parentId && (catById[catId]?.parentId ?: catId) == parentId }
-                    .sortedByDescending { it.value }
-                    .forEach { (catId, amount) ->
-                        val childPct = if (parentTotal > 0) (amount * 100 / parentTotal) else 0L
-                        lines += ReportLine.Row("   › ${catName.getValue(catId)}", "${money(amount, currency)} ($childPct%)")
-                    }
+                val childTotals: Map<String, Long> = when (parentName) {
+                    "Suscripciones" -> parentRows.groupBy { tx -> tx.subscriptionId?.let { subscriptionById[it] }?.name ?: catById[tx.categoryId]?.name ?: "Suscripción" }
+                        .mapValues { (_, list) -> list.sumOf { it.amountMinor } }
+                    "Inversiones" -> parentRows.groupBy { tx -> tx.investmentId?.let { investmentById[it] }?.name ?: catById[tx.categoryId]?.name ?: "Inversión" }
+                        .mapValues { (_, list) -> list.sumOf { it.amountMinor } }
+                    else -> parentRows.groupBy { it.categoryId }
+                        .filterKeys { it != parentId }
+                        .mapValues { (_, list) -> list.sumOf { it.amountMinor } }
+                        .mapKeys { (catId, _) -> catName.getValue(catId) }
+                }
+                childTotals.entries.sortedByDescending { it.value }.forEach { (name, amount) ->
+                    lines += ReportLine.Row("   › $name", money(amount, currency), tone = tone)
+                }
             }
             return lines
         }
 
         val lines = mutableListOf<ReportLine>()
-        lines += ReportLine.Title("Cauce — Resumen de $periodLabel")
+        lines += ReportLine.Title("Sage — Resumen de $periodLabel")
         lines += ReportLine.Row("Generado el ${nowLabel()}")
         lines += ReportLine.Blank
 
         lines += ReportLine.Section("Balance del periodo")
-        lines += ReportLine.Row("Ingresos", money(income, currency))
-        lines += ReportLine.Row("Gastos", money(expense, currency))
-        lines += ReportLine.Row("Neto", money(net, currency), emphasis = true)
-        lines += ReportLine.Row("Patrimonio neto a cierre del periodo", money(netWorthMinor, currency), emphasis = true)
+        lines += ReportLine.Row("Ingresos", money(income, currency), tone = ReportLine.RowTone.Positive)
+        lines += ReportLine.Row("Gastos", money(expense, currency), tone = ReportLine.RowTone.Negative)
+        lines += ReportLine.Row(
+            "Neto",
+            money(net, currency),
+            emphasis = true,
+            tone = if (net >= 0) ReportLine.RowTone.Positive else ReportLine.RowTone.Negative,
+        )
+        lines += ReportLine.Row("Patrimonio", money(netWorthMinor, currency), emphasis = true)
         lines += ReportLine.Blank
 
         lines += ReportLine.Section("Ingresos por categoría")
-        lines += breakdownLines("INCOME", income, "(sin ingresos en el periodo)")
+        lines += breakdownLines("INCOME", "(sin ingresos en el periodo)")
         lines += ReportLine.Blank
 
         lines += ReportLine.Section("Gastos por categoría")
-        lines += breakdownLines("EXPENSE", expense, "(sin gastos en el periodo)")
+        lines += breakdownLines("EXPENSE", "(sin gastos en el periodo)")
         lines += ReportLine.Blank
 
         lines += ReportLine.Section("Presupuestos del periodo")
@@ -128,13 +161,13 @@ object ReportBuilder {
             val subcategoryLevel = budgeted.filter { it.parentName != null }.sortedByDescending { it.spentMinor }
             (categoryLevel + subcategoryLevel).forEach { b ->
                 val baseLabel = b.parentName?.let { "$it › ${b.categoryName}" } ?: b.categoryName
-                val pct = if (b.limitMinor > 0) (b.spentMinor * 100 / b.limitMinor) else 0L
                 val over = b.spentMinor > b.limitMinor
                 val label = if (over) "$baseLabel $WARNING_SYMBOL" else baseLabel
                 lines += ReportLine.Row(
                     label,
-                    "${money(b.spentMinor, currency)} de ${money(b.limitMinor, currency)} ($pct%)",
+                    "${money(b.spentMinor, currency)} de ${money(b.limitMinor, currency)}",
                     emphasis = over,
+                    tone = if (over) ReportLine.RowTone.Warning else ReportLine.RowTone.Neutral,
                 )
             }
         }
@@ -156,12 +189,19 @@ object ReportBuilder {
 
         if (budgeted.any { it.spentMinor > it.limitMinor }) {
             lines += ReportLine.Blank
-            lines += ReportLine.Row("$WARNING_SYMBOL Presupuesto excedido en el periodo")
+            lines += ReportLine.Row("$WARNING_SYMBOL Presupuesto excedido en el periodo", tone = ReportLine.RowTone.Warning)
         }
         return lines
     }
 
     private const val WARNING_SYMBOL = "⚠"
+
+    private fun kindLabel(kind: String): String = when (kind) {
+        "INCOME" -> "Ingreso"
+        "EXPENSE" -> "Gasto"
+        "TRANSFER" -> "Transferencia"
+        else -> kind
+    }
 
     private fun money(amountMinor: Long, currency: String): String = "${Money(amountMinor, currency).format()} $currency"
 

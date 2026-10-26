@@ -144,6 +144,29 @@ class InvestmentsViewModel(
         investRepo.close(id, withdrawnAmountMinor, todayEpochDay(), yieldValue)
     }
 
+    fun investmentById(id: Long): Investment? = investRepo.byId(id)
+
+    /** Cambia nombre/monto/cuenta/periodicidad/recurrencia hacia adelante — no reescribe aportes ya
+     * posteados. Si se activa periodicidad sobre una inversión que no tenía próxima fecha de aporte
+     * (puntual → periódica), hay que sembrarla o `postDueContributions` la ignora para siempre. */
+    fun updateInvestment(id: Long, name: String, amountMinor: Long, accountId: Long, periodic: Boolean, frequency: String?, intervalCount: Long?) {
+        val account = accountRepo.all().firstOrNull { it.id == accountId } ?: return
+        val current = investRepo.byId(id) ?: return
+        investRepo.update(
+            id = id,
+            name = name,
+            amountMinor = amountMinor,
+            currency = account.currency,
+            accountId = account.id,
+            periodic = periodic,
+            frequency = if (periodic) frequency else null,
+            intervalCount = if (periodic) intervalCount else null,
+        )
+        if (periodic && current.nextContributionDate == null) {
+            investRepo.updateNextContribution(id, todayEpochDay())
+        }
+    }
+
     fun deleteInvestment(id: Long) = investRepo.delete(id)
 
     private fun todayEpochDay(): Long = Clock.System.todayIn(TimeZone.currentSystemDefault()).toEpochDays().toLong()

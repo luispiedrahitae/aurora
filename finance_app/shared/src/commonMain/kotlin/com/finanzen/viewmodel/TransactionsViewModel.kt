@@ -93,22 +93,34 @@ class TransactionsViewModel(
     }
 
     /**
-     * Si el toggle está activo y este gasto hace que la categoría cruce su límite del mes, notifica.
+     * Si el toggle está activo y este gasto hace que la categoría (o su categoría padre, si el
+     * presupuesto vive en el nivel de "categoría completa") cruce su límite del mes, notifica.
      * Solo al cruzar (antes < límite, ahora ≥ límite) para no repetir el aviso en cada gasto.
+     * Reutiliza BudgetsViewModel.computeBudgets (misma agregación que la pantalla de Presupuestos,
+     * incluye el roll-up de subcategorías) en vez de duplicar la suma aquí.
      */
     private fun maybeNotifyBudget(categoryId: Long, kind: String, amountMinor: Long, dateEpochDay: Long) {
         if (kind != "EXPENSE" || !settingsRepo.budgetNotificationsEnabled()) return
         val period = BudgetsViewModel.currentPeriodMonth()
         if (monthOf(dateEpochDay) != period) return
-        val limit = budgetRepo.limitFor(categoryId, period)
-        if (limit <= 0) return
-        val spentAfter = txRepo.all()
-            .filter { it.kind == "EXPENSE" && it.categoryId == categoryId && monthOf(it.date) == period }
-            .sumOf { it.amountMinor }
+
+        val data = BudgetsViewModel.computeBudgets(budgetRepo.all(), categoryRepo.all(), txRepo.all(), period)
+        val leafRow = data.rows.firstOrNull { it.categoryId == categoryId } ?: return
+        val parentId = categoryRepo.byId(categoryId)?.parentId
+        val parentRow = parentId?.let { pid -> data.rows.firstOrNull { it.categoryId == pid } }
+
+        // El presupuesto "activo" es el de la propia hoja si tiene límite; si no, el de su categoría
+        // padre completa (parentRow.spentMinor ya incluye el gasto de esta hoja).
+        val (targetId, targetRow) = when {
+            leafRow.limitMinor > 0 -> categoryId to leafRow
+            parentRow != null && parentRow.limitMinor > 0 -> parentId!! to parentRow
+            else -> return
+        }
+        val spentAfter = targetRow.spentMinor
         val spentBefore = spentAfter - amountMinor
-        if (spentBefore < limit && spentAfter >= limit) {
-            val name = categories.value.firstOrNull { it.id == categoryId }?.name ?: "tu presupuesto"
-            scheduler.notifyNow(BUDGET_NOTIF_BASE + categoryId, "Presupuesto alcanzado", "Alcanzaste el límite de $name este mes.")
+        if (spentBefore < targetRow.limitMinor && spentAfter >= targetRow.limitMinor) {
+            val name = categories.value.firstOrNull { it.id == targetId }?.name ?: "tu presupuesto"
+            scheduler.notifyNow(BUDGET_NOTIF_BASE + targetId, "Presupuesto alcanzado", "Alcanzaste el límite de $name este mes.")
         }
     }
 

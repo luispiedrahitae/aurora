@@ -2,8 +2,6 @@ package com.finanzen.data
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.finanzen.db.FinanzenDb
-import com.finanzen.viewmodel.SettingsViewModel
-import com.finanzen.viewmodel.ThemeMode
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -15,27 +13,14 @@ class SettingsRepositoryTest {
     }
 
     @Test
-    fun defaultEsDarkYPersisteElCambio() {
+    fun defaultEsElAcentoTerracottaYPersisteElCambio() {
         val repo = SettingsRepository(freshDb())
-        // sin valor guardado → oscuro OLED por defecto (ver DESIGN.md, "Dark Mode principal")
-        assertEquals(SettingsRepository.THEME_DARK, repo.themeMode())
+        // Sage: la app solo tiene tema claro (sin Oscuro/Dinámico) — lo único configurable de
+        // apariencia aquí es el acento.
+        assertEquals(SettingsRepository.DEFAULT_ACCENT, repo.accent())
 
-        repo.setThemeMode(SettingsRepository.THEME_SYSTEM)
-        assertEquals(SettingsRepository.THEME_SYSTEM, repo.themeMode())
-    }
-
-    @Test
-    fun viewModelParseaYExponeElTemaPersistido() {
-        val db = freshDb()
-        SettingsRepository(db).setThemeMode(SettingsRepository.THEME_DARK)
-
-        // un VM nuevo (como tras reiniciar la app) arranca con el tema guardado
-        val vm = SettingsViewModel(SettingsRepository(db), CurrencyRepository(db))
-        assertEquals(ThemeMode.DARK, vm.theme.value)
-
-        vm.setTheme(ThemeMode.LIGHT)
-        assertEquals(ThemeMode.LIGHT, vm.theme.value)
-        assertEquals(SettingsRepository.THEME_LIGHT, SettingsRepository(db).themeMode())
+        repo.setAccent("Sage")
+        assertEquals("Sage", repo.accent())
     }
 
     @Test
@@ -138,10 +123,12 @@ class SettingsRepositoryTest {
     }
 
     @Test
-    fun symbolPositionDefaultEsAuto() {
+    fun symbolPositionDefaultEsPrefix() {
         val repo = SettingsRepository(freshDb())
-        // sin valor guardado → "auto" (CLDR por moneda), ya no "prefix" fijo.
-        assertEquals("auto", repo.symbolPosition())
+        // Sage: sin valor guardado → "prefix" ("Antes" es el default; "Automático" ya no es una
+        // opción de la UI, aunque "auto" se sigue interpretando si ya estaba guardado — ver
+        // SettingsRepository.symbolPosition()).
+        assertEquals("prefix", repo.symbolPosition())
 
         repo.setSymbolPosition("suffix")
         assertEquals("suffix", repo.symbolPosition())

@@ -16,17 +16,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
-import androidx.compose.material.icons.outlined.SwapHoriz
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -41,7 +33,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.finanzen.data.CurrencyLocaleInfo
 import com.finanzen.db.Category
 import com.finanzen.db.TransactionRow
 import com.finanzen.ui.components.CategoryAvatar
@@ -49,10 +40,11 @@ import com.finanzen.ui.components.EmptyState
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.KindAvatar
 import com.finanzen.ui.components.MonthSelector
+import com.finanzen.ui.components.SubScreenHeader
 import com.finanzen.ui.components.kindLabel
 import com.finanzen.ui.components.signedAmountAndColor
-import com.finanzen.ui.format.formatFechaLarga
 import com.finanzen.ui.format.formatMesAnio
+import com.finanzen.ui.icons.LucideIcons
 import com.finanzen.ui.theme.LocalDateLocale
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
@@ -72,7 +64,6 @@ private fun LocalDate.epochDay(): Long = toEpochDays().toLong()
 
 private fun daysInMonth(firstOfMonth: LocalDate): Int = (firstOfMonth.plus(DatePeriod(months = 1)).toEpochDays() - firstOfMonth.toEpochDays())
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CalendarScreen(
     onEdit: (Long) -> Unit,
@@ -102,20 +93,10 @@ fun CalendarScreen(
     }
     val selectedRows = byDay[selected.epochDay()].orEmpty()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Calendario") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Volver")
-                    }
-                },
-            )
-        },
-    ) { inner ->
+    Column(Modifier.fillMaxSize()) {
+        SubScreenHeader(title = "Calendario", onBack = onBack)
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(inner),
+            modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -156,19 +137,11 @@ fun CalendarScreen(
                 }
             }
 
-            item {
-                Text(
-                    dayHeading(selected, dateLocale),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                )
-            }
-
             if (selectedRows.isEmpty()) {
                 item {
                     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                         EmptyState(
-                            icon = Icons.AutoMirrored.Outlined.ReceiptLong,
+                            icon = LucideIcons.Receipt,
                             title = "Sin movimientos este día",
                             subtitle = "Toca otro día del calendario o registra uno con el botón + de Movimientos.",
                             modifier = Modifier.padding(32.dp),
@@ -287,20 +260,19 @@ private fun DayTxRow(row: TransactionRow, category: Category?, parentCategory: C
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         if (category != null) {
-            CategoryAvatar(icon = category.icon, size = 40.dp)
+            CategoryAvatar(name = category.name, size = 40.dp)
         } else {
             KindAvatar(kind = row.kind)
         }
         Column(Modifier.weight(1f)) {
             Text(
                 if (isTransfer) row.note.ifBlank { "Transferencia" } else row.note.ifBlank { "(sin nota)" },
-                fontWeight = FontWeight.Medium,
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.labelLarge,
                 maxLines = 1,
             )
             Text(
                 parentCategory?.name ?: category?.name ?: kindLabel(row.kind),
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
             )
@@ -308,7 +280,7 @@ private fun DayTxRow(row: TransactionRow, category: Category?, parentCategory: C
         if (isTransfer) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 Icon(
-                    Icons.Outlined.SwapHoriz,
+                    LucideIcons.ArrowLeftRight,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(16.dp),
@@ -316,7 +288,7 @@ private fun DayTxRow(row: TransactionRow, category: Category?, parentCategory: C
                 Text(
                     fmt.format(row.amountMinor, row.currency),
                     fontWeight = FontWeight.SemiBold,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -324,11 +296,9 @@ private fun DayTxRow(row: TransactionRow, category: Category?, parentCategory: C
             Text(
                 fmt.format(signedAmount, row.currency, signed = true),
                 fontWeight = FontWeight.SemiBold,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.bodyLarge,
                 color = amountColor,
             )
         }
     }
 }
-
-private fun dayHeading(date: LocalDate, locale: CurrencyLocaleInfo): String = formatFechaLarga(date, locale)

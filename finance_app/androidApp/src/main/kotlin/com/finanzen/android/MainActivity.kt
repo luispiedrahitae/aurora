@@ -15,6 +15,12 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         requestNotificationPermissionIfNeeded()
         enableEdgeToEdge()
+        // En navegación de 3 botones, Android superpone un scrim gris genérico sobre la barra de
+        // navegación del sistema para legibilidad — no el tema de la app (Apariencia > Tema/Acento).
+        // Lo desactivamos para que se vea el contenedor real de NavigationBar (Compose) detrás.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            window.isNavigationBarContrastEnforced = false
+        }
         setContent {
             App()
         }

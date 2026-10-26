@@ -2,7 +2,6 @@ package com.finanzen.platform
 
 import android.content.ContentValues
 import android.content.Context
-import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
 import android.os.Build
@@ -19,7 +18,14 @@ private const val LINE_H = 18f
 private const val BODY_TEXT = 12f
 private const val TITLE_TEXT = 18f
 private const val SECTION_TEXT = 13f
-private const val ACCENT_COLOR = 0xFF0F766E.toInt() // teal, coherente con el acento de la app
+
+// Paleta "Sage" (DESIGN.md) para el fondo tipo tarjeta del PDF (mismo tono que las tarjetas de la
+// app, ver ui/theme/Color.kt#surfaceContainer). Variantes -700 (más oscuras que los acentos base
+// de marca) para superar 4.5:1 de contraste sobre este fondo.
+private const val BACKGROUND_CARD = 0xFFECDCC2.toInt()
+private const val INK = 0xFF201E1D.toInt()
+private const val INK_MUTED = 0xFF5B5450.toInt() // texto secundario y divisores (el "outline" claro de la app es casi invisible sobre este fondo)
+private const val ACCENT_GREEN = 0xFF4B553A.toInt() // sage-700 (== income de la app) — solo título y encabezados de sección
 
 /**
  * Escribe un archivo a la carpeta Descargas pública. API 29+ usa MediaStore (sin permisos);
@@ -58,12 +64,12 @@ internal fun writeToDownloads(
 internal fun writePdf(os: OutputStream, lines: List<ReportLine>) {
     val body = Paint().apply {
         textSize = BODY_TEXT
-        color = Color.BLACK
+        color = INK
         isAntiAlias = true
     }
     val bodyBold = Paint().apply {
         textSize = BODY_TEXT
-        color = Color.BLACK
+        color = INK
         isFakeBoldText = true
         isAntiAlias = true
     }
@@ -71,24 +77,25 @@ internal fun writePdf(os: OutputStream, lines: List<ReportLine>) {
     val bodyBoldRight = Paint(bodyBold).apply { textAlign = Paint.Align.RIGHT }
     val title = Paint().apply {
         textSize = TITLE_TEXT
-        color = ACCENT_COLOR
+        color = ACCENT_GREEN
         isFakeBoldText = true
         isAntiAlias = true
     }
     val section = Paint().apply {
         textSize = SECTION_TEXT
-        color = ACCENT_COLOR
+        color = ACCENT_GREEN
         isFakeBoldText = true
         isAntiAlias = true
     }
     val divider = Paint().apply {
-        color = Color.LTGRAY
+        color = INK_MUTED
         strokeWidth = 1f
     }
 
     val doc = PdfDocument()
     var pageNum = 1
     var page = doc.startPage(PdfDocument.PageInfo.Builder(PAGE_W, PAGE_H, pageNum).create())
+    page.canvas.drawColor(BACKGROUND_CARD)
     var y = MARGIN + LINE_H
 
     // reserve: cuánto espacio extra debe quedar libre además de la línea actual — usado para que un
@@ -98,6 +105,7 @@ internal fun writePdf(os: OutputStream, lines: List<ReportLine>) {
             doc.finishPage(page)
             pageNum++
             page = doc.startPage(PdfDocument.PageInfo.Builder(PAGE_W, PAGE_H, pageNum).create())
+            page.canvas.drawColor(BACKGROUND_CARD)
             y = MARGIN + LINE_H
         }
     }

@@ -43,6 +43,9 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 updateNextContribution:
 UPDATE Investment SET nextContributionDate = ? WHERE id = ?;
 
+update:
+UPDATE Investment SET name = ?, amountMinor = ?, currency = ?, accountId = ?, periodic = ?, frequency = ?, intervalCount = ? WHERE id = ?;
+
 close:
 UPDATE Investment SET status = 'CLOSED', withdrawnAmountMinor = ?, closedDate = ?, yieldMinor = ?, nextContributionDate = NULL WHERE id = ?;
 
@@ -54,3 +57,6 @@ DELETE FROM Investment WHERE categoryId = ?;
 
 reassignCategory:
 UPDATE Investment SET categoryId = :newCategoryId WHERE categoryId != :newCategoryId;
+
+clearAccount:
+UPDATE Investment SET accountId = NULL WHERE accountId = ?;

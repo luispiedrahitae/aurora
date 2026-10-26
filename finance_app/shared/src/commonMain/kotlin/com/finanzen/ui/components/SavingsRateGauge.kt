@@ -2,16 +2,15 @@ package com.finanzen.ui.components
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Remove
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -25,39 +24,35 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.finanzen.ui.icons.LucideIcons
 import com.finanzen.ui.theme.LocalFinanceColors
+import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.ui.theme.motionTween
-import kotlin.math.PI
-import kotlin.math.cos
-import kotlin.math.min
-import kotlin.math.sin
 
 /**
- * Medidor semicircular de la tasa de ahorro. Arco de fondo (surfaceVariant) + arco de valor
- * (verde ingreso) con barrido proporcional, más una marca radial fija en [goalPct]. El porcentaje
- * exacto va en el centro como número grande, así el color nunca es la única señal. Tocar la
- * tarjeta abre un diálogo para editar la meta.
+ * Medidor compacto de la tasa de ahorro (círculo de 64dp + texto al lado), igual que
+ * `Sage.dc.html`: anillo de progreso (verde ingreso) sobre pista neutra, porcentaje en el centro.
+ * Tocar la tarjeta abre un diálogo para editar la meta.
  */
 @Composable
 fun SavingsRateGauge(savingsRate: Float, goalPct: Long, onGoalChange: (Long) -> Unit, modifier: Modifier = Modifier) {
+    val spacing = LocalSpacing.current
     val finance = LocalFinanceColors.current
     val trackColor = MaterialTheme.colorScheme.surfaceVariant
-    val markerColor = MaterialTheme.colorScheme.primary
-    // El arco no puede pintar un déficit (no hay barrido negativo): se recorta a 0. El número sí
+    // El anillo no puede pintar un déficit (no hay barrido negativo): se recorta a 0. El número sí
     // muestra la tasa real, incluida negativa — aplanarla a 0% escondería que el mes fue deficitario.
     val arcTarget = savingsRate.coerceIn(0f, 1f)
     val animated by animateFloatAsState(targetValue = arcTarget, animationSpec = motionTween(600))
     val pctInt = (savingsRate.coerceAtMost(1f) * 100).toInt()
     val valueColor = if (pctInt < 0) finance.expense else finance.income
-    val goalFraction = (goalPct / 100f).coerceIn(0f, 1f)
+    val aboveGoal = savingsRate * 100f >= goalPct
     var showGoalDialog by remember { mutableStateOf(false) }
 
     FinanceCard(
@@ -66,67 +61,51 @@ fun SavingsRateGauge(savingsRate: Float, goalPct: Long, onGoalChange: (Long) -> 
         },
         onClick = { showGoalDialog = true },
     ) {
-        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopEnd) {
-            Column(
-                modifier = Modifier.fillMaxWidth().align(Alignment.TopStart),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
-                    Canvas(Modifier.fillMaxWidth().aspectRatio(2f)) {
-                        val strokeW = 26f
-                        val cx = size.width / 2f
-                        val cy = size.height - strokeW / 2f
-                        val r = (min(size.width / 2f, size.height) - strokeW).coerceAtLeast(1f)
-                        val topLeft = Offset(cx - r, cy - r)
-                        val arcSize = Size(r * 2f, r * 2f)
-                        drawArc(
-                            color = trackColor,
-                            startAngle = 180f,
-                            sweepAngle = 180f,
-                            useCenter = false,
-                            topLeft = topLeft,
-                            size = arcSize,
-                            style = Stroke(width = strokeW, cap = StrokeCap.Round),
-                        )
-                        drawArc(
-                            color = finance.income,
-                            startAngle = 180f,
-                            sweepAngle = 180f * animated,
-                            useCenter = false,
-                            topLeft = topLeft,
-                            size = arcSize,
-                            style = Stroke(width = strokeW, cap = StrokeCap.Round),
-                        )
-                        // Marca de la meta (editable): tick radial que cruza el arco de lado a lado.
-                        val goalRad = ((180f + goalFraction * 180f) * PI / 180f).toFloat()
-                        val cosA = cos(goalRad)
-                        val sinA = sin(goalRad)
-                        val inner = r - strokeW / 2f - 2f
-                        val outer = r + strokeW / 2f + 2f
-                        drawLine(
-                            color = markerColor,
-                            start = Offset(cx + inner * cosA, cy + inner * sinA),
-                            end = Offset(cx + outer * cosA, cy + outer * sinA),
-                            strokeWidth = 3f,
-                        )
-                    }
-                    AutoSizeText(
-                        text = "$pctInt%",
-                        modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp),
-                        color = valueColor,
-                        fontWeight = FontWeight.Bold,
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(spacing.md)) {
+            // Sage.dc.html: anillo conic-gradient de 84px con un círculo hueco de 64px encima (del
+            // mismo tono que la tarjeta) — no un solo trazo de 64px total como antes, que quedaba
+            // chico y sin el hueco central del diseño original.
+            Box(Modifier.size(84.dp), contentAlignment = Alignment.Center) {
+                Canvas(Modifier.size(84.dp)) {
+                    val strokeW = 10.dp.toPx()
+                    drawArc(
+                        color = trackColor,
+                        startAngle = 0f,
+                        sweepAngle = 360f,
+                        useCenter = false,
+                        style = Stroke(width = strokeW, cap = StrokeCap.Butt),
+                    )
+                    drawArc(
+                        color = finance.income,
+                        startAngle = -90f,
+                        sweepAngle = 360f * animated,
+                        useCenter = false,
+                        style = Stroke(width = strokeW, cap = StrokeCap.Butt),
                     )
                 }
+                Box(
+                    Modifier.size(64.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainer),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        "$pctInt%",
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = valueColor,
+                    )
+                }
+            }
+            Column(Modifier.weight(1f)) {
                 Text(
-                    "Tasa de ahorro",
+                    "TASA DE AHORRO",
                     style = MaterialTheme.typography.labelLarge,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    "Meta $goalPct%",
+                    if (aboveGoal) "Por encima de tu meta de $goalPct%" else "Meta: $goalPct%",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (aboveGoal) finance.income else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             InfoTooltip(
@@ -156,16 +135,15 @@ private fun SavingsGoalDialog(goalPct: Long, onChange: (Long) -> Unit, onDismiss
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 IconButton(onClick = { onChange((goalPct - 5).coerceAtLeast(0)) }, enabled = goalPct > 0) {
-                    Icon(Icons.Outlined.Remove, contentDescription = "Reducir meta")
+                    Icon(LucideIcons.Minus, contentDescription = "Reducir meta")
                 }
                 Text(
                     "$goalPct%",
                     style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(horizontal = 24.dp),
                 )
                 IconButton(onClick = { onChange((goalPct + 5).coerceAtMost(100)) }, enabled = goalPct < 100) {
-                    Icon(Icons.Outlined.Add, contentDescription = "Aumentar meta")
+                    Icon(LucideIcons.Plus, contentDescription = "Aumentar meta")
                 }
             }
         },

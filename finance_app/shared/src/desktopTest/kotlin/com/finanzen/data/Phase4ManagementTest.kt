@@ -59,7 +59,7 @@ class Phase4ManagementTest {
     fun crearCuentaDeCreditoCreaTarjetaYBorrarlaLaElimina() {
         val db = freshDb()
         seedIfEmpty(db)
-        val vm = AccountsViewModel(AccountRepository(db), TransactionRepository(db), CardRepository(db), InstallmentPlanRepository(db), SettingsRepository(db), NotificationScheduler())
+        val vm = AccountsViewModel(AccountRepository(db), TransactionRepository(db), CardRepository(db), InstallmentPlanRepository(db), SubscriptionRepository(db), InvestmentRepository(db), SettingsRepository(db), NotificationScheduler())
         val accountsBefore = db.accountQueries.selectAll().executeAsList().size
 
         // Crear una cuenta de crédito también crea su tarjeta con cupo/corte/pago/interés.
@@ -87,7 +87,7 @@ class Phase4ManagementTest {
     fun gastoConCreditoYCuotasCreaPlanYRegistraSoloLaCuota1() {
         val db = freshDb()
         seedIfEmpty(db)
-        val accVm = AccountsViewModel(AccountRepository(db), TransactionRepository(db), CardRepository(db), InstallmentPlanRepository(db), SettingsRepository(db), NotificationScheduler())
+        val accVm = AccountsViewModel(AccountRepository(db), TransactionRepository(db), CardRepository(db), InstallmentPlanRepository(db), SubscriptionRepository(db), InvestmentRepository(db), SettingsRepository(db), NotificationScheduler())
         // El interés se toma de la tarjeta (2.0%), ya no se pide en el formulario de movimientos.
         val accId = accVm.addAccount(type = "CREDIT", name = "Visa", creditLimitMinor = 1_000_000L, interestRate = 2.0)!!
         val txVm = TransactionsViewModel(
@@ -131,7 +131,7 @@ class Phase4ManagementTest {
     fun gastoConCreditoYUnaSolaCuotaNoCreaPlan() {
         val db = freshDb()
         seedIfEmpty(db)
-        val accVm = AccountsViewModel(AccountRepository(db), TransactionRepository(db), CardRepository(db), InstallmentPlanRepository(db), SettingsRepository(db), NotificationScheduler())
+        val accVm = AccountsViewModel(AccountRepository(db), TransactionRepository(db), CardRepository(db), InstallmentPlanRepository(db), SubscriptionRepository(db), InvestmentRepository(db), SettingsRepository(db), NotificationScheduler())
         val accId = accVm.addAccount(type = "CREDIT", name = "Visa", creditLimitMinor = 1_000_000L, interestRate = 2.0)!!
         val txVm = TransactionsViewModel(
             TransactionRepository(db),
@@ -177,13 +177,13 @@ class Phase4ManagementTest {
         txRepo.add(accId, cat.id, cuota, "USD", startEpoch, "TV", "EXPENSE", installmentPlanId = planId)
 
         // Construir el ViewModel dispara el catch-up en su init.
-        AccountsViewModel(accountRepo, txRepo, cardRepo, planRepo, SettingsRepository(db), NotificationScheduler())
+        AccountsViewModel(accountRepo, txRepo, cardRepo, planRepo, SubscriptionRepository(db), InvestmentRepository(db), SettingsRepository(db), NotificationScheduler())
 
         val expected = (InstallmentMath.elapsedInstallments(startEpoch, today.toEpochDays().toLong(), 12) + 1).coerceAtMost(12)
         assertEquals(expected, db.transactionQueries.countByInstallmentPlan(planId).executeAsOne())
 
         // Abrir la pantalla de Cuentas otra vez el mismo día no debe duplicar cuotas.
-        AccountsViewModel(accountRepo, txRepo, cardRepo, planRepo, SettingsRepository(db), NotificationScheduler())
+        AccountsViewModel(accountRepo, txRepo, cardRepo, planRepo, SubscriptionRepository(db), InvestmentRepository(db), SettingsRepository(db), NotificationScheduler())
         assertEquals(expected, db.transactionQueries.countByInstallmentPlan(planId).executeAsOne())
     }
 
@@ -195,7 +195,7 @@ class Phase4ManagementTest {
         val cardRepo = CardRepository(db)
         val planRepo = InstallmentPlanRepository(db)
         val txRepo = TransactionRepository(db)
-        val vm = AccountsViewModel(accountRepo, txRepo, cardRepo, planRepo, SettingsRepository(db), NotificationScheduler())
+        val vm = AccountsViewModel(accountRepo, txRepo, cardRepo, planRepo, SubscriptionRepository(db), InvestmentRepository(db), SettingsRepository(db), NotificationScheduler())
 
         val savingsId = accountRepo.add("Ahorros", "SAVINGS", "USD", openingBalanceMinor = 500_000)
         val creditId = vm.addAccount(type = "CREDIT", name = "Visa", creditLimitMinor = 1_000_000L, interestRate = 0.0)!!
@@ -279,6 +279,41 @@ class Phase4ManagementTest {
         assertEquals(50_000, row.limitMinor)
         assertEquals(12_000, row.spentMinor)
         assertTrue(data.rows.all { it.spentMinor >= 0 })
+    }
+
+    @Test
+    fun computeBudgetsSumaGastoDeSubcategoriasEnElPresupuestoDeLaCategoriaPadre() {
+        val db = freshDb()
+        seedIfEmpty(db)
+        val budgetRepo = BudgetRepository(db)
+        val categoryRepo = CategoryRepository(db)
+        val account = db.accountQueries.selectAll().executeAsList().first()
+
+        // add() con parentId = null crea automáticamente una subcategoría "General".
+        categoryRepo.add(name = "Mascotas", kind = "EXPENSE", parentId = null)
+        val parent = db.categoryQueries.selectByKind("EXPENSE").executeAsList().first { it.parentId == null && it.name == "Mascotas" }
+        val leaf = categoryRepo.children(parent.id).first()
+
+        val period = BudgetsViewModel.currentPeriodMonth()
+        budgetRepo.setLimit(parent.id, period, 50_000) // presupuesto de "categoría completa"
+
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault()).toEpochDays().toLong()
+        // El gasto real siempre se guarda en la hoja, nunca en el padre (ver Transaction.sq).
+        TransactionRepository(db).add(account.id, leaf.id, 12_000, account.currency, today, "veterinario", "EXPENSE")
+
+        val data = BudgetsViewModel.computeBudgets(
+            budgets = db.budgetQueries.selectAll().executeAsList(),
+            cats = db.categoryQueries.selectAll().executeAsList(),
+            txs = db.transactionQueries.selectAll().executeAsList(),
+            period = period,
+        )
+
+        val parentRow = data.rows.first { it.categoryId == parent.id }
+        assertEquals(50_000, parentRow.limitMinor)
+        assertEquals(12_000, parentRow.spentMinor) // antes del fix: 0
+
+        val leafRow = data.rows.first { it.categoryId == leaf.id }
+        assertEquals(12_000, leafRow.spentMinor) // la hoja sigue reportando su propio gasto, sin duplicarse
     }
 
     @Test

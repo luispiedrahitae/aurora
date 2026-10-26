@@ -4,7 +4,9 @@ import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.finanzen.data.AccountRepository
 import com.finanzen.data.CardRepository
 import com.finanzen.data.InstallmentPlanRepository
+import com.finanzen.data.InvestmentRepository
 import com.finanzen.data.SettingsRepository
+import com.finanzen.data.SubscriptionRepository
 import com.finanzen.data.TransactionRepository
 import com.finanzen.data.seedIfEmpty
 import com.finanzen.db.FinanzenDb
@@ -24,6 +26,8 @@ class AccountsViewModelTest {
         TransactionRepository(db),
         CardRepository(db),
         InstallmentPlanRepository(db),
+        SubscriptionRepository(db),
+        InvestmentRepository(db),
         SettingsRepository(db),
         NotificationScheduler(),
     )

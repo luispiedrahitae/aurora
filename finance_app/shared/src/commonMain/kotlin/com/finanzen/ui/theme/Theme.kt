@@ -12,7 +12,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 @Composable
 fun FinanZenTheme(
     darkTheme: Boolean = false,
-    accent: AccentPreset = AccentPreset.Teal,
+    accent: AccentPreset = AccentPreset.Terracotta,
     useDynamic: Boolean = true,
     reduceMotion: Boolean = false,
     content: @Composable () -> Unit,

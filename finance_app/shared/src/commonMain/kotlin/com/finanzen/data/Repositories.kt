@@ -10,7 +10,6 @@ import com.finanzen.db.Currency
 import com.finanzen.db.FinanzenDb
 import com.finanzen.db.InstallmentPlan
 import com.finanzen.db.Investment
-import com.finanzen.db.RecurringExpense
 import com.finanzen.db.Subscription
 import com.finanzen.db.TransactionRow
 import kotlinx.coroutines.Dispatchers
@@ -227,11 +226,17 @@ class SubscriptionRepository(private val db: FinanzenDb) {
 
     fun activeNow(): List<Subscription> = db.subscriptionQueries.selectActive().executeAsList()
 
+    fun all(): List<Subscription> = db.subscriptionQueries.selectAll().executeAsList()
+
     fun byId(id: Long): Subscription? = db.subscriptionQueries.selectById(id).executeAsOneOrNull()
 
     fun updateNextCharge(id: Long, nextChargeDateEpochDay: Long) = db.subscriptionQueries.updateNextCharge(nextChargeDateEpochDay, id)
 
+    fun update(id: Long, name: String, amountMinor: Long, currency: String, accountId: Long?, frequency: String, intervalCount: Long) = db.subscriptionQueries.update(name, amountMinor, currency, accountId, frequency, intervalCount, id)
+
     fun delete(id: Long) = db.subscriptionQueries.delete(id)
+
+    fun clearAccount(accountId: Long) = db.subscriptionQueries.clearAccount(accountId)
 }
 
 class InvestmentRepository(private val db: FinanzenDb) {
@@ -260,41 +265,38 @@ class InvestmentRepository(private val db: FinanzenDb) {
 
     fun openNow(): List<Investment> = db.investmentQueries.selectOpen().executeAsList()
 
+    /** Abiertas + cerradas — para reportes de periodos pasados que aún deben mostrar el nombre
+     * propio de una inversión ya cerrada. */
+    fun all(): List<Investment> = db.investmentQueries.selectOpen().executeAsList() + db.investmentQueries.selectClosed().executeAsList()
+
     fun byId(id: Long): Investment? = db.investmentQueries.selectById(id).executeAsOneOrNull()
 
     fun updateNextContribution(id: Long, next: Long) = db.investmentQueries.updateNextContribution(next, id)
 
-    fun close(id: Long, withdrawnAmountMinor: Long, closedDate: Long, yieldMinor: Long) = db.investmentQueries.close(withdrawnAmountMinor, closedDate, yieldMinor, id)
-
-    fun delete(id: Long) = db.investmentQueries.delete(id)
-}
-
-class RecurringExpenseRepository(private val db: FinanzenDb) {
-    fun observeActive(): Flow<List<RecurringExpense>> = db.recurringExpenseQueries.selectActive().asFlow().mapToList(Dispatchers.Default)
-
-    fun add(
+    fun update(
+        id: Long,
         name: String,
         amountMinor: Long,
         currency: String,
-        categoryId: Long?,
         accountId: Long?,
-        frequency: String,
-        intervalCount: Long,
-        nextChargeDateEpochDay: Long,
-        remindDaysBefore: Long,
-    ): Long = db.transactionWithResult {
-        db.recurringExpenseQueries.insert(
-            name, amountMinor, currency, categoryId, accountId,
-            frequency, intervalCount, nextChargeDateEpochDay, remindDaysBefore, active = 1,
-        )
-        db.recurringExpenseQueries.lastInsertRowId().executeAsOne()
-    }
+        periodic: Boolean,
+        frequency: String?,
+        intervalCount: Long?,
+    ) = db.investmentQueries.update(name, amountMinor, currency, accountId, if (periodic) 1L else 0L, frequency, intervalCount, id)
 
-    fun delete(id: Long) = db.recurringExpenseQueries.delete(id)
+    fun close(id: Long, withdrawnAmountMinor: Long, closedDate: Long, yieldMinor: Long) = db.investmentQueries.close(withdrawnAmountMinor, closedDate, yieldMinor, id)
+
+    fun delete(id: Long) = db.investmentQueries.delete(id)
+
+    fun clearAccount(accountId: Long) = db.investmentQueries.clearAccount(accountId)
 }
 
 class CategoryRepository(private val db: FinanzenDb) {
     fun observeAll(): Flow<List<Category>> = db.categoryQueries.selectAll().asFlow().mapToList(Dispatchers.Default)
+
+    fun all(): List<Category> = db.categoryQueries.selectAll().executeAsList()
+
+    fun byId(id: Long): Category? = db.categoryQueries.selectById(id).executeAsOneOrNull()
 
     fun byKind(kind: String): List<Category> = db.categoryQueries.selectByKind(kind).executeAsList()
 
@@ -356,6 +358,8 @@ class CurrencyRepository(private val db: FinanzenDb) {
 
 class BudgetRepository(private val db: FinanzenDb) {
     fun observeAll(): Flow<List<Budget>> = db.budgetQueries.selectAll().asFlow().mapToList(Dispatchers.Default)
+
+    fun all(): List<Budget> = db.budgetQueries.selectAll().executeAsList()
 
     fun setLimit(categoryId: Long, periodMonth: Long, limitMinor: Long) = db.budgetQueries.upsert(categoryId = categoryId, periodMonth = periodMonth, limitMinor = limitMinor)
 

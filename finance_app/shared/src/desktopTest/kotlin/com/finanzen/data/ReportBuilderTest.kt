@@ -57,14 +57,14 @@ class ReportBuilderTest {
             db.categoryQueries.selectAll().executeAsList(),
             db.accountQueries.selectAll().executeAsList().associate { it.id to it.name },
         )
-        assertEquals("id,date,account,category,subcategory,kind,amount,currency,note", csv.lines().first())
+        assertEquals("Fecha,Tipo,Categoría,Subcategoría,Cuenta,Monto,Moneda,Nota", csv.lines().first())
         val dataRow = csv.trim().lines().drop(1).first { it.contains("netflix") }
         assertTrue(dataRow.contains("Ocio"))
         assertTrue(dataRow.contains("Streaming"))
     }
 
     @Test
-    fun periodSummaryAnidaSubcategoriasBajoSuCategoriaConPorcentajesPropios() {
+    fun periodSummaryAnidaSubcategoriasBajoSuCategoria() {
         val db = freshDb()
         seedIfEmpty(db)
         val account = db.accountQueries.selectAll().executeAsList().first()
@@ -99,21 +99,20 @@ class ReportBuilderTest {
 
         val comidaRow = expenseRows.first { it.label == "Comida" }
         assertTrue(comidaRow.emphasis) // la fila de categoría (padre) va en negrita
-        assertTrue(comidaRow.value.contains("66%"))
+        assertTrue(!comidaRow.value.contains("%"))
 
         val transporteRow = expenseRows.first { it.label == "Transporte" }
-        assertTrue(transporteRow.value.contains("33%"))
+        assertTrue(!transporteRow.value.contains("%"))
 
         // Comida (10_000) va antes que Transporte (5_000): orden por gasto total de la categoría.
         assertTrue(expenseRows.indexOf(comidaRow) < expenseRows.indexOf(transporteRow))
 
-        // Las subcategorías van indentadas bajo su categoría, con % relativo al total de ESA
-        // categoría (no del total general): Snacks 7000/10000 = 70%, General 3000/10000 = 30%.
+        // Las subcategorías van indentadas bajo su categoría, sin porcentaje.
         val comidaIdx = expenseRows.indexOf(comidaRow)
         val transporteIdx = expenseRows.indexOf(transporteRow)
         val comidaChildren = expenseRows.subList(comidaIdx + 1, transporteIdx)
-        assertTrue(comidaChildren.any { it.label.contains("Snacks") && it.value.contains("70%") && !it.emphasis })
-        assertTrue(comidaChildren.any { it.label.contains("General") && it.value.contains("30%") })
+        assertTrue(comidaChildren.any { it.label.contains("Snacks") && !it.value.contains("%") && !it.emphasis })
+        assertTrue(comidaChildren.any { it.label.contains("General") && !it.value.contains("%") })
     }
 
     @Test
@@ -143,11 +142,19 @@ class ReportBuilderTest {
 
         val incomeRows = rowsOfSection(lines, "Ingresos por categoría")
         val expenseRows = rowsOfSection(lines, "Gastos por categoría")
-        assertTrue(incomeRows.any { it.label == "Sueldo" && it.value.contains("100%") })
-        assertTrue(expenseRows.any { it.label == "Comida" && it.value.contains("100%") })
+        assertTrue(incomeRows.any { it.label == "Sueldo" && !it.value.contains("%") })
+        assertTrue(expenseRows.any { it.label == "Comida" && !it.value.contains("%") })
         // Cada sección solo lista sus propias categorías, no se mezclan.
         assertTrue(incomeRows.none { it.label == "Comida" })
         assertTrue(expenseRows.none { it.label == "Sueldo" })
+
+        // Tono semántico para el color del PDF: ingreso=Positive, gasto=Negative (No-Shame Rule,
+        // nunca un tono de alarma para el gasto).
+        assertTrue(incomeRows.first { it.label == "Sueldo" }.tone == ReportLine.RowTone.Positive)
+        assertTrue(expenseRows.first { it.label == "Comida" }.tone == ReportLine.RowTone.Negative)
+        val balanceRows = rowsOfSection(lines, "Balance del periodo")
+        assertTrue(balanceRows.first { it.label == "Ingresos" }.tone == ReportLine.RowTone.Positive)
+        assertTrue(balanceRows.first { it.label == "Gastos" }.tone == ReportLine.RowTone.Negative)
     }
 
     @Test
@@ -172,13 +179,16 @@ class ReportBuilderTest {
         assertTrue(!comida.value.contains("⚠"))
         assertTrue(!comida.value.contains("EXCEDIDO"))
         assertTrue(comida.emphasis)
+        assertTrue(comida.tone == ReportLine.RowTone.Warning)
 
         val transporte = budgetRows.first { it.label.startsWith("Transporte") }
         assertTrue(!transporte.label.contains("⚠"))
         assertTrue(!transporte.emphasis)
+        assertTrue(transporte.tone == ReportLine.RowTone.Neutral)
 
-        // La leyenda del símbolo solo aparece si algún presupuesto se excedió.
-        assertTrue(lines.any { it is ReportLine.Row && it.label.contains("⚠") && it.label.contains("Presupuesto excedido") })
+        // La leyenda del símbolo solo aparece si algún presupuesto se excedió, y también lleva tono Warning.
+        val leyenda = lines.filterIsInstance<ReportLine.Row>().first { it.label.contains("⚠") && it.label.contains("Presupuesto excedido") }
+        assertTrue(leyenda.tone == ReportLine.RowTone.Warning)
     }
 
     @Test
@@ -254,8 +264,79 @@ class ReportBuilderTest {
             openInvestments = InvestmentRepository(db).openNow(),
         )
 
-        assertTrue(lines.any { it is ReportLine.Row && it.label.contains("Patrimonio neto") && it.value.contains("42") })
+        assertTrue(lines.any { it is ReportLine.Row && it.label == "Patrimonio" && it.value.contains("42") })
         assertTrue(lines.any { it is ReportLine.Row && it.label == "Fondo indexado" })
         assertTrue(lines.any { it is ReportLine.Row && it.label == "Total invertido" })
+    }
+
+    @Test
+    fun periodSummaryUsaNombrePropioDeSuscripcionEInversionEnVezDeEtiquetaGenerica() {
+        val db = freshDb()
+        seedIfEmpty(db)
+        val account = db.accountQueries.selectAll().executeAsList().first()
+        val subCat = db.categoryQueries.selectByKind("EXPENSE").executeAsList().first { it.name == "Suscripción" }
+        val invCat = db.categoryQueries.selectByKind("EXPENSE").executeAsList().first { it.name == "Inversión" }
+
+        val subscriptionId = SubscriptionRepository(db).add(
+            name = "Netflix",
+            amountMinor = 4_500,
+            currency = account.currency,
+            categoryId = subCat.id,
+            accountId = account.id,
+            frequency = "MONTHLY",
+            intervalCount = 1,
+            nextChargeDateEpochDay = 0,
+            remindDaysBefore = 1,
+        )
+        val investmentId = InvestmentRepository(db).add(
+            name = "Fondo indexado",
+            amountMinor = 100_000,
+            currency = account.currency,
+            accountId = account.id,
+            categoryId = invCat.id,
+            periodic = false,
+            frequency = null,
+            intervalCount = null,
+            nextContributionDate = null,
+            startDate = 0,
+        )
+
+        val txRepo = TransactionRepository(db)
+        txRepo.add(account.id, subCat.id, 4_500, account.currency, 100, "netflix", "EXPENSE", subscriptionId = subscriptionId)
+        txRepo.add(account.id, invCat.id, 20_000, account.currency, 100, "aporte", "EXPENSE", investmentId = investmentId)
+
+        val subscriptions = SubscriptionRepository(db).all()
+        val investments = InvestmentRepository(db).all()
+        val rows = db.transactionQueries.selectAll().executeAsList()
+        val categories = db.categoryQueries.selectAll().executeAsList()
+
+        val lines = ReportBuilder.periodSummaryPdfLines(
+            periodLabel = "2026",
+            rows = rows,
+            categories = categories,
+            currency = account.currency,
+            budgetRows = emptyList(),
+            netWorthMinor = 0L,
+            openInvestments = emptyList(),
+            subscriptions = subscriptions,
+            investments = investments,
+        )
+        val expenseRows = rowsOfSection(lines, "Gastos por categoría")
+        assertTrue(expenseRows.any { it.label.contains("Netflix") })
+        assertTrue(expenseRows.any { it.label.contains("Fondo indexado") })
+        assertTrue(expenseRows.none { it.label.contains("Suscripción") && !it.label.contains("Netflix") })
+        assertTrue(expenseRows.none { it.label.contains("Inversión") && !it.label.contains("Fondo indexado") })
+
+        val csv = ReportBuilder.transactionsCsv(
+            rows,
+            categories,
+            db.accountQueries.selectAll().executeAsList().associate { it.id to it.name },
+            subscriptions,
+            investments,
+        )
+        val netflixRow = csv.trim().lines().first { it.contains("netflix") }
+        assertTrue(netflixRow.contains("Netflix"))
+        val aporteRow = csv.trim().lines().first { it.contains("aporte") }
+        assertTrue(aporteRow.contains("Fondo indexado"))
     }
 }

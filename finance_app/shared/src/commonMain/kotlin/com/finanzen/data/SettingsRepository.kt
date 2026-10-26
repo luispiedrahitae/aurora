@@ -5,22 +5,10 @@ import com.finanzen.db.FinanzenDb
 /** Lectura/escritura de preferencias de UI sobre la tabla `Setting` (key/value). */
 class SettingsRepository(private val db: FinanzenDb) {
 
-    fun themeMode(): String = db.settingQueries.get(KEY_THEME).executeAsOneOrNull() ?: THEME_DARK
-
-    fun setThemeMode(mode: String) = db.settingQueries.put(KEY_THEME, mode)
-
     /** Preset de acento (nombre del enum AccentPreset). */
     fun accent(): String = db.settingQueries.get(KEY_ACCENT).executeAsOneOrNull() ?: DEFAULT_ACCENT
 
     fun setAccent(key: String) = db.settingQueries.put(KEY_ACCENT, key)
-
-    /**
-     * Color dinámico (Material You). Apagado por defecto: la app se muestra con su acento de marca
-     * (morado) en todos los dispositivos; el usuario puede activar Material You si lo prefiere.
-     */
-    fun dynamicColorEnabled(): Boolean = db.settingQueries.get(KEY_DYNAMIC).executeAsOneOrNull()?.toBooleanStrictOrNull() ?: false
-
-    fun setDynamicColorEnabled(enabled: Boolean) = db.settingQueries.put(KEY_DYNAMIC, enabled.toString())
 
     /** Recordatorios de corte/pago de tarjetas de crédito. Apagado por defecto. */
     fun cardNotificationsEnabled(): Boolean = db.settingQueries.get(KEY_NOTIFY_CARDS).executeAsOneOrNull()?.toBooleanStrictOrNull() ?: false
@@ -42,8 +30,8 @@ class SettingsRepository(private val db: FinanzenDb) {
 
     fun setReduceMotionEnabled(enabled: Boolean) = db.settingQueries.put(KEY_REDUCE_MOTION, enabled.toString())
 
-    /** Posición del símbolo de moneda en los montos: auto (default, según CLDR) | prefix | suffix | none. */
-    fun symbolPosition(): String = db.settingQueries.get(KEY_SYMBOL_POS).executeAsOneOrNull() ?: "auto"
+    /** Posición del símbolo de moneda en los montos: auto (según CLDR) | prefix (default) | suffix | none. */
+    fun symbolPosition(): String = db.settingQueries.get(KEY_SYMBOL_POS).executeAsOneOrNull() ?: "prefix"
 
     fun setSymbolPosition(pos: String) = db.settingQueries.put(KEY_SYMBOL_POS, pos)
 
@@ -96,15 +84,10 @@ class SettingsRepository(private val db: FinanzenDb) {
     }
 
     companion object {
-        const val KEY_THEME = "ui.theme"
-        const val THEME_SYSTEM = "system"
-        const val THEME_LIGHT = "light"
-        const val THEME_DARK = "dark"
         const val KEY_CURRENCY = "app.currency"
         const val DEFAULT_CURRENCY = "USD"
         const val KEY_ACCENT = "app.accent"
-        const val DEFAULT_ACCENT = "Teal"
-        const val KEY_DYNAMIC = "app.dynamic_color"
+        const val DEFAULT_ACCENT = "Terracotta"
         const val KEY_NOTIFY_CARDS = "notif.cards"
         const val KEY_NOTIFY_BUDGET = "notif.budget"
         const val KEY_NOTIFY_REMIND_DAYS = "notif.remind_days"

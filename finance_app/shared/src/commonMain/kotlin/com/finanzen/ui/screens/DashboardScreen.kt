@@ -1,7 +1,9 @@
 package com.finanzen.ui.screens
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -9,13 +11,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Visibility
-import androidx.compose.material.icons.outlined.VisibilityOff
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -23,9 +20,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -40,10 +38,8 @@ import com.finanzen.ui.components.CategoryBreakdownSection
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.IncomeExpenseBarChart
 import com.finanzen.ui.components.KpiDelta
-import com.finanzen.ui.components.KpiDeltaLine
 import com.finanzen.ui.components.MainTabHeader
 import com.finanzen.ui.components.MonthSelector
-import com.finanzen.ui.components.NetWorthAreaChart
 import com.finanzen.ui.components.PeriodModeChip
 import com.finanzen.ui.components.SavingsRateGauge
 import com.finanzen.ui.components.SectionHeader
@@ -53,6 +49,8 @@ import com.finanzen.ui.components.kpiDelta
 import com.finanzen.ui.format.PeriodMode
 import com.finanzen.ui.format.formatMesAnio
 import com.finanzen.ui.format.mesLargo
+import com.finanzen.ui.icons.LucideIcons
+import com.finanzen.ui.theme.LocalAccentColor
 import com.finanzen.ui.theme.LocalDateLocale
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
@@ -71,6 +69,7 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun DashboardScreen(
+    onOpenSubscriptions: () -> Unit = {},
     vm: DashboardViewModel = koinViewModel(),
     settingsVm: SettingsViewModel = koinInject(),
 ) {
@@ -84,29 +83,14 @@ fun DashboardScreen(
     val fmt = LocalMoneyFormat.current
     val finance = LocalFinanceColors.current
     val dateLocale = LocalDateLocale.current
-    val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
-
-    // Los gráficos de tendencia (ingresos/gastos, patrimonio neto) resaltan por defecto el día/mes
-    // actual del periodo en curso, en vez del último índice del array (que puede ser un día/mes
-    // futuro sin datos todavía) — solo cuando el periodo seleccionado es el actual.
-    val trendLastIndex = (data.incomeExpenseTrend.size - 1).coerceAtLeast(0)
-    val defaultTrendIndex = when (mode) {
-        PeriodMode.MONTH -> if (month.year == today.year && month.month == today.month) {
-            (today.dayOfMonth - 1).coerceIn(0, trendLastIndex)
-        } else {
-            trendLastIndex
-        }
-        PeriodMode.YEAR -> if (year == today.year) (today.monthNumber - 1).coerceIn(0, trendLastIndex) else trendLastIndex
-    }
-
-    // Bento: el hero de saldo (vidrio) ocupa las 2 columnas; los pares de KPI son medium tiles lado
-    // a lado; gráficas/secciones vuelven a ocupar el ancho completo — capas de tamaño, no una lista
-    // plana (DESIGN.md, "Bento Tiles"). Todo salvo el hero y "Saldos por cuenta" está acotado al
-    // periodo seleccionado (chip Mes/Año arriba a la derecha del título + selector debajo).
-    val fullSpan: LazyGridItemSpanScope.() -> GridItemSpan = { GridItemSpan(maxLineSpan) }
-
+    // Columna única de tarjetas planas a todo el ancho (Sage.dc.html: nada de grid bento de 2
+    // columnas salvo el par Ingresos/Gastos, que es una fila explícita). Todo salvo el hero y
+    // "Saldos por cuenta" está acotado al periodo seleccionado (chip Mes/Año arriba a la derecha
+    // del título + selector debajo).
     Column(Modifier.fillMaxSize()) {
         MainTabHeader(
+            // "Resumen" (mismo label que la pestaña en Destinations.kt) en vez del wordmark "Sage" —
+            // las otras 4 pestañas usan su nombre de sección, no la marca, en este header.
             title = "Resumen",
             action = {
                 PeriodModeChip(
@@ -135,15 +119,13 @@ fun DashboardScreen(
                 onLabelClick = { vm.setYear(Clock.System.todayIn(TimeZone.currentSystemDefault()).year) },
             )
         }
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
+        LazyColumn(
             modifier = Modifier.fillMaxSize(),
             // bottom extra para que el FAB central no tape la última tarjeta.
             contentPadding = PaddingValues(start = spacing.lg, end = spacing.lg, top = spacing.sm, bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(spacing.lg),
-            horizontalArrangement = Arrangement.spacedBy(spacing.sm),
         ) {
-            item(span = fullSpan) {
+            item {
                 BalanceHeroCard(
                     totalBalance = data.totalBalanceMinor,
                     currency = data.currency,
@@ -153,72 +135,93 @@ fun DashboardScreen(
             }
 
             val prevLabel = when (mode) {
-                PeriodMode.MONTH -> mesLargo(month.plus(DatePeriod(months = -1)).monthNumber)
+                PeriodMode.MONTH -> mesLargo(month.plus(DatePeriod(months = -1)).monthNumber).replaceFirstChar { it.uppercase() }
                 PeriodMode.YEAR -> "${year - 1}"
             }
             item {
-                KpiTile(
-                    "Ingresos",
-                    if (hideAmounts) MASK else fmt.format(data.periodIncomeMinor, data.currency),
-                    finance.income,
-                    masked = hideAmounts,
-                    delta = kpiDelta(data.periodIncomeMinor, data.prevPeriodIncomeMinor, prevLabel, upIsGood = true),
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(spacing.sm),
+                ) {
+                    KpiTile(
+                        "Ingresos",
+                        if (hideAmounts) MASK else fmt.format(data.periodIncomeMinor, data.currency),
+                        finance.income,
+                        modifier = Modifier.weight(1f),
+                        masked = hideAmounts,
+                        delta = kpiDelta(data.periodIncomeMinor, data.prevPeriodIncomeMinor, prevLabel, upIsGood = true),
+                    )
+                    KpiTile(
+                        "Gastos",
+                        if (hideAmounts) MASK else fmt.format(data.periodExpenseMinor, data.currency),
+                        finance.expense,
+                        flipTrendIcon = true,
+                        modifier = Modifier.weight(1f),
+                        masked = hideAmounts,
+                        delta = kpiDelta(data.periodExpenseMinor, data.prevPeriodExpenseMinor, prevLabel, upIsGood = false),
+                    )
+                }
             }
             item {
-                KpiTile(
-                    "Gastos",
-                    if (hideAmounts) MASK else fmt.format(data.periodExpenseMinor, data.currency),
-                    finance.expense,
+                SubscriptionsSummaryRow(
+                    valueText = if (hideAmounts) MASK else fmt.format(data.subscriptionCostMinor, data.currency),
                     masked = hideAmounts,
-                    delta = kpiDelta(data.periodExpenseMinor, data.prevPeriodExpenseMinor, prevLabel, upIsGood = false),
-                )
-            }
-            item(span = fullSpan) {
-                KpiTile(
-                    "Suscripciones",
-                    if (hideAmounts) MASK else fmt.format(data.subscriptionCostMinor, data.currency),
-                    MaterialTheme.colorScheme.primary,
-                    masked = hideAmounts,
+                    onClick = onOpenSubscriptions,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
 
-            item(span = fullSpan) {
+            item {
                 SavingsRateGauge(
                     savingsRate = data.savingsRate,
                     goalPct = savingsGoalPct,
                     onGoalChange = settingsVm::setSavingsGoalPct,
+                    modifier = Modifier.fillMaxWidth(),
                 )
             }
 
             if (data.accounts.isNotEmpty()) {
-                item(span = fullSpan) { SectionHeader("Saldos por cuenta") }
-                item(span = fullSpan) { AccountBalanceBars(data.accounts, data.currency) }
-            }
-
-            if (data.accounts.any { it.type in DashboardViewModel.NET_WORTH_TYPES }) {
-                item(span = fullSpan) { SectionHeader("Patrimonio neto") }
-                item(span = fullSpan) {
-                    NetWorthAreaChart(
-                        data.netWorthTrend,
-                        data.currency,
-                        initialSelectedIndex = defaultTrendIndex,
-                        lastDataIndex = defaultTrendIndex,
-                    )
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                        SectionHeader("Saldos por cuenta")
+                        AccountBalanceBars(data.accounts, data.currency, modifier = Modifier.fillMaxWidth())
+                    }
                 }
             }
 
             if (data.incomeExpenseTrend.any { it.incomeMinor > 0 || it.expenseMinor > 0 }) {
-                item(span = fullSpan) { SectionHeader("Ingresos vs gastos") }
-                item(span = fullSpan) { IncomeExpenseBarChart(data.incomeExpenseTrend, data.currency, initialSelectedIndex = defaultTrendIndex) }
+                item {
+                    val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+                    val todayIndex = when (mode) {
+                        PeriodMode.MONTH -> if (month.year == today.year && month.monthNumber == today.monthNumber) today.dayOfMonth - 1 else null
+                        PeriodMode.YEAR -> if (year == today.year) today.monthNumber - 1 else null
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                        SectionHeader("Ingresos vs gastos")
+                        IncomeExpenseBarChart(
+                            data.incomeExpenseTrend,
+                            data.currency,
+                            modifier = Modifier.fillMaxWidth(),
+                            initialSelectedIndex = todayIndex,
+                        )
+                    }
+                }
             }
 
-            item(span = fullSpan) { SectionHeader("Gastos por categoría") }
-            item(span = fullSpan) { CategoryBreakdownSection(data.categoryBreakdown, data.currency) }
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                    SectionHeader("Gastos por categoría")
+                    CategoryBreakdownSection(data.categoryBreakdown, data.currency, modifier = Modifier.fillMaxWidth())
+                }
+            }
 
             if (data.frequent.isNotEmpty()) {
-                item(span = fullSpan) { SectionHeader("Gastos más frecuentes") }
-                item(span = fullSpan) { TopFrequentExpensesList(data.frequent, data.currency) }
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                        SectionHeader("Gastos más frecuentes")
+                        TopFrequentExpensesList(data.frequent, data.currency, modifier = Modifier.fillMaxWidth())
+                    }
+                }
             }
         }
     }
@@ -251,20 +254,25 @@ private fun BalanceHeroCard(
     val animatedBalance by animateFloatAsState(targetValue = totalBalance.toFloat(), animationSpec = motionTween(400))
     val balanceText = if (hidden) MASK else fmt.format(animatedBalance.toLong(), currency)
 
-    FinanceCard(size = BentoTileSize.Hero, glass = true) {
+    FinanceCard(modifier = Modifier.fillMaxWidth(), size = BentoTileSize.Hero) {
         Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Balance general", style = MaterialTheme.typography.labelLarge, color = onSurfaceVar)
+                Text(
+                    "BALANCE GENERAL",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = onSurfaceVar,
+                    fontWeight = FontWeight.SemiBold,
+                )
                 IconButton(onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onToggleHidden()
                 }) {
                     Icon(
-                        if (hidden) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
+                        if (hidden) LucideIcons.EyeOff else LucideIcons.Eye,
                         contentDescription = if (hidden) "Mostrar montos" else "Ocultar montos",
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp),
@@ -275,10 +283,12 @@ private fun BalanceHeroCard(
                 text = balanceText,
                 modifier = Modifier.fillMaxWidth()
                     .then(if (hidden) Modifier.semantics { contentDescription = "Monto oculto" } else Modifier),
-                maxFontSize = MaterialTheme.typography.displayLarge.fontSize,
+                // Sage.dc.html: el balance del hero es 36px/700, no el display de 52sp reservado
+                // para "un número por pantalla" — aquí ya conviven balance + KPIs + suscripciones.
+                maxFontSize = MaterialTheme.typography.displaySmall.fontSize,
                 color = balanceColor,
-                fontWeight = FontWeight.SemiBold,
-                style = MaterialTheme.typography.displayLarge,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.displaySmall,
             )
         }
     }
@@ -295,26 +305,116 @@ private fun KpiTile(
     valueText: String,
     accent: Color,
     modifier: Modifier = Modifier,
+    // No hay un ícono "trending-down" en el set Lucide del proyecto; se reutiliza TrendingUp
+    // rotado 180° para Gastos en vez de sumar un recurso nuevo.
+    flipTrendIcon: Boolean = false,
     masked: Boolean = false,
     delta: KpiDelta? = null,
     caption: String? = null,
 ) {
     val spacing = LocalSpacing.current
+    val finance = LocalFinanceColors.current
     FinanceCard(modifier = modifier, contentPadding = PaddingValues(spacing.md)) {
         Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
-            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(
-                valueText,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = accent,
-                maxLines = 1,
-                modifier = if (masked) Modifier.semantics { contentDescription = "Monto oculto" } else Modifier,
-            )
-            delta?.let { KpiDeltaLine(it) }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
+                Text(
+                    label,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Icon(
+                    LucideIcons.TrendingUp,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(14.dp).rotate(if (flipTrendIcon) 180f else 0f),
+                )
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                Text(
+                    valueText,
+                    // Número secundario de pantalla (KPI), no la cifra hero — Title (20sp) en vez de
+                    // Headline (24sp) para que quepa cómodo en la mitad del ancho, con Bold explícito
+                    // (Title por defecto es SemiBold) para que siga leyéndose como un dato destacado.
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = accent,
+                    maxLines = 1,
+                    modifier = if (masked) Modifier.semantics { contentDescription = "Monto oculto" } else Modifier,
+                )
+                delta?.let {
+                    Icon(
+                        // Sin glifo de flecha arriba/abajo en el set Lucide (39 iconos) — se reusa
+                        // chevron up/down, ya en el set, en vez de agregar un drawable nuevo.
+                        if (it.pct >= 0) LucideIcons.ChevronUp else LucideIcons.ChevronDown,
+                        contentDescription = null,
+                        tint = if (it.isGood) finance.income else finance.expense,
+                        modifier = Modifier.size(12.dp),
+                    )
+                }
+            }
+            delta?.let {
+                Text(
+                    "${if (it.pct >= 0) "+" else ""}${it.pct}% vs ${it.vsLabel}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (it.isGood) finance.income else finance.expense,
+                    maxLines = 1,
+                )
+            }
             caption?.let {
                 Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
             }
+        }
+    }
+}
+
+/** Fila resumen de suscripciones: icono + etiqueta + monto mensual + chevron, tocable → abre
+ * Suscripciones (mismo patrón de fila-resumen-navegable que Sage.dc.html). Envuelta en
+ * FinanceCard para que quede consistente con el resto de bloques del dashboard (todos con
+ * superficie/sombra de tarjeta) en vez del tratamiento "al ras" del handoff original.
+ */
+@Composable
+private fun SubscriptionsSummaryRow(valueText: String, masked: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val spacing = LocalSpacing.current
+    FinanceCard(modifier = modifier, onClick = onClick, contentPadding = PaddingValues(spacing.md)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(spacing.sm),
+        ) {
+            Box(
+                modifier = Modifier.size(36.dp).clip(CircleShape).background(LocalAccentColor.current),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    LucideIcons.Repeat,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+            Text(
+                "SUSCRIPCIONES",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                valueText,
+                // Mismo tamaño/peso que los montos de fila del dashboard (saldo de cuenta, gasto por
+                // categoría, gasto frecuente): bodyLarge+SemiBold, no el titleSmall+Bold de KpiTile.
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.primary,
+                maxLines = 1,
+                modifier = if (masked) Modifier.semantics { contentDescription = "Monto oculto" } else Modifier,
+            )
+            Icon(
+                LucideIcons.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(18.dp),
+            )
         }
     }
 }

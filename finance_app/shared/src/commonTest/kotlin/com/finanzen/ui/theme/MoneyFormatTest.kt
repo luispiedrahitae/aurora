@@ -54,24 +54,14 @@ class MoneyFormatTest {
     }
 
     @Test
-    fun autoResuelvePrefijoParaUSD() {
-        // USD es PREFIX según CURRENCY_LOCALE_INFO (convención en-US): sin elegir nada manualmente,
-        // AUTO debe dar el mismo resultado que forzar PREFIX a mano.
-        val fmt = MoneyFormat(SymbolPosition.AUTO, mapOf("USD" to usd))
-        assertEquals("\$1,234.56", fmt.format(123456, "USD"))
+    fun parseMigraLegadoAutoAPrefijo() {
+        // "auto" era la opción "Automático", retirada de la UI (SymbolPosition.AUTO ya no existe);
+        // cualquier valor persistido de instalaciones viejas debe migrar a PREFIX al leerse.
+        assertEquals(SymbolPosition.PREFIX, MoneyFormat.parse("auto"))
     }
 
     @Test
-    fun autoResuelveSufijoParaEUR() {
-        // EUR es SUFFIX según CURRENCY_LOCALE_INFO (convención de-DE): AUTO detecta esto sin que el
-        // usuario haya tocado el selector de posición.
-        val fmt = MoneyFormat(SymbolPosition.AUTO, mapOf("EUR" to eur))
-        assertEquals("1.234,56 €", fmt.format(123456, "EUR"))
-    }
-
-    @Test
-    fun autoConMonedaSinDatosCldrUsaFallbackPrefijo() {
-        val fmt = MoneyFormat(SymbolPosition.AUTO, mapOf("USD" to usd))
-        assertEquals(SymbolPosition.PREFIX, fmt.resolvePosition("XYZ"))
+    fun parseValorDesconocidoUsaFallbackPrefijo() {
+        assertEquals(SymbolPosition.PREFIX, MoneyFormat.parse("algo-invalido"))
     }
 }

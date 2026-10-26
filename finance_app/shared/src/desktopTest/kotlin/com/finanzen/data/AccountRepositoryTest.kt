@@ -43,7 +43,7 @@ class AccountRepositoryTest {
         val txRepo = TransactionRepository(db)
         val cardRepo = CardRepository(db)
         val planRepo = InstallmentPlanRepository(db)
-        val vm = AccountsViewModel(accountRepo, txRepo, cardRepo, planRepo, SettingsRepository(db), NotificationScheduler())
+        val vm = AccountsViewModel(accountRepo, txRepo, cardRepo, planRepo, SubscriptionRepository(db), InvestmentRepository(db), SettingsRepository(db), NotificationScheduler())
         val accId = accountRepo.add(name = "Efectivo", type = "CASH", currency = "USD")
         val catId = CategoryRepository(db).addAndGetId("Comida", "EXPENSE", null)
         txRepo.add(accountId = accId, categoryId = catId, amountMinor = 1_000, currency = "USD", epochDay = 0, note = "super", kind = "EXPENSE")
@@ -79,7 +79,7 @@ class AccountRepositoryTest {
         val txRepo = TransactionRepository(db)
         val cardRepo = CardRepository(db)
         val planRepo = InstallmentPlanRepository(db)
-        val vm = AccountsViewModel(accountRepo, txRepo, cardRepo, planRepo, SettingsRepository(db), NotificationScheduler())
+        val vm = AccountsViewModel(accountRepo, txRepo, cardRepo, planRepo, SubscriptionRepository(db), InvestmentRepository(db), SettingsRepository(db), NotificationScheduler())
         val accId = accountRepo.add(name = "Tarjeta", type = "CREDIT", currency = "USD")
         cardRepo.add(accountId = accId, last4 = "1234", network = "OTRA", creditLimitMinor = 100_000, cutoffDay = null, dueDay = null)
         val cardId = cardRepo.byAccount(accId)!!.id

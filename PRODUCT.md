@@ -10,11 +10,11 @@ A single person managing their own personal finances — accounts, transactions,
 
 ## Product Purpose
 
-Cauce is a personal finance tracker: accounts, transactions, budgets, subscriptions, categories, and analysis (income/expense trends, net worth, spending patterns) in one local-first app. Success looks like the user trusting the numbers at a glance, without friction or judgment, and being able to act on them (log a transaction, adjust a budget) in a couple of taps.
+Sage is a personal finance tracker: accounts, transactions, budgets, subscriptions, categories, and analysis (income/expense trends, net worth, spending patterns) in one local-first app. Success looks like the user trusting the numbers at a glance, without friction or judgment, and being able to act on them (log a transaction, adjust a budget) in a couple of taps.
 
 ## Brand Personality
 
-Precise & trustworthy. The interface should feel like Linear or Stripe's dashboard: calm confidence, restrained color, the data speaks for itself rather than being dressed up. Not warm/playful (no mascot energy, no celebratory confetti for saving money), not terminal-dense (this is a personal tool for one person, not a power-user trading desk — density serves clarity, not maximalism).
+Warm & trustworthy. The interface should feel like a well-kept ledger, not a trading terminal: calm confidence and restrained use of two earthy accents (terracotta, sage), the data speaks for itself rather than being dressed up. Warm without being playful (no mascot energy, no celebratory confetti for saving money), not terminal-dense (this is a personal tool for one person, not a power-user trading desk — density serves clarity, not maximalism).
 
 ## Anti-references
 
@@ -26,14 +26,14 @@ Precise & trustworthy. The interface should feel like Linear or Stripe's dashboa
 ## Design Principles
 
 - Data speaks for itself — restraint over decoration; every visual flourish must earn its place.
-- Precision over friendliness — a Swiss-modernist grid and typographic hierarchy over soft/playful shapes.
-- Depth with purpose — glass and dimensional layering mark hierarchy (this is the important number), not decoration.
+- Warmth with precision — an organic, rounded grid and typographic hierarchy over cold, hard-edged shapes, without sacrificing the underlying structure.
+- Depth with purpose — soft shadow and tonal layering mark hierarchy (this is the important number), not decoration.
 - Trust through consistency — identical components read identically everywhere; no screen invents its own affordances.
 - Accessible & ethical by construction — accessibility and non-manipulative framing are load-bearing requirements, not a final pass.
 
 ## Accessibility & Inclusion
 
-- WCAG 2.1 AA minimum, verified independently in both the OLED-dark and light themes (not inferred from one).
+- WCAG 2.1 AA minimum, verified independently in both the dark and light themes (not inferred from one).
 - Color is never the sole encoding — every chart pairs color with an icon, pattern, or direct label (colorblind-safe).
 - No shame-based visual treatment of overspend/negative balances — informative framing (clear numbers, neutral-to-warning color scale) instead of alarming/punishing styling.
 - No dark patterns anywhere in the interface.

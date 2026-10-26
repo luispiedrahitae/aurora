@@ -3,58 +3,47 @@ package com.finanzen.ui.screens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.finanzen.platform.platformName
 import com.finanzen.ui.components.FinanceCard
+import com.finanzen.ui.components.SubScreenHeader
+import com.finanzen.ui.icons.LucideIcons
+import com.finanzen.ui.theme.LocalSpacing
+import com.finanzen.ui.theme.displayFontFamily
 
 private const val APP_VERSION = "1.0.0"
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AboutScreen(onBack: () -> Unit) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Acerca de Cauce") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Volver")
-                    }
-                },
-            )
-        },
-    ) { inner ->
+    Column(Modifier.fillMaxSize()) {
+        SubScreenHeader(title = "Acerca de Sage", onBack = onBack)
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(inner),
+            modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Cauce", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.SemiBold)
+                    Text("Sage", style = MaterialTheme.typography.headlineSmall.copy(fontFamily = displayFontFamily()))
                     Text(
-                        "Sigue el flujo de tus finanzas.",
+                        "Sabiduría financiera, sin ruido.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Text(
-                        "Versión $APP_VERSION · $platformName",
+                        "Versión $APP_VERSION",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -63,37 +52,35 @@ fun AboutScreen(onBack: () -> Unit) {
 
             item {
                 InfoCard(
+                    icon = LucideIcons.Shield,
                     title = "Privacidad",
-                    body = "Tus datos viven solo en este dispositivo. No hay servidores, ni cuentas, ni telemetría, " +
-                        "ni publicidad. La app no requiere conexión a internet para funcionar. El asistente IA " +
-                        "opcional es la única función que usa internet, y solo para descargar el modelo una vez; " +
-                        "después responde 100% en tu dispositivo. Los backups que exportes se cifran con AES-GCM " +
-                        "usando una clave derivada de tu PIN: sin ese PIN, el archivo no se puede leer.",
+                    body = "Tus datos viven solo en este dispositivo. No hay servidores, cuentas ni telemetría.",
                 )
             }
 
             item {
                 InfoCard(
+                    icon = LucideIcons.Lock,
                     title = "Datos y permisos",
-                    body = "Cauce no recopila información personal. Solo usa almacenamiento local para la base de " +
-                        "datos y, cuando tú lo pidas, para guardar reportes o backups. No se comparte nada con terceros.",
+                    body = "Sage pide huella/rostro para desbloquear la app y notificaciones para tus recordatorios. " +
+                        "Nada más: no hay acceso a contactos, ubicación ni internet.",
                 )
             }
 
             item {
                 InfoCard(
+                    icon = LucideIcons.FileText,
                     title = "Licencias y tecnología",
-                    body = "Construida con Kotlin Multiplatform y Compose Multiplatform. Persistencia con SQLDelight, " +
-                        "inyección de dependencias con Koin. Software de código abierto bajo sus respectivas licencias.",
+                    body = "Construida con Kotlin Multiplatform y Compose Multiplatform. Software de código abierto " +
+                        "bajo sus respectivas licencias.",
                 )
             }
 
             item {
                 InfoCard(
+                    icon = LucideIcons.Palette,
                     title = "Iconos",
-                    body = "Iconos generales: Material Symbols (Apache 2.0). Logos de servicios: Simple Icons (CC0). " +
-                        "Las marcas y logotipos pertenecen a sus respectivos dueños; se muestran solo para que " +
-                        "identifiques tus categorías y no implican afiliación ni patrocinio.",
+                    body = "Iconos de interfaz: Lucide (ISC). Las marcas y logotipos pertenecen a sus respectivos dueños.",
                 )
             }
         }
@@ -101,10 +88,13 @@ fun AboutScreen(onBack: () -> Unit) {
 }
 
 @Composable
-private fun InfoCard(title: String, body: String) {
+private fun InfoCard(icon: Painter, title: String, body: String) {
     FinanceCard(modifier = Modifier.fillMaxWidth()) {
-        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(title, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+        Column(verticalArrangement = Arrangement.spacedBy(LocalSpacing.current.xs)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(LocalSpacing.current.xs)) {
+                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                Text(title, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+            }
             Text(body, style = MaterialTheme.typography.bodyMedium)
         }
     }

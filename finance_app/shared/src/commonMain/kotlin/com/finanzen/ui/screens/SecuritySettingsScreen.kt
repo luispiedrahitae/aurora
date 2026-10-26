@@ -3,24 +3,16 @@ package com.finanzen.ui.screens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -35,13 +27,15 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.finanzen.ui.components.FinanceCard
+import com.finanzen.ui.components.SelectorPill
+import com.finanzen.ui.components.SubScreenHeader
 import com.finanzen.ui.theme.LocalFinanceColors
+import com.finanzen.ui.theme.displayFontFamily
 import com.finanzen.viewmodel.SecurityViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SecuritySettingsScreen(
     onBack: () -> Unit,
@@ -49,28 +43,24 @@ fun SecuritySettingsScreen(
 ) {
     val lockOn = remember { mutableStateOf(vm.lockEnabled()) }
     var showSetup by remember { mutableStateOf(false) }
+    var showPreview by remember { mutableStateOf(false) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Seguridad") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Volver")
-                    }
-                },
-            )
-        },
-    ) { inner ->
+    if (showPreview) {
+        PinPreviewScreen(onCancel = { showPreview = false })
+        return
+    }
+
+    Column(Modifier.fillMaxSize()) {
+        SubScreenHeader(title = "Seguridad", onBack = onBack)
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(inner),
+            modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
                 FinanceCard(modifier = Modifier.fillMaxWidth()) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        androidx.compose.foundation.layout.Row(
+                        Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
@@ -87,21 +77,28 @@ fun SecuritySettingsScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
-                            Switch(
-                                checked = lockOn.value,
-                                onCheckedChange = { checked ->
-                                    if (checked) {
-                                        showSetup = true
-                                    } else {
-                                        vm.disableLock()
-                                        lockOn.value = false
-                                    }
-                                },
-                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                SelectorPill(
+                                    text = "Sí",
+                                    selected = lockOn.value,
+                                    onClick = { if (!lockOn.value) showSetup = true },
+                                )
+                                SelectorPill(
+                                    text = "No",
+                                    selected = !lockOn.value,
+                                    onClick = {
+                                        if (lockOn.value) {
+                                            vm.disableLock()
+                                            lockOn.value = false
+                                        }
+                                    },
+                                )
+                            }
                         }
                         if (lockOn.value) {
                             TextButton(onClick = { showSetup = true }) { Text("Cambiar PIN") }
                         }
+                        TextButton(onClick = { showPreview = true }) { Text("Vista previa del bloqueo") }
                     }
                 }
             }
@@ -198,7 +195,7 @@ private fun PinSetupCard(
                             }
                         }
                     },
-                ) { Text(if (isBusy) "Guardando…" else "Guardar") }
+                ) { Text(if (isBusy) "Guardando…" else "Guardar", fontFamily = displayFontFamily()) }
             }
         }
     }

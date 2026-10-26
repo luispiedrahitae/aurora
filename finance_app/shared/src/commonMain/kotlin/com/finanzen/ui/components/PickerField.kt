@@ -11,15 +11,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.UnfoldMore
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -37,12 +35,13 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.finanzen.ui.icons.LucideIcons
 import com.finanzen.ui.theme.LocalSpacing
 
 /**
  * Campo de selección que abre un [ModalBottomSheet] con la lista de opciones (mejor que un dropdown
  * para listas medianas/largas en móvil). El campo es de solo lectura; un overlay transparente captura
- * el toque para abrir el sheet. Alternativa a [LabeledDropdown] para cuenta/categoría.
+ * el toque para abrir el sheet.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,35 +59,62 @@ fun <T> PickerField(
     searchable: Boolean = false,
     searchPredicate: ((T, String) -> Boolean)? = null,
     sectionOf: ((T) -> String?)? = null,
+    // Look "Sage" del handoff: etiqueta aparte arriba (no flotante), sin flecha (el handoff oculta
+    // el caret nativo a propósito) y campo más redondeado/plano — ver `sageFieldColors()` en
+    // MoneyField.kt. Por ahora solo lo usa TransactionFormScreen; el resto de pantallas siguen con
+    // el default sin cambios.
+    plainLabel: Boolean = false,
+    // false: campo de solo-lectura visual (sin abrir el sheet) — p. ej. el tipo de cuenta bloqueado
+    // al editar en AccountFormDialog, que se muestra como PickerField pero no es modificable.
+    enabled: Boolean = true,
 ) {
     val spacing = LocalSpacing.current
     var open by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
 
-    androidx.compose.foundation.layout.Box(modifier) {
-        OutlinedTextField(
-            value = selected?.let(optionLabel) ?: "",
-            onValueChange = {},
-            readOnly = true,
-            label = { Text(label) },
-            placeholder = { Text(placeholder) },
-            trailingIcon = { Icon(Icons.Outlined.UnfoldMore, contentDescription = null) },
-            modifier = Modifier.fillMaxWidth(),
-        )
-        // Overlay transparente: el OutlinedTextField readOnly no expone onClick, así que capturamos
-        // el toque encima de él. clearAndSetSemantics: sin él, TalkBack anuncia el TextField como
-        // "campo de solo lectura" y el overlay no existe como control — este picker era invisible
-        // para lectores de pantalla en todo el flujo de captura.
-        androidx.compose.foundation.layout.Box(
-            Modifier
-                .matchParentSize()
-                .clip(MaterialTheme.shapes.extraSmall)
-                .clickable(onClickLabel = "Abrir opciones") { open = true }
-                .clearAndSetSemantics {
-                    role = Role.Button
-                    contentDescription = "$label: ${selected?.let(optionLabel) ?: placeholder}"
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        if (plainLabel) {
+            Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth()) {
+            OutlinedTextField(
+                value = selected?.let(optionLabel) ?: "",
+                onValueChange = {},
+                readOnly = true,
+                enabled = enabled,
+                label = if (plainLabel) {
+                    null
+                } else {
+                    { Text(label) }
                 },
-        )
+                placeholder = { Text(placeholder) },
+                trailingIcon = if (plainLabel) {
+                    null
+                } else {
+                    { Icon(LucideIcons.ChevronsUpDown, contentDescription = null) }
+                },
+                shape = if (plainLabel) MaterialTheme.shapes.medium else OutlinedTextFieldDefaults.shape,
+                colors = if (plainLabel) sageFieldColors() else OutlinedTextFieldDefaults.colors(),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            // Overlay transparente: el OutlinedTextField readOnly no expone onClick, así que capturamos
+            // el toque encima de él. clearAndSetSemantics: sin él, TalkBack anuncia el TextField como
+            // "campo de solo lectura" y el overlay no existe como control — este picker era invisible
+            // para lectores de pantalla en todo el flujo de captura. Si enabled=false (p. ej. tipo de
+            // cuenta bloqueado), no se agrega ni el clickable ni la semántica de botón.
+            if (enabled) {
+                androidx.compose.foundation.layout.Box(
+                    Modifier
+                        .matchParentSize()
+                        .clip(MaterialTheme.shapes.extraSmall)
+                        .clickable(onClickLabel = "Abrir opciones") { open = true }
+                        .clearAndSetSemantics {
+                            role = Role.Button
+                            contentDescription = "$label: ${selected?.let(optionLabel) ?: placeholder}"
+                        },
+                )
+            }
+        }
     }
 
     if (open) {
@@ -103,7 +129,6 @@ fun <T> PickerField(
                 Text(
                     label,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(horizontal = spacing.lg, vertical = spacing.sm),
                 )
                 if (searchable) {
@@ -112,7 +137,7 @@ fun <T> PickerField(
                         onValueChange = { query = it },
                         modifier = Modifier.fillMaxWidth().padding(horizontal = spacing.lg, vertical = spacing.sm),
                         placeholder = { Text("Buscar…") },
-                        leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
+                        leadingIcon = { Icon(LucideIcons.Search, contentDescription = null) },
                         singleLine = true,
                         shape = MaterialTheme.shapes.small,
                     )
@@ -133,7 +158,7 @@ fun <T> PickerField(
                     // Lista dentro de un recuadro redondeado con separadores, como una tarjeta de opciones.
                     Surface(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = spacing.lg),
-                        shape = MaterialTheme.shapes.large,
+                        shape = MaterialTheme.shapes.medium,
                         color = MaterialTheme.colorScheme.surfaceContainerHigh,
                     ) {
                         LazyColumn(modifier = Modifier.heightIn(max = 420.dp)) {
