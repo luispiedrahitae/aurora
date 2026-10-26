@@ -29,11 +29,8 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -48,6 +45,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -61,6 +59,7 @@ import com.finanzen.ui.components.KindAvatar
 import com.finanzen.ui.components.MainTabHeader
 import com.finanzen.ui.components.MoneyText
 import com.finanzen.ui.components.MonthSelector
+import com.finanzen.ui.components.SwipeToDeleteRow
 import com.finanzen.ui.components.kindLabel
 import com.finanzen.ui.components.signedAmountAndColor
 import com.finanzen.ui.format.diaSemana
@@ -133,15 +132,17 @@ fun TransactionsScreen(
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
         pendingDeleteIds = pendingDeleteIds + id
         scope.launch {
-            val result = snackbarHostState.showSnackbar(
-                message = "Movimiento eliminado",
-                actionLabel = "Deshacer",
-                duration = SnackbarDuration.Short,
-            )
-            if (result == SnackbarResult.ActionPerformed) {
-                pendingDeleteIds = pendingDeleteIds - id
-            } else {
-                vm.delete(id)
+            // finally: salir de la pantalla cancela la corrutina antes de que el snackbar termine;
+            // el borrado se confirma igual salvo que el usuario haya tocado "Deshacer".
+            var undone = false
+            try {
+                undone = snackbarHostState.showSnackbar(
+                    message = "Movimiento eliminado",
+                    actionLabel = "Deshacer",
+                    duration = SnackbarDuration.Short,
+                ) == SnackbarResult.ActionPerformed
+            } finally {
+                if (!undone) vm.delete(id)
                 pendingDeleteIds = pendingDeleteIds - id
             }
         }
@@ -158,6 +159,7 @@ fun TransactionsScreen(
                     label = formatMesAnio(month, dateLocale),
                     onPrev = { month = month.plus(DatePeriod(months = -1)) },
                     onNext = { month = month.plus(DatePeriod(months = 1)) },
+                    onLabelClick = { month = LocalDate(today.year, today.month, 1) },
                 )
                 OutlinedTextField(
                     value = query,
@@ -402,32 +404,8 @@ private fun TransactionItem(
     val finance = LocalFinanceColors.current
     val (signedAmount, amountColor) = signedAmountAndColor(row.kind, row.amountMinor, finance)
 
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = {
-            if (it == SwipeToDismissBoxValue.EndToStart) {
-                onSwipeToDelete()
-            } else {
-                false
-            }
-        },
-    )
-
-    SwipeToDismissBox(
-        state = dismissState,
-        modifier = modifier,
-        enableDismissFromStartToEnd = false,
-        backgroundContent = {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.errorContainer)
-                    .padding(horizontal = spacing.lg),
-                contentAlignment = Alignment.CenterEnd,
-            ) {
-                Icon(LucideIcons.Trash, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.onErrorContainer)
-            }
-        },
-    ) {
+    // RectangleShape: las filas van al ras dentro de la tarjeta del día, sin radio propio.
+    SwipeToDeleteRow(onSwipeToDelete = onSwipeToDelete, modifier = modifier, shape = RectangleShape) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()

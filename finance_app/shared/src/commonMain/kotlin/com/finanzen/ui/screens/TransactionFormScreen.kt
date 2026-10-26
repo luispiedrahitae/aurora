@@ -38,7 +38,9 @@ import androidx.compose.ui.unit.dp
 import com.finanzen.data.RESERVED_CATEGORY_NAMES
 import com.finanzen.domain.InstallmentMath
 import com.finanzen.ui.components.CategoryAvatar
+import com.finanzen.ui.components.ConfirmDialog
 import com.finanzen.ui.components.DateField
+import com.finanzen.ui.components.FieldError
 import com.finanzen.ui.components.MoneyField
 import com.finanzen.ui.components.PickerField
 import com.finanzen.ui.components.SelectorPill
@@ -102,6 +104,7 @@ fun TransactionFormScreen(
     }
     var cuotasText by remember { mutableStateOf("") }
     var blockedDelete by remember { mutableStateOf<TransactionsViewModel.DeleteBlock?>(null) }
+    var confirmDelete by remember { mutableStateOf<Pair<String, () -> Unit>?>(null) }
 
     // Solo para kind == SUBSCRIPTION/INVESTMENT (alta) o isLinkedEdit (edición del maestro): estos dos
     // tipos no son un TransactionRow.kind real (ver Transaction.sq), así que su alta/edición se resuelve
@@ -364,13 +367,7 @@ fun TransactionFormScreen(
                                 shape = PillShape,
                             ) { Text("Añadir") }
                         }
-                        if (subcategoryNameTaken) {
-                            Text(
-                                "Ya existe una subcategoría con ese nombre",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = finance.expense,
-                            )
-                        }
+                        if (subcategoryNameTaken) FieldError("Ya existe una subcategoría con ese nombre")
                     }
                 }
             }
@@ -457,7 +454,7 @@ fun TransactionFormScreen(
                 }
             }
 
-            error?.let { Text(it, color = finance.expense, style = MaterialTheme.typography.bodySmall) }
+            error?.let { FieldError(it) }
 
             Button(
                 onClick = {
@@ -599,8 +596,10 @@ fun TransactionFormScreen(
             if (editingSubscription != null) {
                 TextButton(
                     onClick = {
-                        subVm.deleteSubscription(editingSubscription.id)
-                        onDismiss()
+                        confirmDelete = "esta suscripción" to {
+                            subVm.deleteSubscription(editingSubscription.id)
+                            onDismiss()
+                        }
                     },
                     colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = finance.expense),
                     modifier = Modifier.fillMaxWidth(),
@@ -608,8 +607,10 @@ fun TransactionFormScreen(
             } else if (editingInvestment != null) {
                 TextButton(
                     onClick = {
-                        invVm.deleteInvestment(editingInvestment.id)
-                        onDismiss()
+                        confirmDelete = "esta inversión" to {
+                            invVm.deleteInvestment(editingInvestment.id)
+                            onDismiss()
+                        }
                     },
                     colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = finance.expense),
                     modifier = Modifier.fillMaxWidth(),
@@ -621,8 +622,10 @@ fun TransactionFormScreen(
                         if (block != null) {
                             blockedDelete = block
                         } else {
-                            vm.delete(existing.id)
-                            onDismiss()
+                            confirmDelete = "este movimiento" to {
+                                vm.delete(existing.id)
+                                onDismiss()
+                            }
                         }
                     },
                     colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = finance.expense),
@@ -630,6 +633,19 @@ fun TransactionFormScreen(
                 ) { Text("Eliminar movimiento") }
             }
         }
+    }
+
+    // Desde el formulario no hay snackbar de "Deshacer" (el sheet se cierra), así que se confirma antes.
+    confirmDelete?.let { (what, delete) ->
+        ConfirmDialog(
+            title = "¿Eliminar $what?",
+            body = "Esta acción no se puede deshacer.",
+            onConfirm = {
+                confirmDelete = null
+                delete()
+            },
+            onDismiss = { confirmDelete = null },
+        )
     }
 
     blockedDelete?.let { block ->

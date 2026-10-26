@@ -96,6 +96,8 @@ import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.SwitchColors
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
@@ -480,7 +482,7 @@ fun PeriodModeChip(mode: PeriodMode, onToggle: () -> Unit, modifier: Modifier = 
 
 /**
  * Envuelve [content] en un gesto de deslizar-para-eliminar (deslizar de derecha a izquierda revela
- * un fondo rojo con el icono de papelera), el mismo patrón ya usado en Movimientos y Cuentas —
+ * un fondo terracota con el icono de papelera), el mismo patrón ya usado en Movimientos y Cuentas —
  * evita triplicarlo inline en cada pantalla de "Más" que tenía en su lugar un botón de papelera
  * suelto en la tarjeta. [onSwipeToDelete] decide si el gesto se consuma (`true`, la fila desaparece)
  * o si vuelve a su sitio (`false`) — p. ej. para abrir un diálogo de confirmación en vez de borrar
@@ -509,11 +511,12 @@ fun SwipeToDeleteRow(
                 modifier = Modifier
                     .fillMaxSize()
                     .clip(shape)
-                    .background(MaterialTheme.colorScheme.errorContainer)
+                    // Terracota (finance.expense*), no el rojo de error: DESIGN.md "No-Shame Rule".
+                    .background(LocalFinanceColors.current.expenseContainer)
                     .padding(horizontal = LocalSpacing.current.lg),
                 contentAlignment = Alignment.CenterEnd,
             ) {
-                Icon(LucideIcons.Trash, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.onErrorContainer)
+                Icon(LucideIcons.Trash, contentDescription = "Eliminar", tint = LocalFinanceColors.current.expense)
             }
         },
         content = { content() },
@@ -993,7 +996,7 @@ fun IconAvatar(icon: ImageVector, modifier: Modifier = Modifier, size: Dp = 40.d
             icon,
             contentDescription = null,
             tint = Color.White,
-            modifier = Modifier.size(size * 0.55f),
+            modifier = Modifier.size(size * 0.5f),
         )
     }
 }
@@ -1032,6 +1035,31 @@ fun AddFab(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
         }
     }
 }
+
+/** Mensaje de validación bajo un campo. DESIGN.md: "Error state uses Warning Amber text + icon",
+ * nunca solo color — el icono mantiene el error legible sin depender del tono. */
+@Composable
+fun FieldError(message: String, modifier: Modifier = Modifier) {
+    val warning = LocalFinanceColors.current.warning
+    Row(
+        modifier = modifier,
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(LocalSpacing.current.xs),
+    ) {
+        Icon(LucideIcons.AlertTriangle, contentDescription = null, tint = warning, modifier = Modifier.size(16.dp))
+        Text(message, color = warning, style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+/** Colores del Switch para todos los ajustes. El default de M3 pinta borde y perilla apagados con
+ * `outline`, que en la paleta Sage queda a ~1.2:1 sobre las tarjetas (WCAG 1.4.11 pide 3:1) y el
+ * Switch apagado se volvía casi invisible. */
+@Composable
+fun sageSwitchColors(): SwitchColors = SwitchDefaults.colors(
+    uncheckedThumbColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    uncheckedBorderColor = MaterialTheme.colorScheme.onSurfaceVariant,
+    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+)
 
 /** Estado vacío reutilizable: icono + título + subtítulo. [icon] es un `Painter` (LucideIcons) —
  * este chrome no es un glifo de categoría, así que siempre debe migrar al set Lucide. */

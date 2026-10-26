@@ -25,12 +25,17 @@ import com.finanzen.ui.components.YearSelector
 import com.finanzen.ui.format.PeriodMode
 import com.finanzen.ui.format.formatMesAnio
 import com.finanzen.ui.icons.LucideIcons
+import com.finanzen.ui.theme.LocalDateLocale
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.ui.theme.displayFontFamily
 import com.finanzen.viewmodel.ReportsViewModel
+import kotlinx.datetime.Clock
 import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
+import kotlinx.datetime.todayIn
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
@@ -63,15 +68,20 @@ fun ReportsScreen(
             item {
                 if (mode == PeriodMode.MONTH) {
                     MonthSelector(
-                        label = formatMesAnio(month),
+                        label = formatMesAnio(month, LocalDateLocale.current),
                         onPrev = { vm.setMonth(month.plus(DatePeriod(months = -1))) },
                         onNext = { vm.setMonth(month.plus(DatePeriod(months = 1))) },
+                        onLabelClick = {
+                            val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+                            vm.setMonth(LocalDate(today.year, today.month, 1))
+                        },
                     )
                 } else {
                     YearSelector(
                         label = year.toString(),
                         onPrev = { vm.setYear(year - 1) },
                         onNext = { vm.setYear(year + 1) },
+                        onLabelClick = { vm.setYear(Clock.System.todayIn(TimeZone.currentSystemDefault()).year) },
                     )
                 }
             }

@@ -33,6 +33,7 @@ import com.finanzen.data.RESERVED_CATEGORY_NAMES
 import com.finanzen.db.Category
 import com.finanzen.ui.components.CategoryAvatar
 import com.finanzen.ui.components.ConfirmDialog
+import com.finanzen.ui.components.EmptyState
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.SectionHeader
 import com.finanzen.ui.components.SelectorPill
@@ -164,7 +165,21 @@ private fun androidx.compose.foundation.lazy.LazyListScope.categoryGroup(
     onDelete: (Long) -> Unit,
     onAddSubcategory: (parentId: Long, name: String) -> Unit,
 ) {
-    if (parents.isEmpty()) return
+    if (parents.isEmpty()) {
+        // Antes el grupo desaparecía entero (encabezado incluido) y no quedaba claro dónde crear uno.
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SectionHeader(title)
+                EmptyState(
+                    icon = LucideIcons.Tag,
+                    title = "Sin categorías de ${title.lowercase()}",
+                    subtitle = "Créala arriba, en \"Nueva categoría\", para poder clasificar tus movimientos.",
+                    modifier = Modifier.fillMaxWidth().padding(vertical = LocalSpacing.current.lg),
+                )
+            }
+        }
+        return
+    }
     item {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             SectionHeader(title)
@@ -217,10 +232,9 @@ private fun CategoryCard(
                 }
             }
             if (children.isNotEmpty()) {
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(LocalSpacing.current.sm),
-                    verticalArrangement = Arrangement.spacedBy(LocalSpacing.current.sm),
-                ) {
+                // Sin espacio vertical: cada chip ya ocupa 48dp de alto (área táctil) alrededor de una
+                // píldora más baja, lo que deja el hueco visible entre filas.
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(LocalSpacing.current.sm)) {
                     children.forEach { child -> SubcategoryTag(child, onDelete) }
                 }
             }
@@ -268,21 +282,28 @@ private fun CategoryCard(
 
 @Composable
 private fun SubcategoryTag(category: Category, onDelete: (Long) -> Unit) {
-    Surface(shape = PillShape, color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+    // Todo el chip es el objetivo táctil (Surface con onClick aplica el mínimo de 48dp por fuera de la
+    // píldora visible); antes era una "X" de 20dp. Borrar abre el ConfirmDialog, así que un toque
+    // accidental no destruye nada.
+    Surface(
+        onClick = { onDelete(category.id) },
+        shape = PillShape,
+        // Highest, no High: en la paleta Sage surfaceContainerHigh == color de la tarjeta, y la
+        // píldora quedaba invisible (solo se veía el texto + X flotando).
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+    ) {
         Row(
             modifier = Modifier.padding(
                 start = LocalSpacing.current.md,
-                end = LocalSpacing.current.xs,
+                end = LocalSpacing.current.sm,
                 top = LocalSpacing.current.xs,
                 bottom = LocalSpacing.current.xs,
             ),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(LocalSpacing.current.xs),
         ) {
             Text(category.name, style = MaterialTheme.typography.labelMedium)
-            IconButton(onClick = { onDelete(category.id) }, modifier = Modifier.size(20.dp)) {
-                Icon(LucideIcons.X, contentDescription = "Eliminar ${category.name}", modifier = Modifier.size(11.dp))
-            }
+            Icon(LucideIcons.X, contentDescription = "Eliminar", modifier = Modifier.size(16.dp))
         }
     }
 }

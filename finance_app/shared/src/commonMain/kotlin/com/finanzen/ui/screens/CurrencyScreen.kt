@@ -15,11 +15,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.finanzen.domain.SymbolPosition
+import com.finanzen.ui.components.ConfirmDialog
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.PickerField
 import com.finanzen.ui.components.SectionHeader
@@ -35,6 +40,20 @@ fun CurrencyScreen(
 ) {
     val baseCurrency by vm.baseCurrency.collectAsState()
     val symbolPos by vm.symbolPosition.collectAsState()
+    var pendingCurrency by remember { mutableStateOf<String?>(null) }
+
+    pendingCurrency?.let { code ->
+        ConfirmDialog(
+            title = "¿Cambiar la moneda a $code?",
+            body = "Tus montos existentes no se convierten: conservan el mismo número y pasan a mostrarse en $code.",
+            confirmLabel = "Cambiar",
+            onConfirm = {
+                vm.setBaseCurrency(code)
+                pendingCurrency = null
+            },
+            onDismiss = { pendingCurrency = null },
+        )
+    }
 
     Column(Modifier.fillMaxSize()) {
         SubScreenHeader(title = "Moneda", onBack = onBack)
@@ -63,7 +82,7 @@ fun CurrencyScreen(
                                 options = orderedCurrencies,
                                 selected = vm.currencies.firstOrNull { it.code == baseCurrency },
                                 optionLabel = { "${it.code} — ${it.name} (${it.symbol})" },
-                                onSelect = { vm.setBaseCurrency(it.code) },
+                                onSelect = { if (it.code != baseCurrency) pendingCurrency = it.code },
                                 modifier = Modifier.padding(16.dp),
                                 searchable = true,
                                 searchPredicate = { c, q -> c.code.contains(q, ignoreCase = true) || c.name.contains(q, ignoreCase = true) },
@@ -107,12 +126,14 @@ private fun SymbolOption(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .selectable(selected = selected == value, onClick = { onSelect(value) })
+            // La fila es el único objetivo táctil/semántico; el RadioButton es solo visual
+            // (onClick = null) para que TalkBack no enfoque dos veces la misma opción.
+            .selectable(selected = selected == value, role = Role.RadioButton, onClick = { onSelect(value) })
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        RadioButton(selected = selected == value, onClick = { onSelect(value) })
+        RadioButton(selected = selected == value, onClick = null)
         Text(label, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
     }
 }

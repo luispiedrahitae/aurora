@@ -32,13 +32,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewModelScope
 import com.finanzen.db.Investment
 import com.finanzen.ui.components.EmptyState
 import com.finanzen.ui.components.FinanceCard
@@ -72,22 +72,22 @@ fun InvestmentsScreen(
     var withdrawingInvestment by remember { mutableStateOf<Investment?>(null) }
     var pendingDeleteIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     val accountNameById = remember(accounts) { accounts.associate { it.id to it.name } }
 
     fun requestDelete(inv: Investment) {
         pendingDeleteIds = pendingDeleteIds + inv.id
-        // vm.viewModelScope, no rememberCoroutineScope(): el deshacer/borrado debe sobrevivir a la
-        // navegación fuera de esta pantalla, no cancelarse con la composición.
-        vm.viewModelScope.launch {
-            val result = snackbarHostState.showSnackbar(
-                message = "Inversión eliminada",
-                actionLabel = "Deshacer",
-                duration = SnackbarDuration.Short,
-            )
-            if (result == SnackbarResult.ActionPerformed) {
-                pendingDeleteIds = pendingDeleteIds - inv.id
-            } else {
-                vm.deleteInvestment(inv.id)
+        // Ver comentario equivalente en SubscriptionsScreen.requestDelete.
+        scope.launch {
+            var undone = false
+            try {
+                undone = snackbarHostState.showSnackbar(
+                    message = "InversiÃ³n eliminada",
+                    actionLabel = "Deshacer",
+                    duration = SnackbarDuration.Short,
+                ) == SnackbarResult.ActionPerformed
+            } finally {
+                if (!undone) vm.deleteInvestment(inv.id)
                 pendingDeleteIds = pendingDeleteIds - inv.id
             }
         }
@@ -115,8 +115,8 @@ fun InvestmentsScreen(
             SubScreenHeader(title = "Inversiones", onBack = onBack)
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 item { SectionHeader("Abiertas") }
                 if (open.isEmpty()) {
@@ -125,7 +125,7 @@ fun InvestmentsScreen(
                             EmptyState(
                                 icon = LucideIcons.TrendingUp,
                                 title = "Sin inversiones abiertas",
-                                subtitle = "Créala desde Nuevo movimiento; los aportes se registran en Movimientos.",
+                                subtitle = "CrÃ©ala desde Nuevo movimiento; los aportes se registran en Movimientos.",
                                 modifier = Modifier.padding(32.dp),
                             )
                         }
@@ -220,8 +220,8 @@ private fun WithdrawDialog(
     }
 }
 
-/** Tarjeta de inversión abierta: icono · nombre + subtítulo (cuenta, periodicidad) · monto por aporte
- * · retirar. Se elimina deslizando. */
+/** Tarjeta de inversiÃ³n abierta: icono Â· nombre + subtÃ­tulo (cuenta, periodicidad) Â· monto por aporte
+ * Â· retirar. Se elimina deslizando. */
 @Composable
 private fun InvestmentItem(
     investment: Investment,
@@ -231,13 +231,13 @@ private fun InvestmentItem(
     val spacing = LocalSpacing.current
     val dateLocale = LocalDateLocale.current
     val subtitle = if (investment.periodic == 1L) {
-        val next = investment.nextContributionDate?.let { " · próximo ${formatDiaMes(it, dateLocale)}" } ?: ""
+        val next = investment.nextContributionDate?.let { " Â· prÃ³ximo ${formatDiaMes(it, dateLocale)}" } ?: ""
         "$accountName$next"
     } else {
-        "$accountName · puntual"
+        "$accountName Â· puntual"
     }
 
-    FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(14.dp)) {
+    FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(16.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconAvatar(Icons.Outlined.TrendingUp)
@@ -252,7 +252,7 @@ private fun InvestmentItem(
     }
 }
 
-/** Tarjeta de inversión cerrada: aportado / retirado / rendimiento (verde si ganancia, rosa si pérdida). */
+/** Tarjeta de inversiÃ³n cerrada: aportado / retirado / rendimiento (verde si ganancia, rosa si pÃ©rdida). */
 @Composable
 private fun ClosedInvestmentItem(investment: Investment, accountName: String) {
     val spacing = LocalSpacing.current
@@ -263,7 +263,7 @@ private fun ClosedInvestmentItem(investment: Investment, accountName: String) {
     val yieldColor = if (yieldMinor >= 0) finance.income else finance.expense
     val yieldPct = if (contributed != 0L) yieldMinor * 100.0 / contributed else null
 
-    FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(14.dp)) {
+    FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(16.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
             Column {
                 Text(investment.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)

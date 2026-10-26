@@ -99,7 +99,9 @@ private fun topDestinationIcon(dest: TopDestination): Painter = when (dest) {
  * paralelos. */
 @Composable
 private fun TabIcon(dest: TopDestination) {
-    val sizeModifier = if (dest == TopDestination.More) Modifier.size(20.dp) else Modifier
+    // El glifo de "Más" se ve más pesado; se encoge con padding dentro de la caja de 24dp en vez de
+    // achicar la caja, porque el indicador de M3 mide ancho-del-icono + 40dp y quedaría más angosto.
+    val sizeModifier = if (dest == TopDestination.More) Modifier.size(24.dp).padding(2.dp) else Modifier
     Icon(
         painter = topDestinationIcon(dest),
         contentDescription = dest.label,

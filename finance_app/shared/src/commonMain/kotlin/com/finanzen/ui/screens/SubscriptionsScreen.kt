@@ -26,12 +26,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewModelScope
 import com.finanzen.db.Subscription
 import com.finanzen.ui.components.BentoTileSize
 import com.finanzen.ui.components.EmptyState
@@ -58,21 +58,23 @@ fun SubscriptionsScreen(
     val accountsById = remember(accounts) { accounts.associateBy { it.id } }
     var pendingDeleteIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
     val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     fun requestDelete(sub: Subscription) {
         pendingDeleteIds = pendingDeleteIds + sub.id
-        // vm.viewModelScope, no rememberCoroutineScope(): el deshacer/borrado debe sobrevivir a la
-        // navegación fuera de esta pantalla, no cancelarse con la composición.
-        vm.viewModelScope.launch {
-            val result = snackbarHostState.showSnackbar(
-                message = "Suscripción eliminada",
-                actionLabel = "Deshacer",
-                duration = SnackbarDuration.Short,
-            )
-            if (result == SnackbarResult.ActionPerformed) {
-                pendingDeleteIds = pendingDeleteIds - sub.id
-            } else {
-                vm.deleteSubscription(sub.id)
+        // rememberCoroutineScope + finally, no vm.viewModelScope: sin SnackbarHost en pantalla,
+        // showSnackbar nunca retorna y el borrado quedaba colgado. Salir cancela la corrutina y el
+        // finally confirma el borrado salvo que el usuario haya tocado "Deshacer".
+        scope.launch {
+            var undone = false
+            try {
+                undone = snackbarHostState.showSnackbar(
+                    message = "SuscripciÃ³n eliminada",
+                    actionLabel = "Deshacer",
+                    duration = SnackbarDuration.Short,
+                ) == SnackbarResult.ActionPerformed
+            } finally {
+                if (!undone) vm.deleteSubscription(sub.id)
                 pendingDeleteIds = pendingDeleteIds - sub.id
             }
         }
@@ -86,8 +88,8 @@ fun SubscriptionsScreen(
             SubScreenHeader(title = "Suscripciones", onBack = onBack)
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 if (subs.isEmpty()) {
                     item {
@@ -95,14 +97,14 @@ fun SubscriptionsScreen(
                             EmptyState(
                                 icon = LucideIcons.Repeat,
                                 title = "Sin suscripciones",
-                                subtitle = "Créala desde Nuevo movimiento; el cobro se registrará en Movimientos.",
+                                subtitle = "CrÃ©ala desde Nuevo movimiento; el cobro se registrarÃ¡ en Movimientos.",
                                 modifier = Modifier.padding(32.dp),
                             )
                         }
                     }
                 } else {
                     item {
-                        // Total mensual comprometido: la cifra que responde "¿cuánto me cuestan al mes?".
+                        // Total mensual comprometido: la cifra que responde "Â¿cuÃ¡nto me cuestan al mes?".
                         val monthlyCost = remember(subs) { DashboardViewModel.computeSubscriptionMonthlyCost(subs) }
                         FinanceCard(modifier = Modifier.fillMaxWidth(), size = BentoTileSize.Small) {
                             Row(
@@ -140,14 +142,14 @@ fun SubscriptionsScreen(
     }
 }
 
-/** Texto de recurrencia corto para la fila de suscripción: "Día N" (mensual) o "Cada N días". */
+/** Texto de recurrencia corto para la fila de suscripciÃ³n: "DÃ­a N" (mensual) o "Cada N dÃ­as". */
 private fun recurrenceText(frequency: String, intervalCount: Long): String = when (frequency) {
-    "MONTHLY" -> "Día $intervalCount"
-    "DAILY" -> "Cada $intervalCount días"
+    "MONTHLY" -> "DÃ­a $intervalCount"
+    "DAILY" -> "Cada $intervalCount dÃ­as"
     else -> frequency
 }
 
-/** Tarjeta de suscripción: icono · nombre + cuenta · recurrencia · monto. Se elimina deslizando. */
+/** Tarjeta de suscripciÃ³n: icono Â· nombre + cuenta Â· recurrencia Â· monto. Se elimina deslizando. */
 @Composable
 private fun SubscriptionItem(
     name: String,
@@ -163,7 +165,7 @@ private fun SubscriptionItem(
             Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
                 Text(name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
                 Text(
-                    listOfNotNull(accountName, recurrenceText).joinToString(" · "),
+                    listOfNotNull(accountName, recurrenceText).joinToString(" Â· "),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

@@ -55,6 +55,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -379,6 +382,16 @@ private fun AccountRow(
 
     SwipeToDismissBox(
         state = dismissState,
+        // El swipe no es alcanzable con lector de pantalla; la misma acción queda en el menú de
+        // acciones de TalkBack.
+        modifier = Modifier.semantics {
+            customActions = listOf(
+                CustomAccessibilityAction("Archivar") {
+                    onArchive()
+                    true
+                },
+            )
+        },
         enableDismissFromStartToEnd = false,
         backgroundContent = {
             Box(
@@ -394,7 +407,7 @@ private fun AccountRow(
         },
     ) {
         // Tocar la tarjeta abre editar (como BudgetProgressCard/TransactionItem); el chevron
-        // expande/contrae los movimientos del mes y archivar es ícono + swipe.
+        // expande/contrae los movimientos del mes y archivar es swipe (+ acción de accesibilidad).
         FinanceCard(
             modifier = Modifier.fillMaxWidth(),
             onClick = onEdit,
@@ -581,6 +594,18 @@ private fun ArchivedAccountRow(
 
     SwipeToDismissBox(
         state = dismissState,
+        modifier = Modifier.semantics {
+            customActions = listOf(
+                CustomAccessibilityAction("Restaurar") {
+                    onUnarchive()
+                    true
+                },
+                CustomAccessibilityAction("Eliminar permanentemente") {
+                    onHardDelete()
+                    true
+                },
+            )
+        },
         backgroundContent = {
             when (dismissState.dismissDirection) {
                 SwipeToDismissBoxValue.StartToEnd -> Box(
@@ -597,11 +622,11 @@ private fun ArchivedAccountRow(
                     modifier = Modifier
                         .fillMaxSize()
                         .clip(MaterialTheme.shapes.medium)
-                        .background(MaterialTheme.colorScheme.errorContainer)
+                        .background(finance.expenseContainer)
                         .padding(horizontal = spacing.lg),
                     contentAlignment = Alignment.CenterEnd,
                 ) {
-                    Icon(LucideIcons.Trash, contentDescription = "Eliminar permanentemente", tint = MaterialTheme.colorScheme.onErrorContainer)
+                    Icon(LucideIcons.Trash, contentDescription = "Eliminar permanentemente", tint = finance.expense)
                 }
                 else -> {}
             }
@@ -690,13 +715,13 @@ private fun CreditDetails(card: Card, balanceMinor: Long, unbilledMinor: Long, c
                     Spacer(modifier = Modifier.weight(1f))
                 }
                 if (hasInfo) {
-                    // Área táctil mínima de 48dp (WCAG 2.5.8); el icono sigue siendo de 16dp visuales.
+                    // Área táctil mínima de 48dp (WCAG 2.5.8); icono Info de 20dp, igual que InfoTooltip.
                     IconButton(onClick = { showInfo = true }, modifier = Modifier.minimumInteractiveComponentSize()) {
                         Icon(
                             LucideIcons.Info,
                             contentDescription = "Detalle de tu tarjeta",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(16.dp),
+                            modifier = Modifier.size(20.dp),
                         )
                     }
                 }
@@ -720,12 +745,14 @@ private fun PayOffCardSheet(
     var sourceAccountId by remember { mutableStateOf(sourceOptions.firstOrNull()?.id) }
     val selectedSource = sourceOptions.firstOrNull { it.id == sourceAccountId }
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    // Mismo chrome que el resto de hojas (AccountFormDialog, BudgetFormDialog, TransactionFormScreen):
+    // sin drag handle, SheetHeader con "Cerrar" y padding de 24dp.
+    ModalBottomSheet(onDismissRequest = onDismiss, dragHandle = null) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = spacing.lg, vertical = spacing.md),
-            verticalArrangement = Arrangement.spacedBy(spacing.md),
+            modifier = Modifier.fillMaxWidth().padding(spacing.xl),
+            verticalArrangement = Arrangement.spacedBy(spacing.lg),
         ) {
-            Text("Pagar tarjeta", style = MaterialTheme.typography.titleMedium)
+            SheetHeader(title = "Pagar tarjeta", onDismiss = onDismiss)
             Text(
                 "Se transferirá ${fmt.format(debtMinor, currency)} desde la cuenta elegida para saldar tu " +
                     "tarjeta. Las cuotas pendientes de tus compras a plazos dejarán de cobrarse " +
@@ -816,7 +843,7 @@ private fun AccountFormDialog(
                         SelectorPill(
                             text = accountTypeLabel(t),
                             selected = type == t,
-                            contentPadding = PaddingValues(vertical = 9.dp, horizontal = 4.dp),
+                            contentPadding = PaddingValues(vertical = 8.dp, horizontal = 4.dp),
                             modifier = Modifier.weight(1f),
                         ) { type = t }
                     }

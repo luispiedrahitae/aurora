@@ -59,7 +59,8 @@ fun MoreScreen(onNavigate: (route: String) -> Unit) {
         MoreItem("Acerca de Sage", LucideIcons.Info) {
             onNavigate("about")
         },
-        MoreItem("Sugerencias", LucideIcons.Info) {
+        // Pencil ("escríbenos"), no Info: compartía icono con "Acerca de Sage" y se confundían.
+        MoreItem("Sugerencias", LucideIcons.Pencil) {
             onNavigate("suggestions")
         },
     )

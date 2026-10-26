@@ -275,7 +275,6 @@ private fun BalanceHeroCard(
                         if (hidden) LucideIcons.EyeOff else LucideIcons.Eye,
                         contentDescription = if (hidden) "Mostrar montos" else "Ocultar montos",
                         tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp),
                     )
                 }
             }
@@ -381,15 +380,17 @@ private fun SubscriptionsSummaryRow(valueText: String, masked: Boolean, onClick:
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(spacing.sm),
         ) {
+            // Mismas medidas que IconAvatar (40dp, glifo a la mitad), que acá no sirve porque recibe
+            // ImageVector y este icono es un Painter Lucide.
             Box(
-                modifier = Modifier.size(36.dp).clip(CircleShape).background(LocalAccentColor.current),
+                modifier = Modifier.size(40.dp).clip(CircleShape).background(LocalAccentColor.current),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     LucideIcons.Repeat,
                     contentDescription = null,
                     tint = Color.White,
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(20.dp),
                 )
             }
             Text(
@@ -413,7 +414,6 @@ private fun SubscriptionsSummaryRow(valueText: String, masked: Boolean, onClick:
                 LucideIcons.ChevronRight,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(18.dp),
             )
         }
     }

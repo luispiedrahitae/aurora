@@ -7,10 +7,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -20,14 +22,16 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.finanzen.platform.rememberBackupPicker
+import com.finanzen.ui.components.ConfirmDialog
 import com.finanzen.ui.components.FinanceCard
-import com.finanzen.ui.components.SelectorPill
 import com.finanzen.ui.components.SubScreenHeader
+import com.finanzen.ui.components.sageSwitchColors
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.displayFontFamily
 import com.finanzen.viewmodel.BackupViewModel
@@ -43,6 +47,20 @@ fun BackupScreen(
     var exportPass by remember { mutableStateOf("") }
     var importPass by remember { mutableStateOf("") }
     val openPicker = rememberBackupPicker { content -> vm.import(importPass, content) }
+    var confirmRestore by remember { mutableStateOf(false) }
+
+    if (confirmRestore) {
+        ConfirmDialog(
+            title = "¿Restaurar backup?",
+            body = "Todos tus datos actuales se reemplazarán por los del archivo. Si quieres conservarlos, crea un backup antes.",
+            confirmLabel = "Restaurar",
+            onConfirm = {
+                confirmRestore = false
+                openPicker()
+            },
+            onDismiss = { confirmRestore = false },
+        )
+    }
 
     Column(Modifier.fillMaxSize()) {
         SubScreenHeader(title = "Backup", onBack = onBack)
@@ -78,10 +96,13 @@ fun BackupScreen(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Row(
+                            modifier = Modifier.toggleable(value = encrypt, role = Role.Switch, onValueChange = { encrypt = it }),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
                             Text("Cifrar con contraseña", modifier = Modifier.weight(1f))
-                            SelectorPill(text = "Sí", selected = encrypt, onClick = { encrypt = true })
-                            SelectorPill(text = "No", selected = !encrypt, onClick = { encrypt = false })
+                            Switch(checked = encrypt, onCheckedChange = null, colors = sageSwitchColors())
                         }
                         if (encrypt) {
                             OutlinedTextField(
@@ -119,7 +140,7 @@ fun BackupScreen(
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                         )
-                        Button(onClick = { openPicker() }, modifier = Modifier.fillMaxWidth()) {
+                        Button(onClick = { confirmRestore = true }, modifier = Modifier.fillMaxWidth()) {
                             Text("Elegir archivo y restaurar", fontFamily = displayFontFamily())
                         }
                     }

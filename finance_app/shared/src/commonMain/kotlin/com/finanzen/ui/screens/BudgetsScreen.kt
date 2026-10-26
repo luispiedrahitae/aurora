@@ -1,6 +1,5 @@
 package com.finanzen.ui.screens
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,6 +8,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -16,6 +16,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
@@ -30,11 +31,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.finanzen.ui.components.AddFab
 import com.finanzen.ui.components.BudgetProgressCard
 import com.finanzen.ui.components.CategoryAvatar
+import com.finanzen.ui.components.ConfirmDialog
 import com.finanzen.ui.components.EmptyState
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.MainTabHeader
@@ -111,20 +112,16 @@ fun BudgetsScreen(
             MainTabHeader(
                 title = "Presupuesto",
                 action = {
-                    // Icono compacto en vez de IconButton: el cuadro mínimo de 48dp de IconButton
-                    // inflaba la altura del header por encima de Movimientos/Cuentas (sin acción).
-                    Icon(
-                        LucideIcons.Info,
-                        contentDescription = "Cómo funcionan los presupuestos mensuales",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier
-                            .clickable(
-                                onClickLabel = "Cómo funcionan los presupuestos mensuales",
-                                role = Role.Button,
-                                onClick = { showInfo = !showInfo },
-                            )
-                            .padding(spacing.xs),
-                    )
+                    // IconButton (área táctil de 48dp): MainTabHeader ya tiene heightIn(min = 48.dp),
+                    // así que no infla el header frente a Movimientos/Cuentas.
+                    IconButton(onClick = { showInfo = !showInfo }) {
+                        Icon(
+                            LucideIcons.Info,
+                            contentDescription = "Cómo funcionan los presupuestos mensuales",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
                 },
             )
             if (showInfo) {
@@ -199,6 +196,19 @@ private fun BudgetFormDialog(
     var limitMinor by remember { mutableStateOf(preselected?.limitMinor ?: 0L) }
     val finance = LocalFinanceColors.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var confirmRemove by remember { mutableStateOf(false) }
+    if (confirmRemove && preselected != null) {
+        ConfirmDialog(
+            title = "¿Quitar presupuesto de \"${preselected.categoryName}\"?",
+            body = "La categoría dejará de tener límite mensual desde este mes.",
+            confirmLabel = "Quitar",
+            onConfirm = {
+                confirmRemove = false
+                onConfirm(preselected.categoryId, 0L)
+            },
+            onDismiss = { confirmRemove = false },
+        )
+    }
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, dragHandle = null) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(24.dp).verticalScroll(rememberScrollState()),
@@ -233,7 +243,7 @@ private fun BudgetFormDialog(
             ) { Text("Guardar presupuesto", fontFamily = displayFontFamily()) }
             if (preselected != null) {
                 TextButton(
-                    onClick = { onConfirm(preselected.categoryId, 0L) },
+                    onClick = { confirmRemove = true },
                     colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = finance.expense),
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text("Quitar presupuesto") }

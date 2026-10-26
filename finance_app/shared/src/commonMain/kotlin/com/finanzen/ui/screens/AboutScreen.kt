@@ -87,8 +87,9 @@ fun AboutScreen(onBack: () -> Unit) {
     }
 }
 
+/** Tarjeta título-con-icono + texto. Compartida con [SuggestionsScreen]. */
 @Composable
-private fun InfoCard(icon: Painter, title: String, body: String) {
+internal fun InfoCard(icon: Painter, title: String, body: String) {
     FinanceCard(modifier = Modifier.fillMaxWidth()) {
         Column(verticalArrangement = Arrangement.spacedBy(LocalSpacing.current.xs)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(LocalSpacing.current.xs)) {

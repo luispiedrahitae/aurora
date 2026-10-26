@@ -1,10 +1,10 @@
 package com.finanzen.ui.components
 
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import com.finanzen.ui.theme.LocalFinanceColors
 
 /**
  * Generic reusable confirm sheet: title, body message, Cancelar / destructive-styled confirm
@@ -25,7 +25,9 @@ fun ConfirmDialog(
         title = { Text(title) },
         text = { Text(body) },
         confirmButton = {
-            TextButton(onClick = onConfirm) { Text(confirmLabel, color = MaterialTheme.colorScheme.error) }
+            // finance.expense (terracota), no colorScheme.error: DESIGN.md "No-Shame Rule" — los
+            // destructivos usan el mismo tono que los botones Eliminar de los formularios.
+            TextButton(onClick = onConfirm) { Text(confirmLabel, color = LocalFinanceColors.current.expense) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(dismissLabel) } },
     )

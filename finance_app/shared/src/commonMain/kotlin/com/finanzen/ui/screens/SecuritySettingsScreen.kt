@@ -11,6 +11,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -26,10 +27,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.finanzen.ui.components.ConfirmDialog
+import com.finanzen.ui.components.FieldError
 import com.finanzen.ui.components.FinanceCard
-import com.finanzen.ui.components.SelectorPill
 import com.finanzen.ui.components.SubScreenHeader
-import com.finanzen.ui.theme.LocalFinanceColors
+import com.finanzen.ui.components.sageSwitchColors
 import com.finanzen.ui.theme.displayFontFamily
 import com.finanzen.viewmodel.SecurityViewModel
 import kotlinx.coroutines.delay
@@ -44,6 +46,22 @@ fun SecuritySettingsScreen(
     val lockOn = remember { mutableStateOf(vm.lockEnabled()) }
     var showSetup by remember { mutableStateOf(false) }
     var showPreview by remember { mutableStateOf(false) }
+
+    var confirmDisable by remember { mutableStateOf(false) }
+
+    if (confirmDisable) {
+        ConfirmDialog(
+            title = "¿Desactivar el bloqueo con PIN?",
+            body = "Cualquiera con acceso a este dispositivo podrá abrir la app y ver tus finanzas.",
+            confirmLabel = "Desactivar",
+            onConfirm = {
+                vm.disableLock()
+                lockOn.value = false
+                confirmDisable = false
+            },
+            onDismiss = { confirmDisable = false },
+        )
+    }
 
     if (showPreview) {
         PinPreviewScreen(onCancel = { showPreview = false })
@@ -77,23 +95,11 @@ fun SecuritySettingsScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                SelectorPill(
-                                    text = "Sí",
-                                    selected = lockOn.value,
-                                    onClick = { if (!lockOn.value) showSetup = true },
-                                )
-                                SelectorPill(
-                                    text = "No",
-                                    selected = !lockOn.value,
-                                    onClick = {
-                                        if (lockOn.value) {
-                                            vm.disableLock()
-                                            lockOn.value = false
-                                        }
-                                    },
-                                )
-                            }
+                            Switch(
+                                checked = lockOn.value,
+                                onCheckedChange = { on -> if (on) showSetup = true else confirmDisable = true },
+                                colors = sageSwitchColors(),
+                            )
                         }
                         if (lockOn.value) {
                             TextButton(onClick = { showSetup = true }) { Text("Cambiar PIN") }
@@ -144,7 +150,6 @@ private fun PinSetupCard(
     var pin by remember { mutableStateOf("") }
     var confirm by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
-    val finance = LocalFinanceColors.current
     val scope = rememberCoroutineScope()
 
     FinanceCard(modifier = Modifier.fillMaxWidth()) {
@@ -171,7 +176,7 @@ private fun PinSetupCard(
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
             )
-            error?.let { Text(it, color = finance.expense, style = MaterialTheme.typography.bodySmall) }
+            error?.let { FieldError(it) }
             androidx.compose.foundation.layout.Row(
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
                 modifier = Modifier.fillMaxWidth(),

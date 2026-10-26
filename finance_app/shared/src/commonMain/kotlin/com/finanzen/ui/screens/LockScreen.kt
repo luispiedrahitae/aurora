@@ -34,9 +34,9 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.finanzen.platform.rememberBiometricUnlock
+import com.finanzen.ui.components.FieldError
 import com.finanzen.ui.icons.LucideIcons
 import com.finanzen.ui.theme.FinanZenShapes
-import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.ui.theme.displayFontFamily
 import com.finanzen.viewmodel.SecurityViewModel
@@ -48,7 +48,6 @@ fun LockScreen(vm: SecurityViewModel) {
     var entered by remember { mutableStateOf("") }
     val error by vm.attemptError.collectAsState()
     val isBusy by vm.isBusy.collectAsState()
-    val finance = LocalFinanceColors.current
     val biometric = rememberBiometricUnlock()
 
     LaunchedEffect(entered) {
@@ -89,13 +88,8 @@ fun LockScreen(vm: SecurityViewModel) {
                 )
             } else {
                 error?.let {
-                    Text(
-                        it,
-                        color = finance.expense,
-                        style = MaterialTheme.typography.bodyMedium,
-                        // liveRegion: el lector de pantalla anuncia el error al fallar el PIN.
-                        modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
-                    )
+                    // liveRegion: el lector de pantalla anuncia el error al fallar el PIN.
+                    FieldError(it, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
                 }
             }
             Keypad(

@@ -42,6 +42,7 @@ import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.InfoTooltip
 import com.finanzen.ui.components.SectionHeader
 import com.finanzen.ui.components.SubScreenHeader
+import com.finanzen.ui.components.sageSwitchColors
 import com.finanzen.ui.icons.LucideIcons
 import com.finanzen.ui.theme.AccentPreset
 import com.finanzen.ui.theme.LocalSpacing
@@ -104,7 +105,7 @@ fun SettingsScreen(
                         ) {
                             Text("Reducir animaciones", fontWeight = FontWeight.SemiBold)
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Switch(checked = reduceMotion, onCheckedChange = vm::setReduceMotion)
+                                Switch(checked = reduceMotion, onCheckedChange = vm::setReduceMotion, colors = sageSwitchColors())
                                 InfoTooltip(
                                     "Sustituye las animaciones por cambios instantáneos.",
                                     contentDescription = "Qué hace reducir animaciones",
