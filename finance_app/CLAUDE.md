@@ -77,5 +77,3 @@ See `.github/workflows/ci.yml` (root-level, `working-directory: finance_app`).
 ## Reference
 
 Full implementation plan and roadmap: `~/.claude/plans/eres-un-senior-kotlin-gentle-wombat.md`. Items marked `// ponytail:` in code are intentional shortcuts with a documented upgrade path — preserve the comment when changing nearby code.
-
-Model-assignment policy for subagent definitions (`.claude/agents/*.md`): see the `subagent-model-policy` skill.
