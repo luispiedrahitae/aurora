@@ -39,7 +39,7 @@ allprojects {
                     // ktlint 1.x quitó la excepción automática de @Composable en function-naming;
                     // hay que declararla o todos los Composables PascalCase fallan.
                     "ktlint_function_naming_ignore_when_annotated_with" to "Composable",
-                    // El proyecto agrupa tipos por concern (Repositories.kt, Destinations.kt);
+                    // El proyecto agrupa tipos por concern (Destinations.kt, DashboardViewModel.kt);
                     // la regla filename (1 tipo = 1 archivo con su nombre) contradice ese diseño.
                     "ktlint_standard_filename" to "disabled",
                 ),

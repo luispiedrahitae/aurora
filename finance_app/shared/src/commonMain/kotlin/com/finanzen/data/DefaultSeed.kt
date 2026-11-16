@@ -17,7 +17,7 @@ private data class SystemCategorySeed(val kind: String, val parentName: String, 
 
 /** Categorías de sistema — usadas como fallback cuando un movimiento no tiene una categoría
  * explícita (transferencias, ajustes de saldo, suscripciones/inversiones). Resueltas en runtime
- * por nombre vía systemCategoryLeaf() en Repositories.kt. Única fuente de verdad: reutilizada
+ * por nombre vía systemCategoryLeaf() en CategoryRepository.kt. Única fuente de verdad: reutilizada
  * tanto en el seed inicial como en [ensureSystemCategoriesExist] para instalaciones existentes. */
 private val SYSTEM_CATEGORY_SEEDS = listOf(
     SystemCategorySeed("TRANSFER", "Transferencias", "Transferencia entre cuentas", "other", 0L),
