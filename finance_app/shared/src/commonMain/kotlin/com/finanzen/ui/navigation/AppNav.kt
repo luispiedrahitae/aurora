@@ -104,7 +104,8 @@ private fun TabIcon(dest: TopDestination) {
     val sizeModifier = if (dest == TopDestination.More) Modifier.size(24.dp).padding(2.dp) else Modifier
     Icon(
         painter = topDestinationIcon(dest),
-        contentDescription = dest.label,
+        // La etiqueta de la pestaña ya la nombra; repetirla aquí hacía que TalkBack la leyera dos veces.
+        contentDescription = null,
         modifier = sizeModifier,
     )
 }
@@ -122,7 +123,8 @@ private fun rememberFittedNavLabelFontSize(
     labels: List<String>,
     availableWidthPerItem: Dp,
     style: TextStyle,
-    minFontSize: TextUnit = 9.sp,
+    // 11sp como piso de legibilidad; si aun así no cabe, la etiqueta se recorta con elipsis.
+    minFontSize: TextUnit = 11.sp,
 ): TextUnit {
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
@@ -343,7 +345,7 @@ private fun AppNavHost(
             TransactionsScreen(onEdit = onEditTransaction)
         }
         composable(TopDestination.Accounts.route) { AccountsTabScreen() }
-        composable(TopDestination.Budgets.route) { BudgetsScreen() }
+        composable(TopDestination.Budgets.route) { BudgetsScreen(onOpenCategories = { navController.navigate("categories") }) }
         composable(TopDestination.More.route) {
             MoreScreen(onNavigate = { route -> navController.navigate(route) })
         }

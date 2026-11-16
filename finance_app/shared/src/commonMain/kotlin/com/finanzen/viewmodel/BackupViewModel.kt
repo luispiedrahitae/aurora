@@ -22,7 +22,7 @@ class BackupViewModel(
     /** Exporta el backup. Si [encrypt] es true cifra con la passphrase; si no, escribe JSON en claro. */
     fun export(encrypt: Boolean, passphrase: String) {
         if (encrypt && passphrase.length < 8) {
-            _status.value = ExportStatus("La passphrase debe tener al menos 8 caracteres", isError = true)
+            _status.value = ExportStatus("La contraseña debe tener al menos 8 caracteres.", isError = true)
             return
         }
         val snapshot = BackupSerializer.snapshotOf(db, Clock.System.now().toEpochMilliseconds())
@@ -30,7 +30,7 @@ class BackupViewModel(
         val content = if (encrypt) {
             val envelope = crypto.encrypt(passphrase, plaintext)
             if (envelope.isEmpty()) {
-                _status.value = ExportStatus("Cifrado no disponible en esta plataforma (stub)", isError = true)
+                _status.value = ExportStatus("Proteger con contraseña no está disponible en este dispositivo.", isError = true)
                 return
             }
             envelope
@@ -38,7 +38,7 @@ class BackupViewModel(
             plaintext
         }
         val path = io.writeBackup("finanzen-backup", content)
-        _status.value = ExportStatus(path, isError = path.startsWith("error") || path.startsWith("stub"))
+        _status.value = exportStatusOf(path)
     }
 
     fun import(passphrase: String, envelope: String?) {
@@ -50,18 +50,18 @@ class BackupViewModel(
         var snapshot = runCatching { BackupSerializer.fromJson(envelope) }.getOrNull()
         if (snapshot == null) {
             if (passphrase.isBlank()) {
-                _status.value = ExportStatus("Este backup está cifrado: indica la passphrase.", isError = true)
+                _status.value = ExportStatus("Esta copia tiene contraseña: escríbela para restaurarla.", isError = true)
                 return
             }
             val plaintext = crypto.decrypt(passphrase, envelope)
             if (plaintext == null) {
-                _status.value = ExportStatus("Passphrase incorrecta o archivo corrupto", isError = true)
+                _status.value = ExportStatus("Contraseña incorrecta o archivo dañado.", isError = true)
                 return
             }
             snapshot = runCatching { BackupSerializer.fromJson(plaintext) }.getOrNull()
         }
         if (snapshot == null) {
-            _status.value = ExportStatus("Formato no reconocido (¿backup de otra versión?)", isError = true)
+            _status.value = ExportStatus("No se reconoce el archivo. ¿Es una copia de seguridad de Sage?", isError = true)
             return
         }
         BackupSerializer.restore(db, snapshot)

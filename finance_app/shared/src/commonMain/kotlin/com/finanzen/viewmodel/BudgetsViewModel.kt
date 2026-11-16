@@ -32,7 +32,8 @@ data class BudgetRow(
     val parentName: String? = null,
 )
 
-data class BudgetsData(val periodMonth: Long, val rows: List<BudgetRow>, val currency: String = "")
+/** [loaded] = false solo en el valor inicial, antes de la primera lectura de la BD. */
+data class BudgetsData(val periodMonth: Long, val rows: List<BudgetRow>, val currency: String = "", val loaded: Boolean = true)
 
 class BudgetsViewModel(
     private val budgetRepo: BudgetRepository,
@@ -60,7 +61,7 @@ class BudgetsViewModel(
             _month,
         ) { budgets, cats, txs, month ->
             computeBudgets(budgets, cats, txs, monthPeriod(month))
-        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BudgetsData(currentPeriodMonth(), emptyList()))
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BudgetsData(currentPeriodMonth(), emptyList(), loaded = false))
 
     fun setLimit(categoryId: Long, limitMinor: Long) = budgetRepo.setLimit(categoryId, monthPeriod(_month.value), limitMinor)
 

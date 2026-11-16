@@ -77,9 +77,35 @@ class SecurityViewModel(private val repo: SecurityRepository) : ViewModel() {
         viewModelScope.launch {
             _isBusy.value = true
             try {
-                repo.enableLockWithPin(pin)
-                _state.value = LockState.Unlocked
-                onResult(true)
+                // Un fallo al guardar debe llegar a la UI como "no se pudo", no dejar la tarjeta colgada.
+                val ok = runCatching { repo.enableLockWithPin(pin) }.isSuccess
+                if (ok) _state.value = LockState.Unlocked
+                onResult(ok)
+            } finally {
+                _isBusy.value = false
+            }
+        }
+    }
+
+    /**
+     * Verifica el PIN actual antes de permitir cambiarlo (si no, cualquiera con el teléfono desbloqueado
+     * podía reemplazarlo). Pasa por [SecurityRepository.verifyPin], así que cuenta para el bloqueo por
+     * intentos igual que la pantalla de bloqueo. [onResult] recibe null si es correcto o el mensaje de error.
+     */
+    fun verifyCurrentPin(pin: String, onResult: (String?) -> Unit) {
+        if (_isBusy.value) return
+        viewModelScope.launch {
+            _isBusy.value = true
+            try {
+                val now = Clock.System.now().toEpochMilliseconds()
+                val lockedUntil = repo.lockedUntilMs()
+                onResult(
+                    when {
+                        now < lockedUntil -> "Demasiados intentos. Espera ${(lockedUntil - now + 999) / 1000}s."
+                        repo.verifyPin(pin, now) -> null
+                        else -> "El PIN actual no es correcto"
+                    },
+                )
             } finally {
                 _isBusy.value = false
             }

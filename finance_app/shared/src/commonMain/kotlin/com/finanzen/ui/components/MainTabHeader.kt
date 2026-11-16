@@ -16,6 +16,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.finanzen.ui.icons.LucideIcons
 import com.finanzen.ui.theme.LocalSpacing
@@ -54,6 +56,7 @@ fun MainTabHeader(
                 // grande frente al handoff. La fuente display (Caprasimo) es exclusiva de este
                 // título — el resto de la tipografía se queda en Figtree.
                 title,
+                modifier = Modifier.semantics { heading() },
                 style = MaterialTheme.typography.headlineSmall.copy(fontFamily = displayFontFamily()),
             )
             if (subtitle != null) {
@@ -98,7 +101,7 @@ fun SubScreenHeader(
         }
         Text(
             title,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier.weight(1f).semantics { heading() },
             style = MaterialTheme.typography.headlineSmall.copy(fontFamily = displayFontFamily()),
         )
         if (action != null) action()
@@ -118,7 +121,11 @@ fun SheetHeader(title: String, onDismiss: () -> Unit, modifier: Modifier = Modif
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(title, style = MaterialTheme.typography.headlineSmall.copy(fontFamily = displayFontFamily()))
+        Text(
+            title,
+            modifier = Modifier.semantics { heading() },
+            style = MaterialTheme.typography.headlineSmall.copy(fontFamily = displayFontFamily()),
+        )
         IconButton(onClick = onDismiss) {
             Icon(LucideIcons.X, contentDescription = "Cerrar")
         }

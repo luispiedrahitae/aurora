@@ -25,7 +25,7 @@ private const val SECTION_TEXT = 13f
 private const val BACKGROUND_CARD = 0xFFECDCC2.toInt()
 private const val INK = 0xFF201E1D.toInt()
 private const val INK_MUTED = 0xFF5B5450.toInt() // texto secundario y divisores (el "outline" claro de la app es casi invisible sobre este fondo)
-private const val ACCENT_GREEN = 0xFF4B553A.toInt() // sage-700 (== income de la app) — solo título y encabezados de sección
+private const val ACCENT_GREEN = 0xFF4B553A.toInt() // sage-700 — solo título y encabezados de sección
 
 /**
  * Escribe un archivo a la carpeta Descargas pública. API 29+ usa MediaStore (sin permisos);

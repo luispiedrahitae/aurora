@@ -84,7 +84,7 @@ fun NotificationsScreen(
                                     if (remindDays == 0L) {
                                         "El mismo día del cobro."
                                     } else {
-                                        "$remindDays día(s) antes de cada cobro."
+                                        "$remindDays ${if (remindDays == 1L) "día" else "días"} antes de cada cobro."
                                     },
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,

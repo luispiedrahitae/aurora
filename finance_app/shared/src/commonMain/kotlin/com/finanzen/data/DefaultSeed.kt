@@ -7,6 +7,7 @@ private const val KEY_SEEDED = "seeded"
 private const val KEY_CURRENCIES_EXPANDED = "currencies_expanded"
 private const val KEY_SYSTEM_CATEGORIES_ENSURED = "system_categories_ensured"
 private const val KEY_LEGACY_SYSTEM_CATEGORIES_FIXED = "legacy_system_categories_fixed_v2"
+private const val KEY_CONTRIBUTION_NOTES_PREFIXED = "contribution_notes_prefixed_v1"
 
 /** Nombres de categorías raíz gestionadas por el sistema (sembradas más abajo) — no seleccionables
  * en pickers de categoría ni creables a mano (CategoriesScreen.kt las bloquea por nombre). */
@@ -89,6 +90,16 @@ fun seedIfEmpty(db: FinanzenDb) {
     expandCurrenciesIfNeeded(db)
     ensureSystemCategoriesExist(db)
     reassignLegacySystemCategories(db)
+    prefixLegacyContributionNotes(db)
+}
+
+/** Una sola vez: antepone "Aporte: " a los aportes guardados antes de que la nota llevara el prefijo. */
+private fun prefixLegacyContributionNotes(db: FinanzenDb) {
+    if (db.settingQueries.get(KEY_CONTRIBUTION_NOTES_PREFIXED).executeAsOneOrNull() != null) return
+    db.transaction {
+        db.transactionQueries.prefixContributionNotes()
+        db.settingQueries.put(KEY_CONTRIBUTION_NOTES_PREFIXED, "true")
+    }
 }
 
 /**

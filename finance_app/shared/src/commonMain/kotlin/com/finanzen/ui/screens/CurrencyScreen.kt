@@ -52,6 +52,8 @@ fun CurrencyScreen(
                 pendingCurrency = null
             },
             onDismiss = { pendingCurrency = null },
+            // Cambiar moneda no borra nada: botón con el color normal, no el de eliminar.
+            destructive = false,
         )
     }
 

@@ -40,7 +40,7 @@ object BackupSerializer {
                 it.frequency, it.intervalCount, it.nextChargeDate, it.remindDaysBefore, it.active,
             )
         },
-        investments = (db.investmentQueries.selectOpen().executeAsList() + db.investmentQueries.selectClosed().executeAsList()).map {
+        investments = db.investmentQueries.selectAll().executeAsList().map {
             InvestmentDto(
                 it.id, it.name, it.amountMinor, it.currency, it.accountId, it.categoryId, it.periodic,
                 it.frequency, it.intervalCount, it.nextContributionDate, it.startDate, it.status,
@@ -70,8 +70,7 @@ object BackupSerializer {
         db.transaction {
             // Borrar en orden inverso al de dependencias
             db.transactionQueries.selectAll().executeAsList().forEach { db.transactionQueries.delete(it.id) }
-            db.investmentQueries.selectOpen().executeAsList().forEach { db.investmentQueries.delete(it.id) }
-            db.investmentQueries.selectClosed().executeAsList().forEach { db.investmentQueries.delete(it.id) }
+            db.investmentQueries.selectAll().executeAsList().forEach { db.investmentQueries.delete(it.id) }
             db.installmentPlanQueries.selectAll().executeAsList().forEach { db.installmentPlanQueries.delete(it.id) }
             db.subscriptionQueries.selectAll().executeAsList().forEach { db.subscriptionQueries.delete(it.id) }
             db.budgetQueries.selectAll().executeAsList().forEach { db.budgetQueries.delete(it.id) }

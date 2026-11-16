@@ -1,6 +1,5 @@
 package com.finanzen.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,7 +8,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -20,15 +18,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.finanzen.ui.icons.LucideIcons
-import com.finanzen.ui.theme.LocalCategoryColors
+import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.viewmodel.CategorySlice
 import com.finanzen.viewmodel.CategorySpend
-import kotlin.math.roundToInt
 
 /**
  * Sección "Gastos por categoría": donut de vistazo rápido (máx. 6 porciones, ver
@@ -65,7 +61,6 @@ private fun CategoryBreakdownRow(spend: CategorySpend, currency: String) {
     var expanded by remember(spend.name) { mutableStateOf(false) }
     val expandable = spend.subcategories.isNotEmpty()
     val spacing = LocalSpacing.current
-    val palette = LocalCategoryColors.current
 
     FinanceCard(
         modifier = Modifier.fillMaxWidth(),
@@ -82,7 +77,6 @@ private fun CategoryBreakdownRow(spend: CategorySpend, currency: String) {
                     amountMinor = spend.amountMinor,
                     currency = currency,
                     pct = spend.pct,
-                    color = categoryColor(spend.name, spend.color, palette),
                     modifier = Modifier.weight(1f),
                 )
                 // Tamaño reservado siempre (haya o no chevron), para que la barra mida el mismo
@@ -100,7 +94,7 @@ private fun CategoryBreakdownRow(spend: CategorySpend, currency: String) {
             }
             if (expanded) {
                 // Mismo Row de dos columnas que el header (contenido + carril de 24dp) para que el
-                // punto de cada subcategoría arranque donde arranca la barra, y el monto termine
+                // nombre de cada subcategoría arranque donde arranca la barra, y el monto termine
                 // donde termina la barra — no donde termina la tarjeta completa.
                 Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
@@ -113,25 +107,21 @@ private fun CategoryBreakdownRow(spend: CategorySpend, currency: String) {
     }
 }
 
-/** Fila liviana de subcategoría: punto de color + nombre + % + monto, igual patrón visual que la
- * leyenda del donut pero más chica — la jerarquía se marca con tamaño e indentación, no con color. */
+/** Fila liviana de subcategoría: nombre + monto — la jerarquía se marca con tamaño, no con color. */
 @Composable
 private fun SubcategoryRow(slice: CategorySlice, currency: String) {
     val fmt = LocalMoneyFormat.current
     val spacing = LocalSpacing.current
-    val palette = LocalCategoryColors.current
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(spacing.sm),
     ) {
-        Box(Modifier.size(8.dp).clip(CircleShape).background(categoryColor(slice.name, slice.color, palette)))
-        Text(slice.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelLarge, maxLines = 1)
-        Text("${(slice.pct * 100).roundToInt()}%", style = MaterialTheme.typography.labelSmall)
+        Text(slice.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
         Text(
             fmt.format(slice.amountMinor, currency),
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = LocalFinanceColors.current.expense,
         )
     }
 }

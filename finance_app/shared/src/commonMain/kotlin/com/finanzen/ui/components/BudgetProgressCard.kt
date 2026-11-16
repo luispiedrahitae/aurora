@@ -6,15 +6,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.ui.theme.LocalSpacing
@@ -22,59 +19,76 @@ import com.finanzen.ui.theme.PillShape
 import com.finanzen.viewmodel.BudgetRow
 
 /**
- * Fila de presupuesto: avatar + nombre + % + barra de progreso + "Gastado X de Y". Compartida por
- * la pestaña Presupuesto y la sección de presupuestos del Resumen. El sobregiro usa Warning Amber
- * con icono de triángulo y el % en color de advertencia — nunca color solo ni rojo de alarma.
+ * Fila de presupuesto: nombre + "(%) gastado / de límite" + barra de progreso. Compartida por
+ * la pestaña Presupuesto y la sección de presupuestos del Resumen. El sobregiro pasa a rojo de gasto
+ * (monto, %, barra) acompañado de la pill "Excedido", para no depender solo del color.
  */
 @Composable
 fun BudgetProgressCard(row: BudgetRow, currency: String, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
-    val fraction = (row.spentMinor.toFloat() / row.limitMinor.toFloat()).coerceIn(0f, 1f)
-    val pct = (row.spentMinor * 100 / row.limitMinor).toInt()
-    val over = row.spentMinor > row.limitMinor
+    // Límite 0 (no debería guardarse, pero el Resumen no filtra): sin progreso en vez de dividir por cero.
+    val hasLimit = row.limitMinor > 0
+    val fraction = if (hasLimit) (row.spentMinor.toFloat() / row.limitMinor.toFloat()).coerceIn(0f, 1f) else 0f
+    val pct = if (hasLimit) (row.spentMinor * 100 / row.limitMinor).toInt() else 0
+    val over = hasLimit && row.spentMinor > row.limitMinor
+    // Aviso temprano en ámbar desde el 90%: llegar al tope no debe ser una sorpresa.
+    val near = !over && pct >= NEAR_LIMIT_PCT
     val finance = LocalFinanceColors.current
     val spacing = LocalSpacing.current
     val fmt = LocalMoneyFormat.current
-    val barColor = if (over) finance.warning else MaterialTheme.colorScheme.primary
+    val barColor = when {
+        over -> finance.expense
+        near -> finance.warning
+        else -> MaterialTheme.colorScheme.primary
+    }
 
     FinanceCard(modifier = modifier.fillMaxWidth(), onClick = onClick) {
         Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(spacing.md)) {
-                CategoryAvatar(name = row.categoryName, size = 36.dp)
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(row.categoryName, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                    Text(row.categoryName, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
                     row.parentName?.let {
                         Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                if (over) {
+                if (over || near) {
                     Text(
-                        "Excedido",
+                        if (over) "Excedido" else "Cerca del límite",
                         style = MaterialTheme.typography.labelSmall,
-                        color = finance.warning,
+                        color = if (over) finance.expense else finance.warning,
+                        softWrap = false,
                         modifier = Modifier
-                            .background(finance.warningContainer, PillShape)
+                            .background(if (over) finance.expenseContainer else finance.warningContainer, PillShape)
                             .padding(horizontal = spacing.sm, vertical = spacing.xs),
                     )
                 }
-                Text(
-                    "$pct%",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = if (over) finance.warning else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+                // "(45%) $13.500 de $30.000" en un solo renglón, al tamaño de los montos de Cuentas
+                // (bodyMedium) y en negrita. Gastado: verde dentro del límite, rojo al excederse.
+                Row(horizontalArrangement = Arrangement.spacedBy(spacing.xs), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "($pct%)",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (over) finance.expense else MaterialTheme.colorScheme.onSurface,
+                        softWrap = false,
+                    )
+                    MoneyText(
+                        amountMinor = row.spentMinor,
+                        currency = currency,
+                        style = MaterialTheme.typography.bodyMedium,
+                        colorOverride = if (over) finance.expense else finance.income,
+                    )
+                    Text(
+                        "de ${fmt.format(row.limitMinor, currency)}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        softWrap = false,
+                    )
+                }
             }
-            LinearProgressIndicator(
-                progress = { fraction },
-                modifier = Modifier.fillMaxWidth(),
-                color = barColor,
-                drawStopIndicator = {},
-            )
-            Text(
-                "${fmt.format(row.spentMinor, currency)} de ${fmt.format(row.limitMinor, currency)}",
-                style = MaterialTheme.typography.labelLarge,
-                color = if (over) finance.warning else MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.End,
-            )
+            ProgressBar(fraction, color = barColor)
         }
     }
 }
+
+private const val NEAR_LIMIT_PCT = 90

@@ -19,6 +19,7 @@ fun ConfirmDialog(
     onDismiss: () -> Unit,
     confirmLabel: String = "Eliminar",
     dismissLabel: String = "Cancelar",
+    destructive: Boolean = true,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -27,7 +28,10 @@ fun ConfirmDialog(
         confirmButton = {
             // finance.expense (terracota), no colorScheme.error: DESIGN.md "No-Shame Rule" — los
             // destructivos usan el mismo tono que los botones Eliminar de los formularios.
-            TextButton(onClick = onConfirm) { Text(confirmLabel, color = LocalFinanceColors.current.expense) }
+            // Acciones no destructivas (p. ej. cambiar moneda) usan el color normal del botón.
+            TextButton(onClick = onConfirm) {
+                if (destructive) Text(confirmLabel, color = LocalFinanceColors.current.expense) else Text(confirmLabel)
+            }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(dismissLabel) } },
     )

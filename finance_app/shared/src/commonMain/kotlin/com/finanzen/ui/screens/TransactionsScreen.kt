@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Autorenew
@@ -26,7 +27,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
@@ -48,13 +48,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.finanzen.db.Account
 import com.finanzen.db.Category
 import com.finanzen.db.TransactionRow
+import com.finanzen.ui.components.BottomSnackbarHost
 import com.finanzen.ui.components.CategoryAvatar
 import com.finanzen.ui.components.EmptyState
+import com.finanzen.ui.components.ExpandableSection
+import com.finanzen.ui.components.FadeSection
 import com.finanzen.ui.components.KindAvatar
 import com.finanzen.ui.components.MainTabHeader
 import com.finanzen.ui.components.MoneyText
@@ -68,6 +72,7 @@ import com.finanzen.ui.format.monthPeriod
 import com.finanzen.ui.format.periodOfEpochDay
 import com.finanzen.ui.icons.LucideIcons
 import com.finanzen.ui.theme.FinanZenShapes
+import com.finanzen.ui.theme.LocalAccentColor
 import com.finanzen.ui.theme.LocalDateLocale
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
@@ -91,12 +96,17 @@ private fun dayExpense(rows: List<TransactionRow>): Long = rows.filter { it.kind
 private val DayCardShape = FinanZenShapes.medium
 private val DayCardElevation = 3.dp // mismo shadowElevation que FinanceCard(size = Medium)
 
+// Columna izquierda de la tarjeta de día: el número (headlineSmall 24sp) y el avatar de cada fila
+// comparten este ancho para quedar del mismo tamaño y alineados.
+private val DayLeadSize = 32.dp
+
 @Composable
 fun TransactionsScreen(
     onEdit: (Long) -> Unit,
     vm: TransactionsViewModel = koinViewModel(),
 ) {
     val rows by vm.transactions.collectAsState()
+    val loaded by vm.loaded.collectAsState()
     val categories by vm.categories.collectAsState()
     val accounts by vm.allAccounts.collectAsState()
     val spacing = LocalSpacing.current
@@ -150,7 +160,6 @@ fun TransactionsScreen(
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { inner ->
         Column(Modifier.fillMaxSize().padding(inner)) {
             MainTabHeader(title = "Movimientos")
@@ -167,7 +176,7 @@ fun TransactionsScreen(
                     // top = spacing.sm iguala el hueco bajo MonthSelector (16dp) al de
                     // Resumen/Cuentas/Presupuesto, que lo obtienen del contentPadding de su LazyColumn.
                     modifier = Modifier.fillMaxWidth().padding(top = spacing.sm, bottom = spacing.sm),
-                    placeholder = { Text("Buscar por nota") },
+                    placeholder = { Text("Buscar por categoría") },
                     leadingIcon = { Icon(LucideIcons.Search, contentDescription = null) },
                     singleLine = true,
                     // ponytail: alineado al shape.small (12dp) del resto de inputs; una unificación
@@ -183,7 +192,9 @@ fun TransactionsScreen(
                     ),
                 )
 
-                if (groups.isEmpty()) {
+                if (!loaded) {
+                    Box(Modifier.fillMaxSize())
+                } else if (groups.isEmpty()) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         EmptyState(
                             icon = LucideIcons.Receipt,
@@ -220,7 +231,7 @@ fun TransactionsScreen(
                                         expanded = expanded,
                                         onToggle = { expandedDays[day] = !(expandedDays[day] ?: (day == todayEpochDay)) },
                                     )
-                                    if (expanded) {
+                                    ExpandableSection(expanded) {
                                         dayRows.forEach { row ->
                                             key(row.id) {
                                                 val subcategory = categoriesById[row.categoryId]
@@ -257,6 +268,7 @@ fun TransactionsScreen(
                 }
             }
         }
+        BottomSnackbarHost(snackbarHostState, aboveFab = true)
     }
 
     blockedDelete?.let { block ->
@@ -296,30 +308,32 @@ private fun DayHeader(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onToggle)
+            .clickable(role = Role.Button, onClick = onToggle)
             .padding(horizontal = spacing.lg, vertical = spacing.md),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(spacing.md),
     ) {
-        Text(
-            dayNumber,
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
+        Box(Modifier.width(DayLeadSize), contentAlignment = Alignment.Center) {
+            Text(
+                dayNumber,
+                style = MaterialTheme.typography.headlineSmall,
+                color = LocalAccentColor.current,
+            )
+        }
         Column(Modifier.weight(1f)) {
             Text(
                 weekday.replaceFirstChar { it.uppercase() },
                 style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Text(
                 if (count == 1) "1 movimiento" else "$count movimientos",
-                style = MaterialTheme.typography.labelLarge,
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        if (!expanded) {
+        FadeSection(!expanded) {
             Column(horizontalAlignment = Alignment.End) {
                 MoneyText(
                     amountMinor = incomeMinor,
@@ -360,21 +374,23 @@ private fun DaySummaryFooter(
             .fillMaxWidth()
             .padding(horizontal = spacing.lg, vertical = spacing.md),
     ) {
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        // Sangría de la columna número/avatar: línea y etiquetas arrancan donde los textos de las filas.
+        val indent = Modifier.padding(start = DayLeadSize + spacing.md)
+        HorizontalDivider(modifier = indent, color = MaterialTheme.colorScheme.outlineVariant)
         Spacer(Modifier.height(spacing.sm))
-        SummaryRow("Ingreso", incomeMinor, currency, colorOverride = finance.income)
-        SummaryRow("Gasto", -expenseMinor, currency, colorOverride = finance.expense)
+        SummaryRow("Ingreso", incomeMinor, currency, colorOverride = finance.income, modifier = indent)
+        SummaryRow("Gasto", -expenseMinor, currency, colorOverride = finance.expense, modifier = indent)
     }
 }
 
 @Composable
-private fun SummaryRow(label: String, amountMinor: Long, currency: String, colorOverride: Color) {
+private fun SummaryRow(label: String, amountMinor: Long, currency: String, colorOverride: Color, modifier: Modifier = Modifier) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(label, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
         MoneyText(
             amountMinor = amountMinor,
             currency = currency,
@@ -410,7 +426,7 @@ private fun TransactionItem(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surfaceContainer)
-                .clickable(onClick = onClick)
+                .clickable(onClickLabel = "Editar", role = Role.Button, onClick = onClick)
                 .padding(horizontal = spacing.lg, vertical = spacing.md),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(spacing.md),
@@ -418,24 +434,26 @@ private fun TransactionItem(
             when {
                 // La suscripción se distingue aun si tiene categoría (igual que una transferencia
                 // nunca se pierde detrás de su categoría) — de ahí que vaya antes del chequeo de categoría.
-                isSubscription -> KindAvatar(kind = row.kind, icon = Icons.Outlined.Autorenew)
+                isSubscription -> KindAvatar(kind = row.kind, size = DayLeadSize, icon = Icons.Outlined.Autorenew)
                 // Transferencias, ajustes e inversiones usan una categoría auto-asignada por el
                 // sistema (no elegida por el usuario) — su inicial no aporta nada, así que el
                 // avatar usa la inicial de la nota del movimiento en su lugar.
                 isTransfer || isAdjustment || isInvestment ->
-                    CategoryAvatar(name = row.note.ifBlank { kindLabel(row.kind) }, size = 40.dp)
-                category != null -> CategoryAvatar(name = category.name, size = 40.dp)
-                else -> KindAvatar(kind = row.kind)
+                    CategoryAvatar(name = row.note.ifBlank { kindLabel(row.kind) }, size = DayLeadSize)
+                category != null -> CategoryAvatar(name = category.name, size = DayLeadSize)
+                else -> KindAvatar(kind = row.kind, size = DayLeadSize)
             }
+            // Mismo formato que la cabecera del día: título como el nombre del día, subtítulo como "N movimientos".
             Column(Modifier.weight(1f)) {
                 Text(
                     if (isTransfer) row.note.ifBlank { "Transferencia" } else row.note.ifBlank { "(sin nota)" },
-                    style = MaterialTheme.typography.labelLarge,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                 )
                 Text(
                     parentCategory?.name ?: category?.name ?: kindLabel(row.kind),
-                    style = MaterialTheme.typography.labelLarge,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                 )

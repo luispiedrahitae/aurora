@@ -264,7 +264,8 @@ class DashboardViewModel(
             val label = mesCorto(m, locale)
             TrendPoint(
                 label = label,
-                axisLabel = label,
+                // Eje: solo la inicial (E F M…); el titular al seleccionar conserva el mes abreviado.
+                axisLabel = label.take(1).uppercase(),
                 incomeMinor = periodTxs.filter { it.kind == "INCOME" && monthKeyOf(it.date) % 100 == m }.sumOf { it.amountMinor },
                 expenseMinor = periodTxs.filter { it.kind == "EXPENSE" && monthKeyOf(it.date) % 100 == m }.sumOf { it.amountMinor },
             )

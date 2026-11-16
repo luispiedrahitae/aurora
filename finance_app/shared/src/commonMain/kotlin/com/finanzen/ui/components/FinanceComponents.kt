@@ -1,6 +1,12 @@
 package com.finanzen.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -14,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.progressSemantics
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccountBalance
@@ -93,6 +100,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PlainTooltip
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
@@ -101,6 +110,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
@@ -110,12 +120,16 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.AnnotatedString
@@ -311,15 +325,22 @@ fun MoneyText(
     colorOverride: Color? = null,
     textAlign: TextAlign? = null,
 ) {
-    val finance = LocalFinanceColors.current
-    val color = colorOverride ?: when {
-        !signed -> MaterialTheme.colorScheme.onSurface
-        amountMinor >= 0 -> finance.income
-        else -> finance.expense
-    }
+    val color = colorOverride ?: if (signed) balanceColor(amountMinor) else MaterialTheme.colorScheme.onSurface
     // El símbolo y su posición ($ antes/después/ninguno) los aporta el formato global.
     val text = LocalMoneyFormat.current.format(amountMinor, currency, signed)
     Text(text, modifier = modifier, style = style, fontWeight = fontWeight, color = color, textAlign = textAlign)
+}
+
+/** Color de un saldo o monto con signo en toda la app: positivo = ingreso (verde), negativo =
+ * gasto (rojo), cero = neutro. */
+@Composable
+fun balanceColor(amountMinor: Long): Color {
+    val finance = LocalFinanceColors.current
+    return when {
+        amountMinor > 0 -> finance.income
+        amountMinor < 0 -> finance.expense
+        else -> MaterialTheme.colorScheme.onSurface
+    }
 }
 
 /**
@@ -457,7 +478,7 @@ fun PeriodModeChip(mode: PeriodMode, onToggle: () -> Unit, modifier: Modifier = 
     }
     Surface(
         onClick = onToggle,
-        modifier = modifier.semantics {
+        modifier = modifier.minimumInteractiveComponentSize().semantics {
             role = Role.Switch
             contentDescription = "Vista: $label. Cambiar a vista de $nextLabel"
         },
@@ -504,7 +525,15 @@ fun SwipeToDeleteRow(
     )
     SwipeToDismissBox(
         state = dismissState,
-        modifier = modifier,
+        // El gesto no es alcanzable con lector de pantalla: misma acción como acción de TalkBack.
+        modifier = modifier.semantics {
+            customActions = listOf(
+                CustomAccessibilityAction("Eliminar") {
+                    onSwipeToDelete()
+                    true
+                },
+            )
+        },
         enableDismissFromStartToEnd = false,
         backgroundContent = {
             Box(
@@ -521,6 +550,156 @@ fun SwipeToDeleteRow(
         },
         content = { content() },
     )
+}
+
+/**
+ * Deslizar a la izquierda para archivar (Cuentas, Inversiones). Libera la tarjeta de un botón fijo;
+ * el gesto no es alcanzable con lector de pantalla, así que la misma acción va en las acciones
+ * personalizadas de TalkBack. [onSwipeRight] (opcional, p. ej. reabrir una inversión cerrada) habilita
+ * deslizar a la derecha; la tarjeta vuelve a su sitio y la lista la reubica sola.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SwipeToArchive(onArchive: () -> Unit, onSwipeRight: (() -> Unit)? = null, swipeRightLabel: String = "", content: @Composable () -> Unit) {
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = {
+            when (it) {
+                SwipeToDismissBoxValue.EndToStart -> {
+                    onArchive()
+                    true
+                }
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    onSwipeRight?.invoke()
+                    false
+                }
+                else -> false
+            }
+        },
+    )
+    SwipeToDismissBox(
+        state = dismissState,
+        modifier = Modifier.semantics {
+            customActions = listOfNotNull(
+                CustomAccessibilityAction("Archivar") {
+                    onArchive()
+                    true
+                },
+                onSwipeRight?.let { action ->
+                    CustomAccessibilityAction(swipeRightLabel) {
+                        action()
+                        true
+                    }
+                },
+            )
+        },
+        enableDismissFromStartToEnd = onSwipeRight != null,
+        backgroundContent = {
+            val right = dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(MaterialTheme.shapes.medium)
+                    .background(MaterialTheme.colorScheme.secondaryContainer)
+                    .padding(horizontal = LocalSpacing.current.lg),
+                contentAlignment = if (right) Alignment.CenterStart else Alignment.CenterEnd,
+            ) {
+                if (right) {
+                    Icon(LucideIcons.ArchiveRestore, contentDescription = swipeRightLabel, tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                } else {
+                    Icon(LucideIcons.Archive, contentDescription = "Archivar", tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                }
+            }
+        },
+        content = { content() },
+    )
+}
+
+/**
+ * Fila de un elemento archivado: deslizar a la derecha restaura, a la izquierda pide el borrado
+ * permanente. [onHardDelete] solo abre el ConfirmDialog ("no se puede deshacer"), así que la fila
+ * no se descarta y vuelve a su sitio hasta que el usuario confirme o cancele.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ArchivedSwipeRow(onRestore: () -> Unit, onHardDelete: () -> Unit, content: @Composable () -> Unit) {
+    val spacing = LocalSpacing.current
+    val finance = LocalFinanceColors.current
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = {
+            when (it) {
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    onRestore()
+                    true
+                }
+                SwipeToDismissBoxValue.EndToStart -> {
+                    onHardDelete()
+                    false
+                }
+                else -> false
+            }
+        },
+    )
+    SwipeToDismissBox(
+        state = dismissState,
+        modifier = Modifier.semantics {
+            customActions = listOf(
+                CustomAccessibilityAction("Restaurar") {
+                    onRestore()
+                    true
+                },
+                CustomAccessibilityAction("Eliminar permanentemente") {
+                    onHardDelete()
+                    true
+                },
+            )
+        },
+        backgroundContent = {
+            when (dismissState.dismissDirection) {
+                SwipeToDismissBoxValue.StartToEnd -> Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(MaterialTheme.shapes.medium)
+                        .background(MaterialTheme.colorScheme.secondaryContainer)
+                        .padding(horizontal = spacing.lg),
+                    contentAlignment = Alignment.CenterStart,
+                ) {
+                    Icon(LucideIcons.ArchiveRestore, contentDescription = "Restaurar", tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                }
+                SwipeToDismissBoxValue.EndToStart -> Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(MaterialTheme.shapes.medium)
+                        .background(finance.expenseContainer)
+                        .padding(horizontal = spacing.lg),
+                    contentAlignment = Alignment.CenterEnd,
+                ) {
+                    Icon(LucideIcons.Trash, contentDescription = "Eliminar permanentemente", tint = finance.expense)
+                }
+                else -> {}
+            }
+        },
+        content = { content() },
+    )
+}
+
+/**
+ * Aviso con "Deshacer" abajo, como overlay (no en el slot `snackbarHost` del Scaffold: el FAB
+ * "+ Movimiento" lo dibuja AppNav encima del NavHost y el Scaffold de la pantalla no lo ve).
+ * Con `aboveFab` se apila sobre el AddFab (16dp margen + ~44dp alto + 12dp aire), como hace M3.
+ * Debe ir como último hijo de un contenedor a pantalla completa.
+ */
+@Composable
+fun BottomSnackbarHost(state: SnackbarHostState, aboveFab: Boolean = false) {
+    val spacing = LocalSpacing.current
+    Box(
+        Modifier
+            .fillMaxSize()
+            .padding(horizontal = spacing.lg)
+            .padding(bottom = if (aboveFab) 72.dp else spacing.lg),
+        contentAlignment = Alignment.BottomCenter,
+    ) {
+        SnackbarHost(state)
+    }
 }
 
 /** Etiqueta central de los selectores de periodo; tocable como boton cuando hay accion "hoy". */
@@ -563,50 +742,41 @@ fun InfoTooltip(text: String, contentDescription: String = "Más información", 
     }
 }
 
-/** Fila de categoría con barra de progreso redondeada (tokens en vez de RoundedCornerShape(4dp)). */
+/** Fila de categoría: nombre + monto y la [ProgressBar] estándar debajo. */
 @Composable
 fun CategoryProgressRow(
     name: String,
     amountMinor: Long,
     currency: String,
     pct: Float,
-    color: Color,
     modifier: Modifier = Modifier,
 ) {
-    val animatedPct by animateFloatAsState(targetValue = pct.coerceIn(0f, 1f), animationSpec = motionTween(400))
     Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(LocalSpacing.current.sm)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box(Modifier.size(8.dp).clip(CircleShape).background(color))
-                Text(name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-            }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    "${(pct.coerceIn(0f, 1f) * 100).roundToInt()}%",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                MoneyText(amountMinor, currency, style = MaterialTheme.typography.bodyMedium)
-            }
+            Text(name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+            MoneyText(amountMinor, currency, style = MaterialTheme.typography.bodyMedium, colorOverride = LocalFinanceColors.current.expense)
         }
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(10.dp)
-                .clip(PillShape)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(animatedPct)
-                    .height(10.dp)
-                    .clip(PillShape)
-                    .background(color),
-            )
+        ProgressBar(pct)
+    }
+}
+
+/**
+ * Barra de progreso estándar de la app (6dp, píldora) en color sólido: por defecto el acento de
+ * Apariencia; los llamadores pasan [color] sólo para estados de alerta (excedido, cupo casi lleno).
+ */
+@Composable
+fun ProgressBar(fraction: Float, modifier: Modifier = Modifier, color: Color = MaterialTheme.colorScheme.primary) {
+    val animated by animateFloatAsState(targetValue = fraction.coerceIn(0f, 1f), animationSpec = motionTween(400))
+    val track = MaterialTheme.colorScheme.surfaceVariant
+    Canvas(modifier.fillMaxWidth().height(6.dp).progressSemantics(fraction.coerceIn(0f, 1f))) {
+        val radius = CornerRadius(size.height / 2)
+        drawRoundRect(color = track, cornerRadius = radius)
+        if (animated > 0f) {
+            drawRoundRect(color = color, size = Size(size.width * animated, size.height), cornerRadius = radius)
         }
     }
 }
@@ -889,6 +1059,27 @@ fun CategoryAvatar(name: String, modifier: Modifier = Modifier, size: Dp = 36.dp
     }
 }
 
+/** Contenido plegable de una tarjeta (día en Movimientos, cuenta, inversión): crece/encoge junto con la
+ * tarjeta en vez de aparecer de golpe, así el pie no se ve antes que el resto. Respeta "reducir animaciones". */
+@Composable
+fun ExpandableSection(visible: Boolean, content: @Composable () -> Unit) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = expandVertically(motionTween(250)) + fadeIn(motionTween(250)),
+        exit = shrinkVertically(motionTween(200)) + fadeOut(motionTween(200)),
+    ) {
+        Column { content() }
+    }
+}
+
+/** Montos de la cabecera que se ocultan al abrir la tarjeta: solo se desvanecen, sin cambiar de tamaño. */
+@Composable
+fun FadeSection(visible: Boolean, content: @Composable () -> Unit) {
+    AnimatedVisibility(visible = visible, enter = fadeIn(motionTween(200)), exit = fadeOut(motionTween(150))) {
+        content()
+    }
+}
+
 /** Icono por tipo de cuenta (efectivo/débito/ahorros/crédito). */
 fun accountTypeIcon(type: String): ImageVector = when (type) {
     "CASH" -> Icons.Outlined.Payments
@@ -1001,6 +1192,17 @@ fun IconAvatar(icon: ImageVector, modifier: Modifier = Modifier, size: Dp = 40.d
     }
 }
 
+/** Variante de [IconAvatar] para iconos Lucide ([Painter]), el set del chrome de la app. */
+@Composable
+fun IconAvatar(icon: Painter, modifier: Modifier = Modifier, size: Dp = 40.dp) {
+    Box(
+        modifier.size(size).clip(CircleShape).background(LocalAccentColor.current),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, contentDescription = null, tint = Color.White, modifier = Modifier.size(size * 0.5f))
+    }
+}
+
 /**
  * FAB de captura rápida ("+ Movimiento", "+ Cuenta", "+ Presupuesto"...), unificado entre las 5
  * pantallas que lo usan. `Surface` a mano en vez de `ExtendedFloatingActionButton` de M3: el color
@@ -1009,10 +1211,11 @@ fun IconAvatar(icon: ImageVector, modifier: Modifier = Modifier, size: Dp = 40.d
  * fuente display (Caprasimo, que Sage.dc.html usa también en los botones, no solo en los títulos
  * H1) a un tamaño bodyLarge (M3 solo da labelLarge/13sp para el texto del slot, sin forma de
  * agrandarlo), y un gap icono-texto de 6dp propio en vez del ~12dp fijo e inajustable del
- * ExtendedFloatingActionButton.
+ * ExtendedFloatingActionButton. Con [showLabel] = false queda solo el "+" en un círculo y [label]
+ * pasa a ser su descripción de accesibilidad.
  */
 @Composable
-fun AddFab(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun AddFab(label: String, onClick: () -> Unit, modifier: Modifier = Modifier, showLabel: Boolean = true) {
     Surface(
         onClick = onClick,
         modifier = modifier,
@@ -1021,6 +1224,10 @@ fun AddFab(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
         contentColor = MaterialTheme.colorScheme.onPrimary,
         shadowElevation = 0.dp,
     ) {
+        if (!showLabel) {
+            Icon(LucideIcons.Plus, contentDescription = label, modifier = Modifier.padding(16.dp))
+            return@Surface
+        }
         Row(
             modifier = Modifier.padding(start = 20.dp, end = 24.dp, top = 10.dp, bottom = 10.dp),
             verticalAlignment = Alignment.CenterVertically,

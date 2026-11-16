@@ -33,10 +33,13 @@ class InvestmentsViewModel(
     val closedInvestments: StateFlow<List<Investment>> =
         investRepo.observeClosed().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    val archivedInvestments: StateFlow<List<Investment>> =
+        investRepo.observeArchived().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
     val accounts: StateFlow<List<Account>> =
         accountRepo.observeAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** Aportes de cada inversión, agrupados desde el flujo ya suscrito por Movimientos — igual que
+    /** Movimientos (aportes = EXPENSE, retiros = INCOME) de cada inversión, agrupados desde el flujo ya suscrito por Movimientos — igual que
      * `AccountsViewModel.transactionsByAccount`, evita una suscripción nueva por fila expandida. */
     val contributionsByInvestment: StateFlow<Map<Long, List<TransactionRow>>> =
         txRepo.observeAll().map { groupByInvestment(it) }
@@ -86,7 +89,7 @@ class InvestmentsViewModel(
                 amountMinor = amountMinor,
                 currency = account.currency,
                 epochDay = startEpochDay,
-                note = name,
+                note = "Aporte: $name",
                 kind = "EXPENSE",
                 investmentId = id,
             )
@@ -110,7 +113,7 @@ class InvestmentsViewModel(
                     amountMinor = inv.amountMinor,
                     currency = inv.currency,
                     epochDay = contributionDay,
-                    note = inv.name,
+                    note = "Aporte: ${inv.name}",
                     kind = "EXPENSE",
                     investmentId = inv.id,
                 )
@@ -121,28 +124,74 @@ class InvestmentsViewModel(
         }
     }
 
-    /**
-     * Retira/cierra la inversión: calcula el rendimiento (retirado − aportado, leído directo de la
-     * BD para evitar un off-by-one justo después de postear un aporte), devuelve el monto retirado a
-     * la cuenta como ingreso (sin `investmentId`, para no aparecer en el historial de aportes), y
-     * marca la inversión como cerrada con ese rendimiento.
-     */
-    fun closeInvestment(id: Long, withdrawnAmountMinor: Long) {
+    /** Aporte extra (fuera del calendario periódico): gasto vinculado a la inversión, desde [accountId]
+     * (por defecto la cuenta del fondo). Una cuenta inexistente o de otra moneda cae a la del fondo. */
+    fun contribute(id: Long, amountMinor: Long, accountId: Long? = null, epochDay: Long = todayEpochDay()) {
         val inv = investRepo.byId(id) ?: return
-        val account = accountRepo.all().firstOrNull { it.id == inv.accountId } ?: return
-        val contributed = txRepo.contributionsForInvestment(id).sumOf { it.amountMinor }
-        val yieldValue = yieldMinor(withdrawnAmountMinor, contributed)
+        val accounts = accountRepo.all()
+        val account = accounts.firstOrNull { it.id == accountId && it.currency == inv.currency }
+            ?: accounts.firstOrNull { it.id == inv.accountId } ?: return
         txRepo.add(
             accountId = account.id,
             categoryId = inv.categoryId,
-            amountMinor = withdrawnAmountMinor,
+            amountMinor = amountMinor,
             currency = account.currency,
-            epochDay = todayEpochDay(),
+            epochDay = epochDay,
+            note = "Aporte: ${inv.name}",
+            kind = "EXPENSE",
+            investmentId = inv.id,
+        )
+    }
+
+    /**
+     * Retiro parcial: devuelve el monto a la cuenta como ingreso vinculado a la inversión (queda en
+     * su historial) sin cerrarla. La nota "Retiro: <nombre>" se conserva porque
+     * `reassignWithdrawalCategory` la usa para los retiros antiguos que no tenían `investmentId`.
+     */
+    fun withdraw(id: Long, amountMinor: Long, epochDay: Long = todayEpochDay()) {
+        val inv = investRepo.byId(id) ?: return
+        val account = accountRepo.all().firstOrNull { it.id == inv.accountId } ?: return
+        txRepo.add(
+            accountId = account.id,
+            categoryId = inv.categoryId,
+            amountMinor = amountMinor,
+            currency = account.currency,
+            epochDay = epochDay,
             note = "Retiro: ${inv.name}",
             kind = "INCOME",
+            investmentId = inv.id,
         )
-        investRepo.close(id, withdrawnAmountMinor, todayEpochDay(), yieldValue)
     }
+
+    /**
+     * Cierra la inversión: registra el retiro final (0 = ya se retiró todo antes) y calcula el
+     * rendimiento sobre todo su historial — Σ retiros − Σ aportes, leído directo de la BD para evitar
+     * un off-by-one justo después de postear. `withdrawnAmountMinor` guarda el total retirado, así
+     * que aportado = retirado − rendimiento sigue valiendo también para las cerradas antiguas.
+     */
+    fun closeInvestment(id: Long, finalWithdrawalMinor: Long, closedDate: Long = todayEpochDay()) {
+        if (finalWithdrawalMinor > 0) withdraw(id, finalWithdrawalMinor)
+        val totals = fundTotals(txRepo.contributionsForInvestment(id))
+        investRepo.close(id, totals.withdrawnMinor, closedDate, yieldMinor(totals.withdrawnMinor, totals.contributedMinor))
+    }
+
+    /** Reabre una cerrada. Si es periódica, el próximo aporte queda en la siguiente fecha posterior a
+     * hoy (no se postea uno inmediato al reabrir). Deshacer = `closeInvestment(id, 0, fechaOriginal)`, que
+     * recalcula lo mismo desde los movimientos. */
+    fun reopen(id: Long) {
+        val inv = investRepo.byId(id) ?: return
+        val frequency = inv.frequency
+        val interval = inv.intervalCount
+        val next = if (inv.periodic == 1L && frequency != null && interval != null) {
+            RecurrenceSchedule.nextOccurrenceAfter(todayEpochDay(), frequency, interval)
+        } else {
+            null
+        }
+        investRepo.reopen(id, next)
+    }
+
+    /** Borra un aporte o retiro del historial (corrección de un registro manual mal ingresado). */
+    fun deleteMovement(txId: Long) = txRepo.delete(txId)
 
     fun investmentById(id: Long): Investment? = investRepo.byId(id)
 
@@ -169,12 +218,35 @@ class InvestmentsViewModel(
 
     fun deleteInvestment(id: Long) = investRepo.delete(id)
 
+    /** Archiva (abierta o cerrada). Una periódica archivada no recibe aportes automáticos; al
+     * restaurarla, el catch-up registra los que faltaron. */
+    fun archive(id: Long) = investRepo.archive(id)
+
+    fun unarchive(id: Long) = investRepo.unarchive(id)
+
+    /** Borrado definitivo desde Archivadas: la inversión y todos sus aportes/retiros (mismo criterio
+     * que AccountsViewModel.delete con los movimientos de la cuenta). */
+    fun deletePermanently(id: Long) {
+        txRepo.deleteByInvestment(id)
+        investRepo.delete(id)
+    }
+
     private fun todayEpochDay(): Long = Clock.System.todayIn(TimeZone.currentSystemDefault()).toEpochDays().toLong()
+
+    /** [initialMinor] = aporte más antiguo; [contributedMinor] = total aportado (incluye el inicial). */
+    data class FundTotals(val initialMinor: Long, val contributedMinor: Long, val withdrawnMinor: Long)
 
     companion object {
         /** Agrupación pura y testeable (mismo criterio que AccountsViewModel.groupByAccount). */
         fun groupByInvestment(txs: List<TransactionRow>): Map<Long, List<TransactionRow>> = txs.filter { it.investmentId != null }
             .groupBy { it.investmentId!! }
+
+        /** Movimientos de una inversión → aportado (EXPENSE) y retirado acumulado (INCOME). */
+        fun fundTotals(txs: List<TransactionRow>): FundTotals = FundTotals(
+            initialMinor = txs.filter { it.kind == "EXPENSE" }.minWithOrNull(compareBy({ it.date }, { it.id }))?.amountMinor ?: 0L,
+            contributedMinor = txs.filter { it.kind == "EXPENSE" }.sumOf { it.amountMinor },
+            withdrawnMinor = txs.filter { it.kind == "INCOME" }.sumOf { it.amountMinor },
+        )
 
         /** Rendimiento total: retirado − aportado. Puede ser negativo (pérdida). */
         fun yieldMinor(withdrawnAmountMinor: Long, contributedAmountMinor: Long): Long = withdrawnAmountMinor - contributedAmountMinor

@@ -12,6 +12,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
@@ -21,7 +22,6 @@ import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -40,16 +40,19 @@ import com.finanzen.domain.InstallmentMath
 import com.finanzen.ui.components.CategoryAvatar
 import com.finanzen.ui.components.ConfirmDialog
 import com.finanzen.ui.components.DateField
+import com.finanzen.ui.components.DiscardChangesDialog
 import com.finanzen.ui.components.FieldError
 import com.finanzen.ui.components.MoneyField
 import com.finanzen.ui.components.PickerField
 import com.finanzen.ui.components.SelectorPill
 import com.finanzen.ui.components.SheetHeader
 import com.finanzen.ui.components.accountTypeLabel
+import com.finanzen.ui.components.rememberGuardedSheetState
 import com.finanzen.ui.components.sageFieldColors
 import com.finanzen.ui.icons.LucideIcons
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
+import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.ui.theme.PillShape
 import com.finanzen.ui.theme.displayFontFamily
 import com.finanzen.viewmodel.InvestmentsViewModel
@@ -156,8 +159,28 @@ fun TransactionFormScreen(
     val finance = LocalFinanceColors.current
     val haptic = LocalHapticFeedback.current
 
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, dragHandle = null) {
+    // Un error viejo no debe quedarse después de que el usuario corrige el campo.
+    LaunchedEffect(amountMinor, categoryId, subcategoryId, accountId, toAccountId, movementName, dayOfMonth, everyDays, recurMonthly) {
+        error = null
+    }
+
+    // Cambios sin guardar: un roce que cierre la hoja no debe tirar lo escrito.
+    val initialAmount = remember { amountMinor }
+    val initialAccountId = remember { accountId }
+    val initialName = remember { movementName }
+    val initialDate = remember { dateEpochDay }
+    val dirty = amountMinor != initialAmount ||
+        accountId != initialAccountId ||
+        movementName != initialName ||
+        dateEpochDay != initialDate ||
+        toAccountId != existing?.transferAccountId ||
+        (subcategoryId != null && subcategoryId != existing?.categoryId) ||
+        cuotasText.isNotEmpty()
+    var confirmDiscard by remember { mutableStateOf(false) }
+    val requestDismiss = { if (dirty) confirmDiscard = true else onDismiss() }
+    if (confirmDiscard) DiscardChangesDialog(onDiscard = onDismiss, onKeepEditing = { confirmDiscard = false })
+    val sheetState = rememberGuardedSheetState(dirty) { confirmDiscard = true }
+    ModalBottomSheet(onDismissRequest = requestDismiss, sheetState = sheetState, dragHandle = null) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(24.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -169,7 +192,7 @@ fun TransactionFormScreen(
                     existing == null -> "Nuevo movimiento"
                     else -> "Editar movimiento"
                 },
-                onDismiss = onDismiss,
+                onDismiss = requestDismiss,
             )
 
             // Editar un movimiento vinculado a una suscripción/inversión reemplaza el selector de tipo
@@ -250,10 +273,12 @@ fun TransactionFormScreen(
                         value = movementName,
                         onValueChange = { movementName = it },
                         singleLine = true,
+                        isError = error == NAME_ERROR,
                         shape = MaterialTheme.shapes.medium,
                         colors = sageFieldColors(),
                         modifier = Modifier.fillMaxWidth(),
                     )
+                    if (error == NAME_ERROR) FieldError(NAME_ERROR)
                 }
             }
 
@@ -265,6 +290,7 @@ fun TransactionFormScreen(
                 plainLabel = true,
                 modifier = Modifier.fillMaxWidth(),
             )
+            if (error == AMOUNT_ERROR) FieldError(AMOUNT_ERROR)
 
             PickerField(
                 label = if (isTransfer) "Cuenta origen" else "Cuenta",
@@ -305,6 +331,7 @@ fun TransactionFormScreen(
                     leadingContent = { cat -> CategoryAvatar(cat.name) },
                     plainLabel = true,
                 )
+                if (error == CATEGORY_ERROR) FieldError(CATEGORY_ERROR)
             }
 
             if (!isTransfer && !isRecurringType) {
@@ -376,6 +403,7 @@ fun TransactionFormScreen(
                         }
                         if (subcategoryNameTaken) FieldError("Ya existe una subcategoría con ese nombre")
                     }
+                    if (error == SUBCATEGORY_ERROR) FieldError(SUBCATEGORY_ERROR)
                 }
             }
 
@@ -383,14 +411,13 @@ fun TransactionFormScreen(
             // no se pide aquí — Card.interestRate ya lo tiene guardado.
             if (!isTransfer && !isRecurringType && kind == "EXPENSE" && selectedAccount?.type == "CREDIT") {
                 val installments = cuotasText.toLongOrNull()?.coerceIn(1, MAX_INSTALLMENTS) ?: 1
-                OutlinedTextField(
+                LabeledNumberField(
+                    label = "Cuotas",
                     value = cuotasText,
                     // Solo dígitos: el teclado numérico no protege de un teclado físico o un pegado.
                     onValueChange = { cuotasText = it.filter(Char::isDigit).take(3) },
-                    label = { Text("Cuotas") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = "1",
+                    error = "Máximo $MAX_INSTALLMENTS cuotas; se usará $MAX_INSTALLMENTS.".takeIf { (cuotasText.toLongOrNull() ?: 0) > MAX_INSTALLMENTS },
                 )
                 if (installments > 1 && amountMinor > 0) {
                     val rate = vm.cardFor(selectedAccount.id)?.interestRate ?: 0.0
@@ -432,36 +459,35 @@ fun TransactionFormScreen(
             }
             if (effectiveKind == "SUBSCRIPTION" || (effectiveKind == "INVESTMENT" && periodic)) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Recurrencia", style = MaterialTheme.typography.labelLarge)
+                    Text("Recurrencia", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         SelectorPill(text = "Día del mes", selected = recurMonthly, modifier = Modifier.weight(1f), onClick = { recurMonthly = true })
                         SelectorPill(text = "Cada X días", selected = !recurMonthly, modifier = Modifier.weight(1f), onClick = { recurMonthly = false })
                     }
                     if (recurMonthly) {
-                        OutlinedTextField(
+                        LabeledNumberField(
+                            label = "Día del mes (1–31)",
                             value = dayOfMonth,
                             onValueChange = { dayOfMonth = it.filter(Char::isDigit).take(2) },
-                            label = { Text("Día del mes (1–31)") },
-                            isError = dayOfMonth.isNotEmpty() && dayOfMonth.toIntOrNull()?.let { it in 1..31 } != true,
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.fillMaxWidth(),
+                            error = "Debe ser un día entre 1 y 31".takeIf {
+                                error == RECURRENCE_ERROR || (dayOfMonth.isNotEmpty() && dayOfMonth.toIntOrNull()?.let { it in 1..31 } != true)
+                            },
                         )
                     } else {
-                        OutlinedTextField(
+                        LabeledNumberField(
+                            label = "Cada cuántos días",
                             value = everyDays,
                             onValueChange = { everyDays = it.filter(Char::isDigit).take(4) },
-                            label = { Text("Cada cuántos días") },
-                            isError = everyDays.isNotEmpty() && everyDays.toLongOrNull()?.let { it >= 1 } != true,
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                            modifier = Modifier.fillMaxWidth(),
+                            error = "Debe ser al menos 1 día".takeIf {
+                                error == RECURRENCE_ERROR || (everyDays.isNotEmpty() && everyDays.toLongOrNull()?.let { it >= 1 } != true)
+                            },
                         )
                     }
                 }
             }
 
-            error?.let { FieldError(it) }
+            // Los errores de un campo concreto ya se muestran bajo ese campo; aquí quedan los generales.
+            error?.takeIf { it !in FIELD_ERRORS }?.let { FieldError(it) }
 
             Button(
                 onClick = {
@@ -474,9 +500,9 @@ fun TransactionFormScreen(
                     }
                     if (editingSubscription != null) {
                         when {
-                            movementName.isBlank() -> error = "Escribe un nombre."
-                            minor <= 0 -> error = "Monto inválido."
-                            !recurValid -> error = "Recurrencia inválida."
+                            movementName.isBlank() -> error = NAME_ERROR
+                            minor <= 0 -> error = AMOUNT_ERROR
+                            !recurValid -> error = RECURRENCE_ERROR
                             else -> {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 val frequency = if (recurMonthly) "MONTHLY" else "DAILY"
@@ -487,10 +513,10 @@ fun TransactionFormScreen(
                         }
                     } else if (editingInvestment != null) {
                         when {
-                            movementName.isBlank() -> error = "Escribe un nombre."
+                            movementName.isBlank() -> error = NAME_ERROR
                             account == null -> error = "Crea una cuenta primero (pestaña Cuentas)."
-                            minor <= 0 -> error = "Monto inválido."
-                            periodic && !recurValid -> error = "Recurrencia inválida."
+                            minor <= 0 -> error = AMOUNT_ERROR
+                            periodic && !recurValid -> error = RECURRENCE_ERROR
                             else -> {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 val frequency = if (!periodic) {
@@ -516,7 +542,7 @@ fun TransactionFormScreen(
                         when {
                             account == null || dest == null -> error = "Elige cuenta origen y destino."
                             account.id == dest.id -> error = "Origen y destino deben ser distintos."
-                            minor <= 0 -> error = "Monto inválido."
+                            minor <= 0 -> error = AMOUNT_ERROR
                             else -> {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 vm.saveTransfer(existing?.id, account.id, dest.id, minor, "", dateEpochDay)
@@ -525,9 +551,9 @@ fun TransactionFormScreen(
                         }
                     } else if (kind == "SUBSCRIPTION") {
                         when {
-                            movementName.isBlank() -> error = "Escribe un nombre."
-                            minor <= 0 -> error = "Monto inválido."
-                            !recurValid -> error = "Recurrencia inválida."
+                            movementName.isBlank() -> error = NAME_ERROR
+                            minor <= 0 -> error = AMOUNT_ERROR
+                            !recurValid -> error = RECURRENCE_ERROR
                             else -> {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 val frequency = if (recurMonthly) "MONTHLY" else "DAILY"
@@ -538,10 +564,10 @@ fun TransactionFormScreen(
                         }
                     } else if (kind == "INVESTMENT") {
                         when {
-                            movementName.isBlank() -> error = "Escribe un nombre."
+                            movementName.isBlank() -> error = NAME_ERROR
                             account == null -> error = "Crea una cuenta primero (pestaña Cuentas)."
-                            minor <= 0 -> error = "Monto inválido."
-                            periodic && !recurValid -> error = "Recurrencia inválida."
+                            minor <= 0 -> error = AMOUNT_ERROR
+                            periodic && !recurValid -> error = RECURRENCE_ERROR
                             else -> {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 val frequency = if (!periodic) {
@@ -565,9 +591,9 @@ fun TransactionFormScreen(
                     } else {
                         when {
                             account == null -> error = "Crea una cuenta primero (pestaña Cuentas)."
-                            categoryId == null -> error = "Elige una categoría."
-                            subcategoryId == null -> error = "Elige una subcategoría."
-                            minor <= 0 -> error = "Monto inválido."
+                            categoryId == null -> error = CATEGORY_ERROR
+                            subcategoryId == null -> error = SUBCATEGORY_ERROR
+                            minor <= 0 -> error = AMOUNT_ERROR
                             else -> {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 // Sin campo de nota manual, la nota es siempre el nombre de la
@@ -608,7 +634,7 @@ fun TransactionFormScreen(
                             onDismiss()
                         }
                     },
-                    colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = finance.expense),
+                    colors = ButtonDefaults.textButtonColors(contentColor = finance.expense),
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text("Eliminar suscripción") }
             } else if (editingInvestment != null) {
@@ -619,7 +645,7 @@ fun TransactionFormScreen(
                             onDismiss()
                         }
                     },
-                    colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = finance.expense),
+                    colors = ButtonDefaults.textButtonColors(contentColor = finance.expense),
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text("Eliminar inversión") }
             } else if (existing != null) {
@@ -635,7 +661,7 @@ fun TransactionFormScreen(
                             }
                         }
                     },
-                    colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = finance.expense),
+                    colors = ButtonDefaults.textButtonColors(contentColor = finance.expense),
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text("Eliminar movimiento") }
             }
@@ -675,3 +701,30 @@ fun TransactionFormScreen(
 }
 
 private const val MAX_INSTALLMENTS = 360L
+
+/** Campo numérico con la etiqueta encima y el error debajo, igual que los demás campos de la hoja. */
+@Composable
+private fun LabeledNumberField(label: String, value: String, onValueChange: (String) -> Unit, placeholder: String? = null, error: String? = null) {
+    Column(verticalArrangement = Arrangement.spacedBy(LocalSpacing.current.xs)) {
+        Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            placeholder = placeholder?.let { { Text(it) } },
+            isError = error != null,
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            shape = MaterialTheme.shapes.medium,
+            colors = sageFieldColors(),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (error != null) FieldError(error)
+    }
+}
+
+private const val AMOUNT_ERROR = "Escribe un monto mayor que 0."
+private const val NAME_ERROR = "Escribe un nombre."
+private const val CATEGORY_ERROR = "Elige una categoría."
+private const val SUBCATEGORY_ERROR = "Elige una subcategoría."
+private const val RECURRENCE_ERROR = "Recurrencia inválida."
+private val FIELD_ERRORS = setOf(AMOUNT_ERROR, NAME_ERROR, CATEGORY_ERROR, SUBCATEGORY_ERROR, RECURRENCE_ERROR)

@@ -11,13 +11,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Subscriptions
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
@@ -33,7 +30,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.finanzen.db.Subscription
+import com.finanzen.ui.components.AddFab
 import com.finanzen.ui.components.BentoTileSize
+import com.finanzen.ui.components.BottomSnackbarHost
 import com.finanzen.ui.components.EmptyState
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.IconAvatar
@@ -54,6 +53,8 @@ fun SubscriptionsScreen(
     vm: SubscriptionsViewModel = koinViewModel(),
 ) {
     val subs by vm.subscriptions.collectAsState()
+    val loaded by vm.loaded.collectAsState()
+    var creating by remember { mutableStateOf(false) }
     val accounts by vm.accounts.collectAsState()
     val accountsById = remember(accounts) { accounts.associateBy { it.id } }
     var pendingDeleteIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
@@ -84,25 +85,32 @@ fun SubscriptionsScreen(
     editingId?.let { id ->
         TransactionFormScreen(transactionId = null, subscriptionId = id, onDismiss = { editingId = null })
     }
+    if (creating) {
+        TransactionFormScreen(transactionId = null, initialKind = "SUBSCRIPTION", onDismiss = { creating = false })
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        // Alta directa aquí, como "+ Presupuesto": el estado vacío ya no manda a otra pantalla.
+        floatingActionButton = { AddFab(label = "Suscripción", onClick = { creating = true }) },
     ) { inner ->
         Column(Modifier.fillMaxSize().padding(inner)) {
             SubScreenHeader(title = "Suscripciones", onBack = onBack)
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
+                // Abajo 96dp para que el FAB no tape la última tarjeta (igual que Movimientos).
+                contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                if (subs.isEmpty()) {
+                if (!loaded) {
+                    // Sin contenido hasta la primera lectura: evita el "Sin suscripciones" fugaz.
+                } else if (subs.isEmpty()) {
                     item {
                         Box(Modifier.fillMaxWidth().padding(top = 48.dp), contentAlignment = Alignment.Center) {
                             EmptyState(
                                 icon = LucideIcons.Repeat,
                                 title = "Sin suscripciones",
-                                subtitle = "Créala desde Nuevo movimiento; el cobro se registrará en Movimientos.",
+                                subtitle = "Usa el botón + para añadir una; cada cobro se registrará en Movimientos.",
                                 modifier = Modifier.padding(32.dp),
                             )
                         }
@@ -111,18 +119,20 @@ fun SubscriptionsScreen(
                     item {
                         // Total mensual comprometido: la cifra que responde "¿cuánto me cuestan al mes?".
                         val monthlyCost = remember(subs) { DashboardViewModel.computeSubscriptionMonthlyCost(subs) }
-                        FinanceCard(modifier = Modifier.fillMaxWidth(), size = BentoTileSize.Small) {
+                        // Mismo padding (16dp) que SubscriptionItem: el texto arranca alineado con sus iconos.
+                        FinanceCard(modifier = Modifier.fillMaxWidth(), size = BentoTileSize.Small, contentPadding = PaddingValues(16.dp)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
-                                Text("Costo mensual equivalente", style = MaterialTheme.typography.labelLarge)
+                                Text("Costo mensual", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
                                 MoneyText(
                                     amountMinor = monthlyCost,
                                     currency = vm.baseCurrency,
                                     style = MaterialTheme.typography.bodyLarge,
                                     fontWeight = FontWeight.SemiBold,
+                                    colorOverride = LocalFinanceColors.current.expense,
                                 )
                             }
                         }
@@ -145,14 +155,17 @@ fun SubscriptionsScreen(
                 }
             }
         }
+        BottomSnackbarHost(snackbarHostState)
     }
 }
 
-/** Texto de recurrencia corto para la fila de suscripción: "Día N" (mensual) o "Cada N días". */
+/** Texto de recurrencia corto para la fila de suscripción. Nunca muestra el código crudo de la BD. */
 private fun recurrenceText(frequency: String, intervalCount: Long): String = when (frequency) {
     "MONTHLY" -> "Día $intervalCount"
-    "DAILY" -> "Cada $intervalCount días"
-    else -> frequency
+    "DAILY" -> if (intervalCount == 1L) "Cada día" else "Cada $intervalCount días"
+    "WEEKLY" -> "Semanal"
+    "YEARLY" -> "Anual"
+    else -> "Periódica"
 }
 
 /** Tarjeta de suscripción: icono · nombre + cuenta · recurrencia · monto. Tocar edita, deslizar elimina. */
@@ -168,12 +181,12 @@ private fun SubscriptionItem(
     val finance = LocalFinanceColors.current
     FinanceCard(modifier = Modifier.fillMaxWidth(), onClick = onClick, contentPadding = PaddingValues(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconAvatar(Icons.Outlined.Subscriptions)
+            IconAvatar(LucideIcons.Repeat)
             Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                Text(name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                Text(name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
                 Text(
                     listOfNotNull(accountName, recurrenceText).joinToString(" · "),
-                    style = MaterialTheme.typography.labelLarge,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }

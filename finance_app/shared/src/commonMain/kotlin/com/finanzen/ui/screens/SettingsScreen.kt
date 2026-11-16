@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -101,16 +102,22 @@ fun SettingsScreen(
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
-                            Text("Reducir animaciones", fontWeight = FontWeight.SemiBold)
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Switch(checked = reduceMotion, onCheckedChange = vm::setReduceMotion, colors = sageSwitchColors())
-                                InfoTooltip(
-                                    "Sustituye las animaciones por cambios instantáneos.",
-                                    contentDescription = "Qué hace reducir animaciones",
-                                )
+                            // Texto + Switch son un solo objetivo táctil; el tooltip queda aparte para no
+                            // alternar el ajuste al pedir la explicación.
+                            Row(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .toggleable(value = reduceMotion, role = Role.Switch, onValueChange = vm::setReduceMotion),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text("Reducir animaciones", fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                                Switch(checked = reduceMotion, onCheckedChange = null, colors = sageSwitchColors())
                             }
+                            InfoTooltip(
+                                "Sustituye las animaciones por cambios instantáneos.",
+                                contentDescription = "Qué hace reducir animaciones",
+                            )
                         }
                     }
                 }

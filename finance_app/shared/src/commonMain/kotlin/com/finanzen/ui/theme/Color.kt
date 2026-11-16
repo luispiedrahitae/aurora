@@ -106,11 +106,14 @@ data class FinanceColors(
     val warningContainer: Color,
 )
 
+// Verde bosque (~145°) / rojo ladrillo (~4°): misma saturación apagada que los acentos tierra de
+// Apariencia pero en matices inequívocamente semánticos, para que combinen con cualquier preset
+// (el salvia/café anterior sólo casaba con Terracota). Ladrillo, no rojo de alarma (No-Shame Rule),
+// y lejos del ámbar de warning. Contraste ≥4.5:1 sobre background/surfaceContainer (ver test).
 internal val LightFinanceColors = FinanceColors(
-    // Sage 700 (ingreso) / terracotta 700 (gasto) — ver Task 2 del brief de rediseño Sage.
-    income = Color(0xFF4B553A),
+    income = Color(0xFF276B43),
     incomeContainer = Color(0xFFCDEFDE),
-    expense = Color(0xFF7F4824),
+    expense = Color(0xFFA33A32),
     expenseContainer = Color(0xFFFADDE2),
     neutral = Color(0xFF55565C),
     warning = Color(0xFFB45309),
@@ -118,10 +121,9 @@ internal val LightFinanceColors = FinanceColors(
 )
 
 internal val DarkFinanceColors = FinanceColors(
-    // Sage 300 (ingreso) / terracotta 300 (gasto) — ver Task 2 del brief de rediseño Sage.
-    income = Color(0xFFBBC5AA),
+    income = Color(0xFF7FC79A),
     incomeContainer = Color(0xFF1B3D30),
-    expense = Color(0xFFE4BBA0),
+    expense = Color(0xFFEE9A8F),
     expenseContainer = Color(0xFF512530),
     neutral = Color(0xFFA9AAB0),
     warning = Color(0xFFFBBF24),

@@ -45,6 +45,9 @@ DELETE FROM TransactionRow WHERE id = ?;
 deleteByAccount:
 DELETE FROM TransactionRow WHERE accountId = ?;
 
+deleteByInvestment:
+DELETE FROM TransactionRow WHERE investmentId = ?;
+
 deleteByCategory:
 DELETE FROM TransactionRow WHERE categoryId = ?;
 
@@ -69,3 +72,7 @@ UPDATE TransactionRow SET categoryId = :newCategoryId WHERE subscriptionId IS NO
 -- función ("Retiro: <nombre>"), único a este flujo.
 reassignWithdrawalCategory:
 UPDATE TransactionRow SET categoryId = :newCategoryId WHERE kind = 'INCOME' AND note LIKE 'Retiro: %' AND categoryId != :newCategoryId;
+
+-- Aportes previos a la nota "Aporte: <nombre>" (simétrica a "Retiro: <nombre>") guardaban solo el nombre.
+prefixContributionNotes:
+UPDATE TransactionRow SET note = 'Aporte: ' || note WHERE kind = 'EXPENSE' AND investmentId IS NOT NULL AND note NOT LIKE 'Aporte: %';

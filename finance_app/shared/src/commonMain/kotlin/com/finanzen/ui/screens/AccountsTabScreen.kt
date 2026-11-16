@@ -1,8 +1,8 @@
 package com.finanzen.ui.screens
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,8 +12,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -24,23 +25,15 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.minimumInteractiveComponentSize
-import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -51,13 +44,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.semantics.CustomAccessibilityAction
-import androidx.compose.ui.semantics.customActions
-import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -67,8 +57,14 @@ import com.finanzen.db.InstallmentPlan
 import com.finanzen.db.TransactionRow
 import com.finanzen.ui.components.AccountTypeAvatar
 import com.finanzen.ui.components.AddFab
+import com.finanzen.ui.components.ArchivedSwipeRow
+import com.finanzen.ui.components.BottomSnackbarHost
 import com.finanzen.ui.components.ConfirmDialog
+import com.finanzen.ui.components.DiscardChangesDialog
 import com.finanzen.ui.components.EmptyState
+import com.finanzen.ui.components.ExpandableSection
+import com.finanzen.ui.components.FadeSection
+import com.finanzen.ui.components.FieldError
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.KindAvatar
 import com.finanzen.ui.components.MainTabHeader
@@ -79,11 +75,13 @@ import com.finanzen.ui.components.PickerField
 import com.finanzen.ui.components.SectionHeader
 import com.finanzen.ui.components.SelectorPill
 import com.finanzen.ui.components.SheetHeader
+import com.finanzen.ui.components.SwipeToArchive
 import com.finanzen.ui.components.accountTypeLabel
+import com.finanzen.ui.components.balanceColor
 import com.finanzen.ui.components.kindLabel
+import com.finanzen.ui.components.rememberGuardedSheetState
 import com.finanzen.ui.components.sageFieldColors
 import com.finanzen.ui.components.signedAmountAndColor
-import com.finanzen.ui.components.trailingIconButtonPadding
 import com.finanzen.ui.format.formatDiaMes
 import com.finanzen.ui.format.formatMesAnio
 import com.finanzen.ui.format.monthPeriod
@@ -95,6 +93,7 @@ import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.ui.theme.displayFontFamily
 import com.finanzen.viewmodel.AccountsViewModel
+import com.finanzen.viewmodel.CategoriesViewModel
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
 import kotlinx.datetime.DatePeriod
@@ -106,8 +105,19 @@ import org.koin.compose.viewmodel.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AccountsTabScreen(vm: AccountsViewModel = koinViewModel()) {
+fun AccountsTabScreen(
+    vm: AccountsViewModel = koinViewModel(),
+    // Solo para leer categorías (flujo ya existente) sin ampliar el constructor de AccountsViewModel.
+    categoriesVm: CategoriesViewModel = koinViewModel(),
+) {
     val accounts by vm.accounts.collectAsState()
+    val loaded by vm.loaded.collectAsState()
+    val categories by categoriesVm.categories.collectAsState()
+    // Categoría de cada movimiento bajo su monto, con la misma regla que Movimientos: la principal si es subcategoría.
+    val categoryLabels = remember(categories) {
+        val byId = categories.associateBy { it.id }
+        categories.associate { c -> c.id to (c.parentId?.let { byId[it] } ?: c).name }
+    }
     val archivedAccounts by vm.archivedAccounts.collectAsState()
     val balances by vm.balances.collectAsState()
     val cards by vm.cards.collectAsState()
@@ -139,6 +149,12 @@ fun AccountsTabScreen(vm: AccountsViewModel = koinViewModel()) {
             )
             if (result == SnackbarResult.ActionPerformed) vm.unarchive(account.id)
         }
+    }
+
+    // Restaurar avisa igual que archivar: sin esto la fila desaparecía de "Archivadas" sin explicación.
+    fun restore(account: Account) {
+        vm.unarchive(account.id)
+        scope.launch { snackbarHostState.showSnackbar("\"${account.name}\" restaurada", duration = SnackbarDuration.Short) }
     }
 
     if (showForm || editingAccount != null) {
@@ -201,6 +217,7 @@ fun AccountsTabScreen(vm: AccountsViewModel = koinViewModel()) {
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 cards[account.id]?.let { vm.payOffCard(it.id, sourceAccountId, amount) }
                 payingOffAccount = null
+                scope.launch { snackbarHostState.showSnackbar("Tarjeta \"${account.name}\" pagada", duration = SnackbarDuration.Short) }
             },
             onDismiss = { payingOffAccount = null },
         )
@@ -213,7 +230,6 @@ fun AccountsTabScreen(vm: AccountsViewModel = koinViewModel()) {
         floatingActionButton = {
             AddFab(label = "Cuenta", onClick = { showForm = true })
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { inner ->
         Column(Modifier.fillMaxSize().padding(inner)) {
             MainTabHeader(title = "Cuentas")
@@ -227,7 +243,9 @@ fun AccountsTabScreen(vm: AccountsViewModel = koinViewModel()) {
                     month = LocalDate(today.year, today.month, 1)
                 },
             )
-            if (accounts.isEmpty() && archivedAccounts.isEmpty()) {
+            if (!loaded) {
+                Box(Modifier.fillMaxSize())
+            } else if (accounts.isEmpty() && archivedAccounts.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     EmptyState(
                         icon = LucideIcons.Wallet,
@@ -251,6 +269,7 @@ fun AccountsTabScreen(vm: AccountsViewModel = koinViewModel()) {
                             plans = emptyList(),
                             unbilledMinor = 0L,
                             movements = transactionsByAccount[account.id].orEmpty(),
+                            categoryLabels = categoryLabels,
                             expanded = expandedAccountIds[account.id] == true,
                             onToggleExpand = { expandedAccountIds[account.id] = expandedAccountIds[account.id] != true },
                             month = month,
@@ -273,6 +292,7 @@ fun AccountsTabScreen(vm: AccountsViewModel = koinViewModel()) {
                                     plans = plansByAccount[first.id].orEmpty(),
                                     unbilledMinor = unbilledByAccount[first.id] ?: 0L,
                                     movements = transactionsByAccount[first.id].orEmpty(),
+                                    categoryLabels = categoryLabels,
                                     expanded = expandedAccountIds[first.id] == true,
                                     onToggleExpand = { expandedAccountIds[first.id] = expandedAccountIds[first.id] != true },
                                     month = month,
@@ -290,6 +310,7 @@ fun AccountsTabScreen(vm: AccountsViewModel = koinViewModel()) {
                                 plans = plansByAccount[account.id].orEmpty(),
                                 unbilledMinor = unbilledByAccount[account.id] ?: 0L,
                                 movements = transactionsByAccount[account.id].orEmpty(),
+                                categoryLabels = categoryLabels,
                                 expanded = expandedAccountIds[account.id] == true,
                                 onToggleExpand = { expandedAccountIds[account.id] = expandedAccountIds[account.id] != true },
                                 month = month,
@@ -306,7 +327,9 @@ fun AccountsTabScreen(vm: AccountsViewModel = koinViewModel()) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable { archivedExpanded = !archivedExpanded }
+                                        .clickable(role = Role.Button, onClickLabel = if (archivedExpanded) "Contraer" else "Expandir") {
+                                            archivedExpanded = !archivedExpanded
+                                        }
                                         .padding(vertical = spacing.sm),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(spacing.sm),
@@ -323,7 +346,7 @@ fun AccountsTabScreen(vm: AccountsViewModel = koinViewModel()) {
                                     ArchivedAccountRow(
                                         account = first,
                                         balanceMinor = balances[first.id] ?: first.openingBalanceMinor,
-                                        onUnarchive = { vm.unarchive(first.id) },
+                                        onUnarchive = { restore(first) },
                                         onHardDelete = { accountPendingHardDelete = first },
                                     )
                                 }
@@ -334,7 +357,7 @@ fun AccountsTabScreen(vm: AccountsViewModel = koinViewModel()) {
                                 ArchivedAccountRow(
                                     account = account,
                                     balanceMinor = balances[account.id] ?: account.openingBalanceMinor,
-                                    onUnarchive = { vm.unarchive(account.id) },
+                                    onUnarchive = { restore(account) },
                                     onHardDelete = { accountPendingHardDelete = account },
                                 )
                             }
@@ -343,6 +366,7 @@ fun AccountsTabScreen(vm: AccountsViewModel = koinViewModel()) {
                 }
             }
         }
+        BottomSnackbarHost(snackbarHostState, aboveFab = true)
     }
 }
 
@@ -355,6 +379,7 @@ private fun AccountRow(
     plans: List<InstallmentPlan>,
     unbilledMinor: Long,
     movements: List<TransactionRow>,
+    categoryLabels: Map<Long, String>,
     expanded: Boolean,
     onToggleExpand: () -> Unit,
     month: LocalDate,
@@ -363,123 +388,113 @@ private fun AccountRow(
     onPayOff: () -> Unit,
 ) {
     val isCredit = account.type == "CREDIT"
-    val finance = LocalFinanceColors.current
     val spacing = LocalSpacing.current
     val fmt = LocalMoneyFormat.current
+    val haptic = LocalHapticFeedback.current
 
-    // Deslizar para archivar (mismo patrón que TransactionsScreen para eliminar movimientos):
-    // libera toda la fila para nombre/saldo en vez de un ícono siempre visible.
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = {
-            if (it == SwipeToDismissBoxValue.EndToStart) {
-                onArchive()
-                true
-            } else {
-                false
-            }
-        },
-    )
-
-    SwipeToDismissBox(
-        state = dismissState,
-        // El swipe no es alcanzable con lector de pantalla; la misma acción queda en el menú de
-        // acciones de TalkBack.
-        modifier = Modifier.semantics {
-            customActions = listOf(
-                CustomAccessibilityAction("Archivar") {
-                    onArchive()
-                    true
-                },
-            )
-        },
-        enableDismissFromStartToEnd = false,
-        backgroundContent = {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(MaterialTheme.shapes.medium)
-                    .background(MaterialTheme.colorScheme.secondaryContainer)
-                    .padding(horizontal = spacing.lg),
-                contentAlignment = Alignment.CenterEnd,
-            ) {
-                Icon(LucideIcons.Archive, contentDescription = "Archivar", tint = MaterialTheme.colorScheme.onSecondaryContainer)
-            }
-        },
-    ) {
-        // Tocar la tarjeta abre editar (como BudgetProgressCard/TransactionItem); el chevron
-        // expande/contrae los movimientos del mes y archivar es swipe (+ acción de accesibilidad).
-        FinanceCard(
-            modifier = Modifier.fillMaxWidth(),
-            onClick = onEdit,
-            contentPadding = trailingIconButtonPadding(),
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(spacing.md)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(spacing.md)) {
-                    AccountTypeAvatar(account.type)
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(account.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-                        Text(
-                            accountTypeLabel(account.type),
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+    // Deslizar para archivar: libera toda la fila para nombre/saldo en vez de un ícono siempre visible.
+    SwipeToArchive(onArchive = onArchive) {
+        // Como el día en Movimientos (DayHeader): tocar la cabecera abre/cierra los movimientos del mes,
+        // mantener pulsado edita y archivar es swipe. Misma estructura que InvestmentItem.
+        FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(0.dp)) {
+            Column {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .combinedClickable(
+                            onClickLabel = if (expanded) "Contraer" else "Expandir",
+                            onLongClickLabel = "Editar",
+                            onLongClick = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onEdit()
+                            },
+                            onClick = onToggleExpand,
                         )
-                    }
-                    // Sin spacedBy propio: el padding interno del IconButton (~12dp, centrado en su
-                    // target táctil de 48dp) ya hace de separación con el saldo — sumarle spacing.md
-                    // encima duplicaba el hueco (ver trailingIconButtonPadding en FinanceComponents.kt).
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Column(horizontalAlignment = Alignment.End) {
+                        .padding(16.dp),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(spacing.md)) {
+                        AccountTypeAvatar(account.type)
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(account.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
                             Text(
-                                fmt.format(balanceMinor, account.currency),
-                                fontWeight = FontWeight.SemiBold,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = if (balanceMinor < 0) finance.expense else MaterialTheme.colorScheme.onSurface,
-                            )
-                            Text(
-                                if (isCredit) "deuda" else "saldo",
+                                accountTypeLabel(account.type),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                        IconButton(onClick = onToggleExpand) {
-                            Icon(
-                                if (expanded) LucideIcons.ChevronUp else LucideIcons.ChevronDown,
-                                contentDescription = if (expanded) "Contraer" else "Expandir",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                        // Como el DayHeader de Movimientos: abierto, el saldo baja al pie del historial.
+                        FadeSection(!expanded) {
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(
+                                    fmt.format(balanceMinor, account.currency),
+                                    fontWeight = FontWeight.SemiBold,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = balanceColor(balanceMinor),
+                                )
+                                Text(
+                                    if (isCredit) "Deuda" else "Saldo",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
+                        Icon(
+                            if (expanded) LucideIcons.ChevronUp else LucideIcons.ChevronDown,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
                     }
                 }
 
-                if (isCredit && card != null) {
-                    CreditDetails(card, balanceMinor, unbilledMinor, account.currency, onPayOff)
+                // CreditActions no pinta nada sin cupo ni fechas: sin esto quedaría un divider suelto.
+                if (isCredit && card != null && ((card.creditLimitMinor ?: 0L) > 0 || card.cutoffDay != null || card.dueDay != null)) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        CreditActions(card, balanceMinor, unbilledMinor, account.currency, onPayOff)
+                    }
                 }
-
-                if (expanded) {
-                    HorizontalDivider()
-                    AccountMovementsSection(
-                        movements = movements,
-                        month = month,
-                        currency = account.currency,
-                        includeIncome = !isCredit,
-                        plansById = if (isCredit) remember(plans) { plans.associateBy { it.id } } else emptyMap(),
-                        installmentIndex = if (isCredit) remember(movements) { AccountsViewModel.installmentIndexByTransaction(movements) } else emptyMap(),
-                    )
+                ExpandableSection(expanded) {
+                    // Sin divisor bajo la cabecera, como la tarjeta de día en Movimientos.
+                    Column(Modifier.padding(start = 16.dp, end = 16.dp, bottom = spacing.md, top = spacing.md)) {
+                        AccountMovementsSection(
+                            movements = movements,
+                            categoryLabels = categoryLabels,
+                            month = month,
+                            currency = account.currency,
+                            includeIncome = !isCredit,
+                            plansById = if (isCredit) remember(plans) { plans.associateBy { it.id } } else emptyMap(),
+                            installmentIndex = if (isCredit) remember(movements) { AccountsViewModel.installmentIndexByTransaction(movements) } else emptyMap(),
+                        ) {
+                            MovementSummaryRow(
+                                if (isCredit) "Deuda" else "Saldo",
+                                balanceMinor,
+                                account.currency,
+                                colorOverride = balanceColor(balanceMinor),
+                                signed = false,
+                                modifier = movementTextIndent(),
+                            )
+                            // Editar visible (además de mantener pulsado, que nadie descubre solo).
+                            Row(movementTextIndent()) { CardAction("Editar", trailing = LucideIcons.Pencil, onClick = onEdit) }
+                        }
+                    }
                 }
             }
         }
     }
 }
 
-/** Sección de movimientos mensuales de una cuenta (lista + subtotal); el mes lo controla el selector global de la pantalla. */
+/** Sección de movimientos mensuales de una cuenta (lista + subtotal); el mes lo controla el selector global de la pantalla.
+ * [footer] (Saldo/Deuda) va pegado a los totales, con las mismas separaciones que el pie del día en Movimientos. */
 @Composable
 private fun AccountMovementsSection(
     movements: List<TransactionRow>,
+    categoryLabels: Map<Long, String>,
     month: LocalDate,
     currency: String,
     includeIncome: Boolean,
     plansById: Map<Long, InstallmentPlan> = emptyMap(),
     installmentIndex: Map<Long, Long> = emptyMap(),
+    footer: @Composable () -> Unit,
 ) {
     val spacing = LocalSpacing.current
     val period = remember(month) { monthPeriod(month) }
@@ -487,6 +502,7 @@ private fun AccountMovementsSection(
         movements.filter { periodOfEpochDay(it.date) == period && (includeIncome || it.kind == "EXPENSE") }
     }
 
+    val indent = movementTextIndent()
     Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
         if (filtered.isEmpty()) {
             Text(
@@ -495,68 +511,104 @@ private fun AccountMovementsSection(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
-                filtered.forEach { row ->
-                    val plan = row.installmentPlanId?.let { plansById[it] }
-                    val idx = row.installmentPlanId?.let { installmentIndex[row.id] }
-                    val cuotaLabel = if (plan != null && idx != null) "Cuota $idx/${plan.installments}" else null
-                    AccountMovementRow(row, cuotaLabel)
-                }
+            filtered.forEach { row ->
+                val plan = row.installmentPlanId?.let { plansById[it] }
+                val idx = row.installmentPlanId?.let { installmentIndex[row.id] }
+                val cuotaLabel = if (plan != null && idx != null) "Cuota $idx/${plan.installments}" else null
+                AccountMovementRow(row, cuotaLabel, amountCaption = categoryLabels[row.categoryId])
             }
-            HorizontalDivider()
+        }
+        // Como DaySummaryFooter: divisor, un respiro y los totales pegados entre sí.
+        Column {
+            HorizontalDivider(indent)
+            Spacer(Modifier.height(spacing.sm))
             val finance = LocalFinanceColors.current
-            if (includeIncome) {
+            if (filtered.isNotEmpty() && includeIncome) {
                 val income = filtered.filter { it.kind == "INCOME" }.sumOf { it.amountMinor }
                 val expense = filtered.filter { it.kind == "EXPENSE" }.sumOf { it.amountMinor }
-                MovementSummaryRow("Ingreso", income, currency, colorOverride = finance.income)
-                MovementSummaryRow("Gasto", -expense, currency, colorOverride = finance.expense)
-            } else {
-                val expense = filtered.sumOf { it.amountMinor }
-                MovementSummaryRow("Total", -expense, currency, colorOverride = finance.expense)
+                MovementSummaryRow("Ingreso", income, currency, colorOverride = finance.income, modifier = indent)
+                MovementSummaryRow("Gasto", -expense, currency, colorOverride = finance.expense, modifier = indent)
+            } else if (filtered.isNotEmpty()) {
+                MovementSummaryRow("Total", -filtered.sumOf { it.amountMinor }, currency, colorOverride = finance.expense, modifier = indent)
             }
+            footer()
         }
     }
 }
 
+/** Sangría del avatar de [AccountMovementRow] (40dp + su spacedBy): líneas y totales arrancan donde el texto
+ * (= nombre de la cuenta), como el pie de la tarjeta de día en Movimientos. */
 @Composable
-private fun MovementSummaryRow(label: String, amountMinor: Long, currency: String, colorOverride: Color) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+internal fun movementTextIndent(): Modifier = Modifier.padding(start = 40.dp + LocalSpacing.current.md)
+
+/** Fila de total del pie (cuenta e inversión). [pct] (rendimiento) va como "(+N%)" antes del monto. */
+@Composable
+internal fun MovementSummaryRow(
+    label: String,
+    amountMinor: Long,
+    currency: String,
+    colorOverride: Color,
+    signed: Boolean = true,
+    modifier: Modifier = Modifier,
+    pct: Double? = null,
+) {
+    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(LocalSpacing.current.xs), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+        if (pct != null) {
+            Text("(${if (pct >= 0) "+" else ""}${pct.toInt()}%)", style = MaterialTheme.typography.bodySmall, color = colorOverride)
+        }
         MoneyText(
             amountMinor = amountMinor,
             currency = currency,
-            style = MaterialTheme.typography.bodyMedium,
-            signed = true,
+            style = MaterialTheme.typography.bodyLarge,
+            signed = signed,
             colorOverride = colorOverride,
         )
     }
 }
 
 /** Fila de movimiento de solo lectura dentro de la cuenta expandida (sin swipe/editar: solo consulta).
- * [cuotaLabel] (ej. "cuota 2/5") se agrega junto a la fecha cuando el gasto pertenece a un plan de cuotas. */
+ * [cuotaLabel] (ej. "cuota 2/5") se agrega junto a la fecha cuando el gasto pertenece a un plan de cuotas.
+ * También la usa el historial de Inversiones, con [title] ("Aporte"/"Retiro") en lugar de la nota. */
 @Composable
-private fun AccountMovementRow(row: TransactionRow, cuotaLabel: String? = null) {
+internal fun AccountMovementRow(
+    row: TransactionRow,
+    cuotaLabel: String? = null,
+    title: String? = null,
+    amountCaption: String? = null,
+    modifier: Modifier = Modifier,
+) {
     val dateLocale = LocalDateLocale.current
     val finance = LocalFinanceColors.current
     val (signedAmount, amountColor) = signedAmountAndColor(row.kind, row.amountMinor, finance)
     val dateLine = formatDiaMes(row.date, dateLocale) + (cuotaLabel?.let { " · $it" } ?: "")
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(LocalSpacing.current.sm),
+        // Avatar de Movimientos (32dp) centrado en la columna del icono de la cuenta (40dp), con su misma
+        // separación: el texto queda bajo el nombre de la cuenta.
+        horizontalArrangement = Arrangement.spacedBy(LocalSpacing.current.md),
     ) {
-        KindAvatar(kind = row.kind, size = 32.dp)
+        Box(Modifier.width(40.dp), contentAlignment = Alignment.Center) {
+            KindAvatar(kind = row.kind, size = 32.dp)
+        }
         Column(Modifier.weight(1f)) {
-            Text(row.note.ifBlank { kindLabel(row.kind) }, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+            Text(title ?: row.note.ifBlank { kindLabel(row.kind) }, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, maxLines = 1)
             Text(dateLine, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        MoneyText(
-            amountMinor = signedAmount,
-            currency = row.currency,
-            style = MaterialTheme.typography.bodyMedium,
-            signed = true,
-            colorOverride = amountColor,
-        )
+        // [amountCaption] (categoría en Cuentas, cuenta de origen en aportes) bajo el monto, como "Saldo" bajo el saldo.
+        Column(horizontalAlignment = Alignment.End) {
+            MoneyText(
+                amountMinor = signedAmount,
+                currency = row.currency,
+                style = MaterialTheme.typography.bodyLarge,
+                signed = true,
+                colorOverride = amountColor,
+            )
+            if (amountCaption != null) {
+                Text(amountCaption, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+            }
+        }
     }
 }
 
@@ -574,72 +626,15 @@ private fun ArchivedAccountRow(
     val finance = LocalFinanceColors.current
     val fmt = LocalMoneyFormat.current
 
-    val dismissState = rememberSwipeToDismissBoxState(
-        confirmValueChange = {
-            when (it) {
-                SwipeToDismissBoxValue.StartToEnd -> {
-                    onUnarchive()
-                    true
-                }
-                SwipeToDismissBoxValue.EndToStart -> {
-                    // No se descarta: onHardDelete solo abre el ConfirmDialog ("no se puede deshacer");
-                    // la fila vuelve a su lugar hasta que el usuario confirme o cancele.
-                    onHardDelete()
-                    false
-                }
-                else -> false
-            }
-        },
-    )
-
-    SwipeToDismissBox(
-        state = dismissState,
-        modifier = Modifier.semantics {
-            customActions = listOf(
-                CustomAccessibilityAction("Restaurar") {
-                    onUnarchive()
-                    true
-                },
-                CustomAccessibilityAction("Eliminar permanentemente") {
-                    onHardDelete()
-                    true
-                },
-            )
-        },
-        backgroundContent = {
-            when (dismissState.dismissDirection) {
-                SwipeToDismissBoxValue.StartToEnd -> Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(MaterialTheme.shapes.medium)
-                        .background(MaterialTheme.colorScheme.secondaryContainer)
-                        .padding(horizontal = spacing.lg),
-                    contentAlignment = Alignment.CenterStart,
-                ) {
-                    Icon(LucideIcons.ArchiveRestore, contentDescription = "Restaurar", tint = MaterialTheme.colorScheme.onSecondaryContainer)
-                }
-                SwipeToDismissBoxValue.EndToStart -> Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(MaterialTheme.shapes.medium)
-                        .background(finance.expenseContainer)
-                        .padding(horizontal = spacing.lg),
-                    contentAlignment = Alignment.CenterEnd,
-                ) {
-                    Icon(LucideIcons.Trash, contentDescription = "Eliminar permanentemente", tint = finance.expense)
-                }
-                else -> {}
-            }
-        },
-    ) {
+    ArchivedSwipeRow(onRestore = onUnarchive, onHardDelete = onHardDelete) {
         FinanceCard(modifier = Modifier.fillMaxWidth()) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(spacing.md)) {
                 AccountTypeAvatar(account.type)
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(account.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
+                    Text(account.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
                     Text(
                         accountTypeLabel(account.type),
-                        style = MaterialTheme.typography.labelLarge,
+                        style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -649,10 +644,10 @@ private fun ArchivedAccountRow(
                         // Sage.dc.html: la fila archivada no es negrita, a diferencia de la activa —
                         // Body Regular (sin peso extra) ya es el estilo por defecto para dinero no destacado.
                         style = MaterialTheme.typography.bodyLarge,
-                        color = if (balanceMinor < 0) finance.expense else MaterialTheme.colorScheme.onSurface,
+                        color = balanceColor(balanceMinor),
                     )
                     Text(
-                        if (account.type == "CREDIT") "deuda" else "saldo",
+                        if (account.type == "CREDIT") "Deuda" else "Saldo",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -662,15 +657,14 @@ private fun ArchivedAccountRow(
     }
 }
 
-/** Barra de uso de una tarjeta de crédito; el detalle (cupo/disponible/corte/pago) vive en el diálogo de info. */
+/** Acciones de crédito en la fila inferior de la tarjeta ("Pagar tarjeta", "Detalle"); el detalle
+ * (cupo/disponible/corte/pago) vive en un diálogo. Emite sus hijos directo en el Row que la llama. */
 @Composable
-private fun CreditDetails(card: Card, balanceMinor: Long, unbilledMinor: Long, currency: String, onPayOff: () -> Unit) {
-    val finance = LocalFinanceColors.current
+private fun CreditActions(card: Card, balanceMinor: Long, unbilledMinor: Long, currency: String, onPayOff: () -> Unit) {
     val fmt = LocalMoneyFormat.current
     val spacing = LocalSpacing.current
     val limit = card.creditLimitMinor
     val hasLimit = limit != null && limit > 0
-    val debt = (-balanceMinor).coerceAtLeast(0L)
     val available = if (hasLimit) limit!! + balanceMinor - unbilledMinor else 0L // = cupo − deuda facturada − compromiso sin facturar
     val showPayButton = hasLimit && available < limit!!
     val hasInfo = hasLimit || card.cutoffDay != null || card.dueDay != null
@@ -694,40 +688,11 @@ private fun CreditDetails(card: Card, balanceMinor: Long, unbilledMinor: Long, c
         )
     }
 
-    // FinanceCard usa trailingIconButtonPadding() (margen derecho 4dp, compensado por el padding
-    // interno del IconButton del chevron); esta sección no tiene ese ícono, así que restauramos
-    // el margen estándar de 16dp con spacing.md para que la barra no quede pegada al borde.
-    Column(modifier = Modifier.padding(end = spacing.md), verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
-        if (hasLimit) {
-            val frac = ((debt + unbilledMinor).toFloat() / limit!!.toFloat()).coerceIn(0f, 1f)
-            LinearProgressIndicator(
-                progress = { frac },
-                modifier = Modifier.fillMaxWidth(),
-                color = if (frac >= 0.9f) finance.expense else MaterialTheme.colorScheme.primary,
-                drawStopIndicator = {},
-            )
-        }
-        if (showPayButton || hasInfo) {
-            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                if (showPayButton) {
-                    TextButton(onClick = onPayOff) { Text("Pagar tarjeta") }
-                } else {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
-                if (hasInfo) {
-                    // Área táctil mínima de 48dp (WCAG 2.5.8); icono Info de 20dp, igual que InfoTooltip.
-                    IconButton(onClick = { showInfo = true }, modifier = Modifier.minimumInteractiveComponentSize()) {
-                        Icon(
-                            LucideIcons.Info,
-                            contentDescription = "Detalle de tu tarjeta",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp),
-                        )
-                    }
-                }
-            }
-        }
+    if (showPayButton) {
+        CardAction("Pagar tarjeta", onClick = onPayOff)
+        if (hasInfo) Spacer(Modifier.width(spacing.xl))
     }
+    if (hasInfo) CardAction("Detalle") { showInfo = true }
 }
 
 /** Hoja para pagar la tarjeta: transfiere el saldo adeudado desde otra cuenta y libera el cupo. */
@@ -814,15 +779,31 @@ private fun AccountFormDialog(
 
     val isCredit = type == "CREDIT"
     val nameTaken = name.isNotBlank() && name.trim().lowercase() in existingNames
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, dragHandle = null) {
+    // Días 1..31 y tasa aceptando coma decimal ("2,5"): antes "2,5" se perdía en silencio.
+    val cutoffInvalid = cutoff.isNotEmpty() && cutoff.toIntOrNull() !in 1..31
+    val dueInvalid = due.isNotEmpty() && due.toIntOrNull() !in 1..31
+    val interestValue = interest.replace(',', '.').toDoubleOrNull()
+    val interestInvalid = interest.isNotBlank() && (interestValue == null || interestValue < 0)
+    val creditInvalid = isCredit && (cutoffInvalid || dueInvalid || interestInvalid)
+    val dirty = type != (existing?.type ?: types.first()) ||
+        name != (existing?.name ?: "") ||
+        amountMinor != currentAmountMinor ||
+        limitMinor != (existingCard?.creditLimitMinor ?: 0L) ||
+        cutoff != (existingCard?.cutoffDay?.toString() ?: "") ||
+        due != (existingCard?.dueDay?.toString() ?: "") ||
+        interest != (existingCard?.interestRate?.toString() ?: "")
+    var confirmDiscard by remember { mutableStateOf(false) }
+    val requestDismiss = { if (dirty) confirmDiscard = true else onDismiss() }
+    if (confirmDiscard) DiscardChangesDialog(onDiscard = onDismiss, onKeepEditing = { confirmDiscard = false })
+    val sheetState = rememberGuardedSheetState(dirty) { confirmDiscard = true }
+    ModalBottomSheet(onDismissRequest = requestDismiss, sheetState = sheetState, dragHandle = null) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(24.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             SheetHeader(
                 title = if (isEditing) "Editar cuenta" else "Nueva cuenta",
-                onDismiss = onDismiss,
+                onDismiss = requestDismiss,
             )
             if (isEditing) {
                 // El tipo queda bloqueado una vez creada la cuenta (ver KDoc arriba) — se muestra
@@ -852,9 +833,14 @@ private fun AccountFormDialog(
             AccountNameField(name, { name = it }, nameTaken)
             if (isCredit) {
                 MoneyField(limitMinor, { limitMinor = it }, currencyCode = baseCurrency, label = "Cupo", plainLabel = true)
-                NumberField(cutoff, "Fecha de corte", "Día del mes (1-31)", maxLen = 2) { cutoff = it }
-                NumberField(due, "Fecha de pago", "Día del mes (1-31)", maxLen = 2) { due = it }
-                DecimalField(interest, "Tasa de interés mensual (%)", "0.0") { interest = it }
+                NumberField(cutoff, "Fecha de corte", "Día del mes (1–31)", maxLen = 2, error = DAY_ERROR.takeIf { cutoffInvalid }) { cutoff = it }
+                NumberField(due, "Fecha de pago", "Día del mes (1–31)", maxLen = 2, error = DAY_ERROR.takeIf { dueInvalid }) { due = it }
+                DecimalField(
+                    interest,
+                    "Tasa de interés mensual (%)",
+                    "0,0",
+                    error = "Escribe un número, por ejemplo 2,5".takeIf { interestInvalid },
+                ) { interest = it }
             } else {
                 MoneyField(amountMinor, { amountMinor = it }, currencyCode = baseCurrency, label = "Monto inicial", plainLabel = true)
             }
@@ -867,10 +853,10 @@ private fun AccountFormDialog(
                         if (isCredit) limitMinor else null,
                         if (isCredit) cutoff.toLongOrNull() else null,
                         if (isCredit) due.toLongOrNull() else null,
-                        if (isCredit) interest.toDoubleOrNull() else null,
+                        if (isCredit) interestValue else null,
                     )
                 },
-                enabled = name.isNotBlank() && !nameTaken,
+                enabled = name.isNotBlank() && !nameTaken && !creditInvalid,
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(if (isEditing) "Guardar cambios" else "Crear cuenta", fontFamily = displayFontFamily()) }
         }
@@ -891,18 +877,12 @@ private fun AccountNameField(value: String, onChange: (String) -> Unit, nameTake
             colors = sageFieldColors(),
             modifier = Modifier.fillMaxWidth(),
         )
-        if (nameTaken) {
-            Text(
-                "Ya existe una cuenta con ese nombre",
-                style = MaterialTheme.typography.bodySmall,
-                color = LocalFinanceColors.current.expense,
-            )
-        }
+        if (nameTaken) FieldError("Ya existe una cuenta con ese nombre")
     }
 }
 
 @Composable
-private fun DecimalField(value: String, label: String, placeholder: String, onChange: (String) -> Unit) {
+private fun DecimalField(value: String, label: String, placeholder: String, error: String? = null, onChange: (String) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         OutlinedTextField(
@@ -911,15 +891,17 @@ private fun DecimalField(value: String, label: String, placeholder: String, onCh
             placeholder = { Text(placeholder) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            isError = error != null,
             shape = MaterialTheme.shapes.medium,
             colors = sageFieldColors(),
             modifier = Modifier.fillMaxWidth(),
         )
+        if (error != null) FieldError(error)
     }
 }
 
 @Composable
-private fun NumberField(value: String, label: String, placeholder: String, maxLen: Int, onChange: (String) -> Unit) {
+private fun NumberField(value: String, label: String, placeholder: String, maxLen: Int, error: String? = null, onChange: (String) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         OutlinedTextField(
@@ -928,9 +910,13 @@ private fun NumberField(value: String, label: String, placeholder: String, maxLe
             placeholder = { Text(placeholder) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            isError = error != null,
             shape = MaterialTheme.shapes.medium,
             colors = sageFieldColors(),
             modifier = Modifier.fillMaxWidth(),
         )
+        if (error != null) FieldError(error)
     }
 }
+
+private const val DAY_ERROR = "Debe ser un día entre 1 y 31"

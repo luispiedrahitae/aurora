@@ -52,7 +52,6 @@ fun SavingsRateGauge(savingsRate: Float, goalPct: Long, onGoalChange: (Long) -> 
     val animated by animateFloatAsState(targetValue = arcTarget, animationSpec = motionTween(600))
     val pctInt = (savingsRate.coerceAtMost(1f) * 100).toInt()
     val valueColor = if (pctInt < 0) finance.expense else finance.income
-    val aboveGoal = savingsRate * 100f >= goalPct
     var showGoalDialog by remember { mutableStateOf(false) }
 
     FinanceCard(
@@ -97,23 +96,26 @@ fun SavingsRateGauge(savingsRate: Float, goalPct: Long, onGoalChange: (Long) -> 
             }
             Column(Modifier.weight(1f)) {
                 Text(
-                    "TASA DE AHORRO",
+                    "META DE AHORRO",
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    if (aboveGoal) "Por encima de tu meta de $goalPct%" else "Meta: $goalPct%",
+                    "$goalPct%",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                // Nombra el número del anillo: sin esto había dos porcentajes y solo uno con etiqueta.
+                Text(
+                    "Tu ahorro actual: $pctInt%",
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (aboveGoal) finance.income else MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            InfoTooltip(
-                "Es lo que ahorraste del mes: (ingresos − gastos) ÷ ingresos, en porcentaje. " +
-                    "Un valor negativo significa que gastaste más de lo que ingresó. " +
-                    "Sin ingresos registrados este mes, muestra 0%.",
-                contentDescription = "Cómo se calcula la tasa de ahorro",
-            )
+            // Pista visible de que la tarjeta se toca para editar la meta (antes solo en semántica).
+            Icon(LucideIcons.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 

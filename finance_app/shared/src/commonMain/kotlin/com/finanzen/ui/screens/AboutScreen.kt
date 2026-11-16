@@ -38,7 +38,7 @@ fun AboutScreen(onBack: () -> Unit) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("Sage", style = MaterialTheme.typography.headlineSmall.copy(fontFamily = displayFontFamily()))
                     Text(
-                        "Sabiduría financiera, sin ruido.",
+                        "Si sabes a dónde va, sabes lo que tienes.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -64,23 +64,6 @@ fun AboutScreen(onBack: () -> Unit) {
                     title = "Datos y permisos",
                     body = "Sage pide huella/rostro para desbloquear la app y notificaciones para tus recordatorios. " +
                         "Nada más: no hay acceso a contactos, ubicación ni internet.",
-                )
-            }
-
-            item {
-                InfoCard(
-                    icon = LucideIcons.FileText,
-                    title = "Licencias y tecnología",
-                    body = "Construida con Kotlin Multiplatform y Compose Multiplatform. Software de código abierto " +
-                        "bajo sus respectivas licencias.",
-                )
-            }
-
-            item {
-                InfoCard(
-                    icon = LucideIcons.Palette,
-                    title = "Iconos",
-                    body = "Iconos de interfaz: Lucide (ISC). Las marcas y logotipos pertenecen a sus respectivos dueños.",
                 )
             }
         }

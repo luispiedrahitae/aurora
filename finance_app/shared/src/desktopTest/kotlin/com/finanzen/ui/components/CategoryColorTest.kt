@@ -1,7 +1,13 @@
 package com.finanzen.ui.components
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.toArgb
+import com.finanzen.ui.theme.DarkFinanceColors
+import com.finanzen.ui.theme.FinanZenDarkScheme
+import com.finanzen.ui.theme.FinanZenLightScheme
 import com.finanzen.ui.theme.LightCategoryColors
+import com.finanzen.ui.theme.LightFinanceColors
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -46,6 +52,21 @@ class CategoryColorTest {
         // Ninguna clave repetida en todo el catálogo.
         val keys = categoryIcons.map { it.first }
         assertEquals(keys.size, keys.toSet().size)
+    }
+
+    @Test
+    fun ingresoYGastoContrastanSobreFondoYTarjeta() {
+        fun ratio(a: Color, b: Color): Float {
+            val (hi, lo) = listOf(a.luminance(), b.luminance()).sortedDescending()
+            return (hi + 0.05f) / (lo + 0.05f)
+        }
+        listOf(LightFinanceColors to FinanZenLightScheme, DarkFinanceColors to FinanZenDarkScheme).forEach { (f, s) ->
+            listOf(f.income, f.expense).forEach { fg ->
+                listOf(s.background, s.surfaceContainer).forEach { bg ->
+                    assertTrue(ratio(fg, bg) >= 4.5f, "$fg sobre $bg = ${ratio(fg, bg)}")
+                }
+            }
+        }
     }
 
     @Test

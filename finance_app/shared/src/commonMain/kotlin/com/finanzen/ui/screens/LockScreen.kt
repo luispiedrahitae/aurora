@@ -28,6 +28,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
@@ -50,11 +52,15 @@ fun LockScreen(vm: SecurityViewModel) {
     val isBusy by vm.isBusy.collectAsState()
     val biometric = rememberBiometricUnlock()
 
+    val haptic = LocalHapticFeedback.current
     LaunchedEffect(entered) {
-        if (entered.length in 4..PIN_MAX) {
-            // No auto-submit; el usuario presiona "OK" en el keypad. Limpio el error al teclear.
-            if (error != null) vm.clearError()
-        }
+        // No auto-submit; el usuario presiona "OK" en el keypad. El error se limpia desde el primer
+        // dígito: antes seguía visible mientras se tecleaban los 3 primeros del nuevo intento.
+        if (entered.isNotEmpty() && error != null) vm.clearError()
+    }
+    // Vibración al fallar: el error se nota aunque no se esté mirando el texto.
+    LaunchedEffect(error) {
+        if (error != null) haptic.performHapticFeedback(HapticFeedbackType.LongPress)
     }
 
     // Ofrece biometría automáticamente al abrir la pantalla de bloqueo.
@@ -235,6 +241,8 @@ private fun KeypadCell(label: String, modifier: Modifier, onClick: () -> Unit) {
         Box(contentAlignment = Alignment.Center) {
             when (label) {
                 "←" -> Icon(LucideIcons.Backspace, contentDescription = "Borrar dígito")
+                // "OK" se anuncia por lo que hace.
+                "OK" -> Text(label, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.semantics { contentDescription = "Desbloquear" })
                 else -> Text(label, style = MaterialTheme.typography.headlineSmall)
             }
         }

@@ -231,7 +231,7 @@ private fun seedRecurringInstruments(
     )
     val investDue = RecurrenceSchedule.occurrencesDueUpTo(investStart, todayEpochDay, "MONTHLY", 9)
     investDue.dates.forEach { day ->
-        txRepo.add(savingsAccountId, investmentCategoryId, investMinor, currency, day, "Fondo indexado", "EXPENSE", investmentId = investId)
+        txRepo.add(savingsAccountId, investmentCategoryId, investMinor, currency, day, "Aporte: Fondo indexado", "EXPENSE", investmentId = investId)
     }
     investRepo.updateNextContribution(investId, investDue.next)
 

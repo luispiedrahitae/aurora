@@ -14,11 +14,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -68,6 +70,7 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun BudgetsScreen(
     onBack: (() -> Unit)? = null,
+    onOpenCategories: () -> Unit = {},
     vm: BudgetsViewModel = koinViewModel(),
 ) {
     val data by vm.data.collectAsState()
@@ -147,8 +150,10 @@ fun BudgetsScreen(
                 },
             )
             when {
+                !data.loaded -> Box(Modifier.fillMaxSize())
                 data.rows.isEmpty() ->
-                    EmptyMessage("Sin presupuestos", "Crea categorías de gasto para asignarles presupuesto.")
+                    // Sin categorías de gasto no hay FAB: el botón lleva al único sitio donde se resuelve.
+                    EmptyMessage("Sin presupuestos", "Crea categorías de gasto para asignarles presupuesto.", "Ir a Categorías", onOpenCategories)
                 budgeted.isEmpty() ->
                     EmptyMessage("Sin presupuestos", "Usa el botón + para asignar uno a una categoría.")
                 else ->
@@ -167,14 +172,17 @@ fun BudgetsScreen(
 }
 
 @Composable
-private fun EmptyMessage(title: String, subtitle: String) {
+private fun EmptyMessage(title: String, subtitle: String, actionLabel: String? = null, onAction: () -> Unit = {}) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        EmptyState(
-            icon = LucideIcons.PieChart,
-            title = title,
-            subtitle = subtitle,
-            modifier = Modifier.padding(32.dp),
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            EmptyState(
+                icon = LucideIcons.PieChart,
+                title = title,
+                subtitle = subtitle,
+                modifier = Modifier.padding(LocalSpacing.current.xxl),
+            )
+            if (actionLabel != null) OutlinedButton(onClick = onAction) { Text(actionLabel) }
+        }
     }
 }
 
@@ -226,6 +234,9 @@ private fun BudgetFormDialog(
                 onSelect = { selected = it },
                 leadingContent = { row -> CategoryAvatar(row.categoryName, size = 32.dp) },
                 sectionOf = { row -> row.parentName ?: "Categorías" },
+                // Al editar, la categoría queda fija (como el tipo de cuenta): cambiarla escribía el
+                // límite sobre otra categoría y dejaba el presupuesto original intacto.
+                enabled = preselected == null,
                 plainLabel = true,
             )
             MoneyField(
@@ -244,7 +255,7 @@ private fun BudgetFormDialog(
             if (preselected != null) {
                 TextButton(
                     onClick = { confirmRemove = true },
-                    colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = finance.expense),
+                    colors = ButtonDefaults.textButtonColors(contentColor = finance.expense),
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text("Quitar presupuesto") }
             }

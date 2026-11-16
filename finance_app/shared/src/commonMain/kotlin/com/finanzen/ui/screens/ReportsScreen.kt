@@ -3,6 +3,7 @@ package com.finanzen.ui.screens
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,11 +11,16 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.liveRegion
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.finanzen.ui.components.FinanceCard
@@ -91,7 +97,7 @@ fun ReportsScreen(
             item {
                 ReportCard(
                     title = "Movimientos (CSV)",
-                    subtitle = "Exporta los movimientos de $periodLabel. Compatible con Excel, Google Sheets, scripts.",
+                    subtitle = "Exporta los movimientos de $periodLabel. Se abre en Excel, Google Sheets y otras hojas de cálculo.",
                     icon = LucideIcons.FileText,
                     buttonText = "Exportar CSV",
                     onClick = { vm.exportTransactionsCsv() },
@@ -99,10 +105,10 @@ fun ReportsScreen(
             }
             item {
                 ReportCard(
-                    title = "Resumen del periodo (PDF)",
+                    title = "Resumen del período (PDF)",
                     subtitle = "Balance, categorías, presupuestos e inversiones de $periodLabel.",
-                    icon = LucideIcons.FileText,
-                    buttonText = "Exportar PDF",
+                    icon = LucideIcons.PieChart,
+                    buttonText = "Exportar resumen PDF",
                     onClick = { vm.exportPeriodSummaryPdf() },
                 )
             }
@@ -120,8 +126,8 @@ private fun ReportCard(
 ) {
     FinanceCard(modifier = Modifier.fillMaxWidth()) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            androidx.compose.foundation.layout.Row(
-                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(LocalSpacing.current.sm),
             ) {
                 Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
@@ -141,11 +147,12 @@ private fun StatusBanner(message: String, isError: Boolean, onDismiss: () -> Uni
     val finance = LocalFinanceColors.current
     val container = if (isError) finance.expenseContainer else MaterialTheme.colorScheme.primaryContainer
     val fg = if (isError) finance.expense else MaterialTheme.colorScheme.onPrimaryContainer
-    FinanceCard(modifier = Modifier.fillMaxWidth(), color = container, contentPadding = PaddingValues(12.dp)) {
+    // liveRegion: el resultado se anuncia aunque el foco del lector esté en el botón de exportar.
+    FinanceCard(modifier = Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite }, color = container, contentPadding = PaddingValues(12.dp)) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(if (isError) "Pendiente / error" else "Exportado", color = fg, fontWeight = FontWeight.SemiBold)
+            Text(if (isError) "No se pudo exportar" else "Exportado", color = fg, fontWeight = FontWeight.SemiBold)
             Text(message, style = MaterialTheme.typography.bodySmall, color = fg)
-            Button(onClick = onDismiss) { Text("OK") }
+            TextButton(onClick = onDismiss) { Text("Entendido", color = fg) }
         }
     }
 }

@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -28,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.finanzen.data.RESERVED_CATEGORY_NAMES
 import com.finanzen.db.Category
@@ -227,8 +230,12 @@ private fun CategoryCard(
             ) {
                 CategoryAvatar(parent.name, size = 28.dp)
                 Text(parent.name, modifier = Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
+                // Con el campo abierto el botón pasa a "Cancelar": antes "+" abría y enviaba con la misma etiqueta.
                 IconButton(onClick = { adding = !adding }) {
-                    Icon(LucideIcons.Plus, contentDescription = "Añadir subcategoría")
+                    Icon(
+                        if (adding) LucideIcons.X else LucideIcons.Plus,
+                        contentDescription = if (adding) "Cancelar" else "Nueva subcategoría en ${parent.name}",
+                    )
                 }
             }
             if (children.isNotEmpty()) {
@@ -247,32 +254,34 @@ private fun CategoryCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
+                    val canAdd = newSubName.isNotBlank() && !nameTaken && !isReserved
+                    val submit = {
+                        onAddSubcategory(parent.id, newSubName)
+                        newSubName = ""
+                        adding = false
+                    }
                     OutlinedTextField(
                         value = newSubName,
                         onValueChange = { newSubName = it },
                         label = { Text("Subcategoría") },
                         singleLine = true,
+                        // "Listo" del teclado también añade, sin tener que buscar el botón.
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                        keyboardActions = KeyboardActions(onDone = { if (canAdd) submit() }),
                         isError = nameTaken || isReserved,
                         supportingText = when {
                             isReserved -> {
                                 { Text("Nombre de categoría reservado") }
                             }
                             nameTaken -> {
-                                { Text("Ya existe") }
+                                { Text("Ya existe una subcategoría con ese nombre") }
                             }
                             else -> null
                         },
                         modifier = Modifier.weight(1f),
                     )
-                    IconButton(
-                        onClick = {
-                            onAddSubcategory(parent.id, newSubName)
-                            newSubName = ""
-                            adding = false
-                        },
-                        enabled = newSubName.isNotBlank() && !nameTaken && !isReserved,
-                    ) {
-                        Icon(LucideIcons.Plus, contentDescription = "Añadir subcategoría")
+                    IconButton(onClick = submit, enabled = canAdd) {
+                        Icon(LucideIcons.Check, contentDescription = "Añadir subcategoría")
                     }
                 }
             }

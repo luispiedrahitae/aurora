@@ -41,6 +41,10 @@ class TransactionsViewModel(
         txRepo.observeAll().map { list -> list.filter { it.kind != "ADJUSTMENT" } }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /** false hasta la primera lectura de la BD: sin esto la pantalla mostraba "vacío" (con consejos equivocados) durante la carga. */
+    val loaded: StateFlow<Boolean> =
+        txRepo.observeAll().map { true }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
     val accounts: StateFlow<List<Account>> =
         accountRepo.observeAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 

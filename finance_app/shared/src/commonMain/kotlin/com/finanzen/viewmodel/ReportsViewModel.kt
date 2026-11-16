@@ -27,6 +27,17 @@ import kotlinx.datetime.todayIn
 data class ExportStatus(val message: String, val isError: Boolean)
 
 /**
+ * Traduce el resultado crudo de las plataformas ("error: <excepción>", "stub: …", una ruta) a un
+ * mensaje para el usuario: nunca mostrar texto de excepción ni la palabra "stub".
+ */
+internal fun exportStatusOf(result: String): ExportStatus = when {
+    result.startsWith("error") -> ExportStatus("No se pudo guardar el archivo. Revisa el espacio disponible e inténtalo de nuevo.", isError = true)
+    result.startsWith("stub") -> ExportStatus("Aún no disponible en esta plataforma.", isError = true)
+    result.startsWith("Guardado") -> ExportStatus(result, isError = false)
+    else -> ExportStatus("Guardado en $result", isError = false)
+}
+
+/**
  * Exportación de reportes (CSV/PDF), filtrada por mes o año. La agregación de presupuestos/
  * patrimonio/inversiones reutiliza [BudgetsViewModel.computeBudgets] y
  * [DashboardViewModel.computeMonthlyNetWorth] tal cual — nada se recalcula aquí.
@@ -82,7 +93,7 @@ class ReportsViewModel(
         val accs = accountRepo.allIncludingArchived().associate { it.id to it.name }
         val csv = ReportBuilder.transactionsCsv(rows, cats, accs, subscriptionRepo.all(), investRepo.all())
         val result = exporter.saveCsv("finanzen-movimientos-${periodSuffix()}", csv)
-        _status.value = ExportStatus(result, isError = result.startsWith("error") || result.startsWith("stub"))
+        _status.value = exportStatusOf(result)
     }
 
     fun exportPeriodSummaryPdf() {
@@ -115,7 +126,7 @@ class ReportsViewModel(
             investments = investRepo.all(),
         )
         val result = exporter.savePdf("finanzen-resumen-${periodSuffix()}", lines)
-        _status.value = ExportStatus(result, isError = result.startsWith("error") || result.startsWith("stub"))
+        _status.value = exportStatusOf(result)
     }
 
     fun clearStatus() {

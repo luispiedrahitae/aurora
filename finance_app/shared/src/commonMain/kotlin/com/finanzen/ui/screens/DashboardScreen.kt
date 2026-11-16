@@ -45,6 +45,7 @@ import com.finanzen.ui.components.SavingsRateGauge
 import com.finanzen.ui.components.SectionHeader
 import com.finanzen.ui.components.TopFrequentExpensesList
 import com.finanzen.ui.components.YearSelector
+import com.finanzen.ui.components.balanceColor
 import com.finanzen.ui.components.kpiDelta
 import com.finanzen.ui.format.PeriodMode
 import com.finanzen.ui.format.formatMesAnio
@@ -219,7 +220,7 @@ fun DashboardScreen(
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
                         SectionHeader("Gastos más frecuentes")
-                        TopFrequentExpensesList(data.frequent, data.currency, modifier = Modifier.fillMaxWidth())
+                        TopFrequentExpensesList(data.frequent, modifier = Modifier.fillMaxWidth())
                     }
                 }
             }
@@ -237,11 +238,7 @@ private fun BalanceHeroCard(
     onToggleHidden: () -> Unit,
 ) {
     val spacing = LocalSpacing.current
-    val onSurface = MaterialTheme.colorScheme.onSurface
     val onSurfaceVar = MaterialTheme.colorScheme.onSurfaceVariant
-    // Tarjeta neutra (no primaryContainer): los colores semánticos verde/rojo contrastan como es debido
-    // en cualquier acento/dinámico, sin lavar el texto sobre el contenedor de color.
-    val expenseRed = LocalFinanceColors.current.expense
 
     // El balance general es histórico (saldos iniciales + ingresos − gastos de todo el
     // histórico), con el mismo formato global (símbolo + separadores) que el resto de montos de
@@ -250,7 +247,8 @@ private fun BalanceHeroCard(
     // grande siempre quepa en una línea.
     val fmt = LocalMoneyFormat.current
     val haptic = LocalHapticFeedback.current
-    val balanceColor = if (totalBalance >= 0) onSurface else expenseRed
+    // Tarjeta neutra (no primaryContainer): verde/rojo semánticos contrastan en cualquier acento.
+    val heroColor = balanceColor(totalBalance)
     val animatedBalance by animateFloatAsState(targetValue = totalBalance.toFloat(), animationSpec = motionTween(400))
     val balanceText = if (hidden) MASK else fmt.format(animatedBalance.toLong(), currency)
 
@@ -285,7 +283,7 @@ private fun BalanceHeroCard(
                 // Sage.dc.html: el balance del hero es 36px/700, no el display de 52sp reservado
                 // para "un número por pantalla" — aquí ya conviven balance + KPIs + suscripciones.
                 maxFontSize = MaterialTheme.typography.displaySmall.fontSize,
-                color = balanceColor,
+                color = heroColor,
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.displaySmall,
             )

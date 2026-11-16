@@ -66,7 +66,10 @@ fun IncomeExpenseBarChart(
     val selectedLabelColor = MaterialTheme.colorScheme.onSurface
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
 
-    FinanceCard(modifier = modifier.semantics { contentDescription = description }) {
+    // Resumen hablado: el lector de pantalla no puede "ver" las barras ni tocarlas una a una.
+    val spoken = "$description. Ingresos ${fmt.format(points.sumOf { it.incomeMinor }, currency)}, " +
+        "gastos ${fmt.format(points.sumOf { it.expenseMinor }, currency)}"
+    FinanceCard(modifier = modifier.semantics { contentDescription = spoken }) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -75,19 +78,22 @@ fun IncomeExpenseBarChart(
             ) {
                 val selected = selectedIndex?.let { points[it] }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    // Prefijo textual: el par de montos no se distingue solo por color.
                     if (selected != null) {
                         Text(
-                            fmt.format(selected.incomeMinor, currency),
+                            "Ingresos ${fmt.format(selected.incomeMinor, currency)}",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = finance.income,
                         )
                         Text(
-                            fmt.format(selected.expenseMinor, currency),
+                            "Gastos ${fmt.format(selected.expenseMinor, currency)}",
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = finance.expense,
                         )
+                    } else {
+                        Text("Toca una barra", style = MaterialTheme.typography.labelMedium, color = labelColor)
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {

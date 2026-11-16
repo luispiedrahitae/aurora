@@ -18,6 +18,9 @@ import androidx.compose.ui.graphics.Color
  * categoría (más oscuro) para no cambiar el look por defecto de la app en un dispositivo de uso
  * personal.
  *
+ * Los 8 acentos finales (vinos, púrpuras, azules) NO están en la paleta de categorías: añadirlos ahí
+ * cambiaría el `hash % size` de [colorForCategory] y recolorearía las categorías ya existentes.
+ *
  * Derivación de container/onContainer (H,S constantes del primary de cada tema, solo se mueve L):
  * container claro = L90%, onContainer claro = L28%, onPrimary oscuro = L13%, container oscuro = L20%,
  * onContainer oscuro = L72%. Los primarios claros de ochre/olive/moss/fern/light terracotta se
@@ -109,6 +112,63 @@ enum class AccentPreset(
         Color(0xFF87454B),
         FinanZenLightScheme.withAccent(Color(0xFF87454B), Color.White, Color(0xFFEEDDDF), Color(0xFF5F3034)),
         FinanZenDarkScheme.withAccent(Color(0xFFCA9999), Color(0xFF2C1717), Color(0xFF432323), Color(0xFFCEA1A1)),
+    ),
+
+    // Vinos, púrpuras y azules apagados: fuera de la paleta de categorías a propósito (ver KDoc).
+    Wine(
+        "Vinotinto",
+        Color(0xFF742F40),
+        FinanZenLightScheme.withAccent(Color(0xFF742F40), Color.White, Color(0xFFF0DBE0), Color(0xFF652938)),
+        FinanZenDarkScheme.withAccent(Color(0xFFC992A0), Color(0xFF2F131A), Color(0xFF481E28), Color(0xFFD39DAA)),
+    ),
+
+    Burgundy(
+        "Burdeos",
+        Color(0xFF6F2A30),
+        FinanZenLightScheme.withAccent(Color(0xFF6F2A30), Color.White, Color(0xFFF1DADC), Color(0xFF68272D)),
+        FinanZenDarkScheme.withAccent(Color(0xFFCB9095), Color(0xFF301215), Color(0xFF4A1C20), Color(0xFFD59BA0)),
+    ),
+
+    Plum(
+        "Ciruela",
+        Color(0xFF713D68),
+        FinanZenLightScheme.withAccent(Color(0xFF713D68), Color.White, Color(0xFFEDDEEB), Color(0xFF5D3256)),
+        FinanZenDarkScheme.withAccent(Color(0xFFC19ABA), Color(0xFF2B1728), Color(0xFF42243D), Color(0xFFCBA4C4)),
+    ),
+
+    Mauve(
+        "Malva",
+        Color(0xFF6F5483),
+        FinanZenLightScheme.withAccent(Color(0xFF6F5483), Color.White, Color(0xFFE6E0EB), Color(0xFF4A3857)),
+        FinanZenDarkScheme.withAccent(Color(0xFFB09FBC), Color(0xFF221A28), Color(0xFF35283E), Color(0xFFBAA9C6)),
+    ),
+
+    Petrol(
+        "Petróleo",
+        Color(0xFF2A636F),
+        FinanZenLightScheme.withAccent(Color(0xFF2A636F), Color.White, Color(0xFFDAEDF1), Color(0xFF275D68)),
+        FinanZenDarkScheme.withAccent(Color(0xFF90C1CB), Color(0xFF122B30), Color(0xFF1C424A), Color(0xFF9BCBD5)),
+    ),
+
+    Steel(
+        "Azul acero",
+        Color(0xFF3F6783),
+        FinanZenLightScheme.withAccent(Color(0xFF3F6783), Color.White, Color(0xFFDDE7EE), Color(0xFF2E4C60)),
+        FinanZenDarkScheme.withAccent(Color(0xFF97B1C4), Color(0xFF16232D), Color(0xFF213645), Color(0xFFA1BBCE)),
+    ),
+
+    Slate(
+        "Azul pizarra",
+        Color(0xFF476185),
+        FinanZenLightScheme.withAccent(Color(0xFF476185), Color.White, Color(0xFFDEE4ED), Color(0xFF32445D)),
+        FinanZenDarkScheme.withAccent(Color(0xFF9AAAC1), Color(0xFF171F2B), Color(0xFF243042), Color(0xFFA4B4CB)),
+    ),
+
+    Navy(
+        "Azul marino",
+        Color(0xFF314772),
+        FinanZenLightScheme.withAccent(Color(0xFF314772), Color.White, Color(0xFFDBE2F0), Color(0xFF2B3E64)),
+        FinanZenDarkScheme.withAccent(Color(0xFF93A5C8), Color(0xFF141D2E), Color(0xFF1F2C47), Color(0xFF9EAFD1)),
     ),
     ;
 

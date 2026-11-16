@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -185,7 +186,8 @@ fun <T> PickerField(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable {
+                                        // selectable: TalkBack anuncia cuál opción está elegida, no solo el color.
+                                        .selectable(selected = isSelected, role = Role.RadioButton) {
                                             onSelect(option)
                                             open = false
                                         }

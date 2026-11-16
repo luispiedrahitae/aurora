@@ -14,7 +14,7 @@ CREATE TABLE Investment (
     intervalCount        INTEGER,
     nextContributionDate INTEGER,                          -- epoch day; null si puntual o CLOSED
     startDate            INTEGER NOT NULL,
-    status               TEXT NOT NULL DEFAULT 'OPEN',      -- OPEN | CLOSED
+    status               TEXT NOT NULL DEFAULT 'OPEN',      -- OPEN | CLOSED | ARCHIVED
     withdrawnAmountMinor INTEGER,
     closedDate           INTEGER,
     yieldMinor           INTEGER                            -- retirado − aportado; puede ser negativo
@@ -25,6 +25,21 @@ SELECT * FROM Investment WHERE status = 'OPEN' ORDER BY periodic DESC, nextContr
 
 selectClosed:
 SELECT * FROM Investment WHERE status = 'CLOSED' ORDER BY closedDate DESC;
+
+-- Archivar reutiliza `status` (sin columna nueva: la BD no tiene migraciones). Al restaurar, el
+-- estado previo se deduce de closedDate: null = estaba abierta, no-null = estaba cerrada.
+selectArchived:
+SELECT * FROM Investment WHERE status = 'ARCHIVED' ORDER BY name;
+
+archive:
+UPDATE Investment SET status = 'ARCHIVED' WHERE id = ?;
+
+unarchive:
+UPDATE Investment SET status = CASE WHEN closedDate IS NULL THEN 'OPEN' ELSE 'CLOSED' END WHERE id = ?;
+
+-- Todas (abiertas, cerradas y archivadas): backup, reportes y limpieza — no deben perder las archivadas.
+selectAll:
+SELECT * FROM Investment;
 
 selectById:
 SELECT * FROM Investment WHERE id = ?;
@@ -48,6 +63,10 @@ UPDATE Investment SET name = ?, amountMinor = ?, currency = ?, accountId = ?, pe
 
 close:
 UPDATE Investment SET status = 'CLOSED', withdrawnAmountMinor = ?, closedDate = ?, yieldMinor = ?, nextContributionDate = NULL WHERE id = ?;
+
+-- Deshace el cierre: los movimientos (incl. el retiro final) siguen en el historial.
+reopen:
+UPDATE Investment SET status = 'OPEN', withdrawnAmountMinor = NULL, closedDate = NULL, yieldMinor = NULL, nextContributionDate = ? WHERE id = ?;
 
 delete:
 DELETE FROM Investment WHERE id = ?;

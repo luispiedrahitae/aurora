@@ -123,6 +123,8 @@ class TransactionRepository(private val db: FinanzenDb) {
 
     fun deleteByAccount(accountId: Long) = db.transactionQueries.deleteByAccount(accountId)
 
+    fun deleteByInvestment(investmentId: Long) = db.transactionQueries.deleteByInvestment(investmentId)
+
     fun countForPlan(planId: Long): Long = db.transactionQueries.countByInstallmentPlan(planId).executeAsOne()
 
     fun contributionsForInvestment(investmentId: Long): List<TransactionRow> = db.transactionQueries.selectByInvestment(investmentId).executeAsList()
@@ -244,6 +246,12 @@ class InvestmentRepository(private val db: FinanzenDb) {
 
     fun observeClosed(): Flow<List<Investment>> = db.investmentQueries.selectClosed().asFlow().mapToList(Dispatchers.Default)
 
+    fun observeArchived(): Flow<List<Investment>> = db.investmentQueries.selectArchived().asFlow().mapToList(Dispatchers.Default)
+
+    fun archive(id: Long) = db.investmentQueries.archive(id)
+
+    fun unarchive(id: Long) = db.investmentQueries.unarchive(id)
+
     fun add(
         name: String,
         amountMinor: Long,
@@ -267,7 +275,7 @@ class InvestmentRepository(private val db: FinanzenDb) {
 
     /** Abiertas + cerradas — para reportes de periodos pasados que aún deben mostrar el nombre
      * propio de una inversión ya cerrada. */
-    fun all(): List<Investment> = db.investmentQueries.selectOpen().executeAsList() + db.investmentQueries.selectClosed().executeAsList()
+    fun all(): List<Investment> = db.investmentQueries.selectAll().executeAsList()
 
     fun byId(id: Long): Investment? = db.investmentQueries.selectById(id).executeAsOneOrNull()
 
@@ -285,6 +293,8 @@ class InvestmentRepository(private val db: FinanzenDb) {
     ) = db.investmentQueries.update(name, amountMinor, currency, accountId, if (periodic) 1L else 0L, frequency, intervalCount, id)
 
     fun close(id: Long, withdrawnAmountMinor: Long, closedDate: Long, yieldMinor: Long) = db.investmentQueries.close(withdrawnAmountMinor, closedDate, yieldMinor, id)
+
+    fun reopen(id: Long, nextContributionDate: Long?) = db.investmentQueries.reopen(nextContributionDate, id)
 
     fun delete(id: Long) = db.investmentQueries.delete(id)
 

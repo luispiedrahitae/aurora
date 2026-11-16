@@ -11,6 +11,7 @@ import com.finanzen.db.Subscription
 import com.finanzen.platform.NotificationScheduler
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 class SubscriptionsViewModel(
@@ -24,6 +25,10 @@ class SubscriptionsViewModel(
 
     val subscriptions: StateFlow<List<Subscription>> =
         subsRepo.observeActive().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** false hasta la primera lectura de la BD: sin esto la pantalla mostraba "vacío" (con consejos equivocados) durante la carga. */
+    val loaded: StateFlow<Boolean> =
+        subsRepo.observeActive().map { true }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     val accounts: StateFlow<List<Account>> =
         accountRepo.observeAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
