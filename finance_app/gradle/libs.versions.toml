@@ -49,7 +49,6 @@ androidx-activity-compose    = { module = "androidx.activity:activity-compose", 
 androidx-work-runtime        = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
 androidx-biometric           = { module = "androidx.biometric:biometric", version.ref = "biometric" }
 
-detekt-formatting = { module = "io.gitlab.arturbosch.detekt:detekt-formatting", version.ref = "detekt" }
 
 [plugins]
 kotlinMultiplatform  = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }

@@ -65,6 +65,9 @@ Dirección de dependencias: `ui → viewmodel → data → domain`. Reglas duras
   - `./gradlew prepareForCommit` — ambos.
 - **Pre-commit:** `.githooks/pre-commit` corre `spotlessCheck` y `detekt`. Se activa una vez por
   clon con `git config core.hooksPath .githooks`. Los tests corren en el CI, no en el hook.
+- Spotless es el único dueño del formato; Detekt no trae reglas de formato.
+- `config/detekt/baseline-shared.xml` congela la deuda anterior al rediseño. El código nuevo no
+  puede añadir entradas; el archivo solo se regenera (`./gradlew detektBaseline`) para encogerlo.
 - No se usa `@Suppress` sin un comentario que explique por qué.
 
 ## 4. Tipado
@@ -75,7 +78,8 @@ Dirección de dependencias: `ui → viewmodel → data → domain`. Reglas duras
   no cadenas. La conversión a texto ocurre solo en el borde con la base de datos.
 - Prohibido `!!`. Se usa `?: return`, `requireNotNull` con mensaje o un tipo no nulo.
 - Las funciones públicas de `domain/` y `data/` declaran su tipo de retorno.
-- Los warnings del compilador son errores (`allWarningsAsErrors`).
+- Los warnings del compilador son errores (`allWarningsAsErrors`); se activa al cerrar la Fase 3,
+  cuando desaparezcan los usos de APIs de Material obsoletas.
 
 ## 5. Errores, estado y datos
 

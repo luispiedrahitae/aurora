@@ -60,12 +60,12 @@ allprojects {
         buildUponDefaultConfig = true
         allRules = false
         config.setFrom(rootProject.files("config/detekt/detekt.yml"))
+        // En un módulo KMP la tarea `detekt` no encuentra fuentes por defecto (src/commonMain, etc.).
+        source.setFrom(files("src"))
+        // Deuda previa a que Detekt analizara el módulo compartido; el código nuevo no puede sumar.
+        baseline = rootProject.file("config/detekt/baseline-${project.name}.xml")
         autoCorrect = false
         parallel = true
-    }
-
-    dependencies {
-        add("detektPlugins", rootProject.libs.detekt.formatting)
     }
 }
 
