@@ -1,0 +1,10 @@
+#!/bin/sh
+# Puerta rápida antes de cada commit: formato (Spotless) + análisis estático (Detekt).
+# Los tests corren en el CI. Activar una vez por clon: git config core.hooksPath .githooks
+# Solo actúa si el commit toca finance_app/.
+git diff --cached --quiet -- finance_app && exit 0
+cd "$(git rev-parse --show-toplevel)/finance_app" || exit 1
+./gradlew spotlessCheck detekt --quiet || {
+  echo "pre-commit: falló el formato o Detekt. Corre './gradlew format' y revisa el reporte." >&2
+  exit 1
+}
