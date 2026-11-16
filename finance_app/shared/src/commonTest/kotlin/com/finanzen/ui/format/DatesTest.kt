@@ -30,31 +30,31 @@ class DatesTest {
         // mesCorto()/mesLargo() ignoran locale.shortMonths/longMonths a propósito (ver comentario
         // ponytail en Dates.kt: la UI es 100% español, solo el orden día/mes/año varía por moneda)
         // y usan siempre MESES_CORTOS, que lleva punto ("jul.").
-        val epochDay = LocalDate(2026, 7, 1).toEpochDays().toLong()
+        val epochDay = LocalDate(2026, 7, 1).toEpochDays()
         assertEquals("1 jul.", formatDiaMes(epochDay, locale(DateOrder.DMY)))
     }
 
     @Test
     fun formatDiaMesOrdenMDY() {
-        val epochDay = LocalDate(2026, 7, 1).toEpochDays().toLong()
+        val epochDay = LocalDate(2026, 7, 1).toEpochDays()
         assertEquals("jul. 1", formatDiaMes(epochDay, locale(DateOrder.MDY)))
     }
 
     @Test
     fun formatFechaCortaOrdenDMY() {
-        val epochDay = LocalDate(2026, 7, 1).toEpochDays().toLong()
+        val epochDay = LocalDate(2026, 7, 1).toEpochDays()
         assertEquals("1 jul. 2026", formatFechaCorta(epochDay, locale(DateOrder.DMY)))
     }
 
     @Test
     fun formatFechaCortaOrdenMDY() {
-        val epochDay = LocalDate(2026, 7, 1).toEpochDays().toLong()
+        val epochDay = LocalDate(2026, 7, 1).toEpochDays()
         assertEquals("jul. 1, 2026", formatFechaCorta(epochDay, locale(DateOrder.MDY)))
     }
 
     @Test
     fun formatFechaCortaOrdenYMD() {
-        val epochDay = LocalDate(2026, 7, 1).toEpochDays().toLong()
+        val epochDay = LocalDate(2026, 7, 1).toEpochDays()
         assertEquals("2026 jul. 1", formatFechaCorta(epochDay, locale(DateOrder.YMD)))
     }
 
@@ -73,7 +73,7 @@ class DatesTest {
 
     @Test
     fun diaSemanaMapeaCorrectamenteElIndice() {
-        val epochDay = LocalDate(2026, 7, 1).toEpochDays().toLong() // 2026-07-01 es miércoles
+        val epochDay = LocalDate(2026, 7, 1).toEpochDays() // 2026-07-01 es miércoles
         assertEquals("miércoles", diaSemana(epochDay))
     }
 
@@ -84,7 +84,7 @@ class DatesTest {
 
     @Test
     fun periodOfEpochDayCoincideConMonthPeriod() {
-        val epochDay = LocalDate(2026, 1, 15).toEpochDays().toLong()
+        val epochDay = LocalDate(2026, 1, 15).toEpochDays()
         assertEquals(202601L, periodOfEpochDay(epochDay))
     }
 }

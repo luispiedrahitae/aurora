@@ -15,9 +15,9 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
+import kotlin.time.Clock
 
 class InvestmentsViewModel(
     private val investRepo: InvestmentRepository,
@@ -231,7 +231,7 @@ class InvestmentsViewModel(
         investRepo.delete(id)
     }
 
-    private fun todayEpochDay(): Long = Clock.System.todayIn(TimeZone.currentSystemDefault()).toEpochDays().toLong()
+    private fun todayEpochDay(): Long = Clock.System.todayIn(TimeZone.currentSystemDefault()).toEpochDays()
 
     /** [initialMinor] = aporte más antiguo; [contributedMinor] = total aportado (incluye el inicial). */
     data class FundTotals(val initialMinor: Long, val contributedMinor: Long, val withdrawnMinor: Long)

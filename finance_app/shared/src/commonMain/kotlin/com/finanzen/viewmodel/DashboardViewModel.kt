@@ -15,6 +15,7 @@ import com.finanzen.db.Category
 import com.finanzen.db.Subscription
 import com.finanzen.db.TransactionRow
 import com.finanzen.domain.RecurrenceSchedule
+import com.finanzen.domain.daysInMonth
 import com.finanzen.ui.format.PeriodMode
 import com.finanzen.ui.format.formatDiaMes
 import com.finanzen.ui.format.mesCorto
@@ -25,12 +26,13 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.datetime.Clock
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.number
 import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
+import kotlin.time.Clock
 
 data class DashboardData(
     val totalBalanceMinor: Long,
@@ -151,8 +153,8 @@ class DashboardViewModel(
         internal val NET_WORTH_TYPES = setOf("CASH", "DEBIT", "SAVINGS")
 
         private fun monthKey(year: Int, monthNumber: Int): Int = year * 100 + monthNumber
-        private fun monthKeyOf(epochDay: Long): Int = LocalDate.fromEpochDays(epochDay.toInt()).let { monthKey(it.year, it.monthNumber) }
-        private fun daysInMonth(firstOfMonth: LocalDate): Int = firstOfMonth.plus(DatePeriod(months = 1)).toEpochDays() - firstOfMonth.toEpochDays()
+        private fun monthKeyOf(epochDay: Long): Int = LocalDate.fromEpochDays(epochDay.toInt()).let { monthKey(it.year, it.month.number) }
+        private fun daysInMonth(firstOfMonth: LocalDate): Int = firstOfMonth.daysInMonth()
 
         /** (ingreso − gasto) ÷ ingreso, tope 100%; sin ingresos, 0% (no divide por cero). Puede ser
          * negativa: gastar más de lo ingresado es un déficit y la UI debe poder mostrarlo, no
@@ -278,11 +280,11 @@ class DashboardViewModel(
             val byDay = periodTxs.groupBy { it.date }
             val firstEpochDay = referenceMonth.toEpochDays()
             return (0 until daysInMonth(referenceMonth)).map { offset ->
-                val epochDay = (firstEpochDay + offset).toLong()
+                val epochDay = (firstEpochDay + offset)
                 val dayTxs = byDay[epochDay].orEmpty()
                 TrendPoint(
                     label = formatDiaMes(epochDay),
-                    axisLabel = LocalDate.fromEpochDays(epochDay.toInt()).dayOfMonth.toString(),
+                    axisLabel = LocalDate.fromEpochDays(epochDay.toInt()).day.toString(),
                     incomeMinor = dayTxs.filter { it.kind == "INCOME" }.sumOf { it.amountMinor },
                     expenseMinor = dayTxs.filter { it.kind == "EXPENSE" }.sumOf { it.amountMinor },
                 )
@@ -302,7 +304,7 @@ class DashboardViewModel(
             val opening = accounts.filter { it.type in NET_WORTH_TYPES }.sumOf { it.openingBalanceMinor }
             val countedTxs = txs.filter { it.accountId in countedAccountIds }
             return (1..12).map { m ->
-                val lastDayEpoch = LocalDate(year, m, 1).plus(DatePeriod(months = 1)).toEpochDays().toLong() - 1
+                val lastDayEpoch = LocalDate(year, m, 1).plus(DatePeriod(months = 1)).toEpochDays() - 1
                 val upTo = countedTxs.filter { it.date <= lastDayEpoch }
                 val income = upTo.filter { it.kind == "INCOME" }.sumOf { it.amountMinor }
                 val expense = upTo.filter { it.kind == "EXPENSE" }.sumOf { it.amountMinor }
@@ -318,11 +320,11 @@ class DashboardViewModel(
             val countedTxs = txs.filter { it.accountId in countedAccountIds }
             val firstEpochDay = month.toEpochDays()
             return (0 until daysInMonth(month)).map { offset ->
-                val epochDay = (firstEpochDay + offset).toLong()
+                val epochDay = (firstEpochDay + offset)
                 val upTo = countedTxs.filter { it.date <= epochDay }
                 val income = upTo.filter { it.kind == "INCOME" }.sumOf { it.amountMinor }
                 val expense = upTo.filter { it.kind == "EXPENSE" }.sumOf { it.amountMinor }
-                val dayNumber = LocalDate.fromEpochDays(epochDay.toInt()).dayOfMonth
+                val dayNumber = LocalDate.fromEpochDays(epochDay.toInt()).day
                 MonthNetWorth(dayNumber.toString(), opening + income - expense)
             }
         }
@@ -331,7 +333,7 @@ class DashboardViewModel(
          * al mes en curso (null para meses pasados o futuros — allí no hay nada que proyectar). */
         internal fun projectMonthEndExpense(expenseSoFarMinor: Long, today: LocalDate, month: LocalDate): Long? {
             if (today.year != month.year || today.month != month.month) return null
-            return expenseSoFarMinor * daysInMonth(month) / today.dayOfMonth
+            return expenseSoFarMinor * daysInMonth(month) / today.day
         }
 
         /** Fusiona las categorías mayores con la porción sintética "Otros" (ver `CategoryDonutChart`),

@@ -23,6 +23,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.progressSemantics
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
+import androidx.compose.material.icons.automirrored.outlined.TrendingUp
 import androidx.compose.material.icons.outlined.AccountBalance
 import androidx.compose.material.icons.outlined.AccountBalanceWallet
 import androidx.compose.material.icons.outlined.ArrowDownward
@@ -61,7 +63,6 @@ import androidx.compose.material.icons.outlined.LocalParking
 import androidx.compose.material.icons.outlined.LocalPizza
 import androidx.compose.material.icons.outlined.LocalTaxi
 import androidx.compose.material.icons.outlined.MedicalServices
-import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Movie
 import androidx.compose.material.icons.outlined.MusicNote
 import androidx.compose.material.icons.outlined.Palette
@@ -86,7 +87,6 @@ import androidx.compose.material.icons.outlined.Subscriptions
 import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material.icons.outlined.TheaterComedy
 import androidx.compose.material.icons.outlined.Train
-import androidx.compose.material.icons.outlined.TrendingUp
 import androidx.compose.material.icons.outlined.Tv
 import androidx.compose.material.icons.outlined.TwoWheeler
 import androidx.compose.material.icons.outlined.VolunteerActivism
@@ -568,10 +568,12 @@ fun SwipeToArchive(onArchive: () -> Unit, onSwipeRight: (() -> Unit)? = null, sw
                     onArchive()
                     true
                 }
+
                 SwipeToDismissBoxValue.StartToEnd -> {
                     onSwipeRight?.invoke()
                     false
                 }
+
                 else -> false
             }
         },
@@ -631,10 +633,12 @@ fun ArchivedSwipeRow(onRestore: () -> Unit, onHardDelete: () -> Unit, content: @
                     onRestore()
                     true
                 }
+
                 SwipeToDismissBoxValue.EndToStart -> {
                     onHardDelete()
                     false
                 }
+
                 else -> false
             }
         },
@@ -665,6 +669,7 @@ fun ArchivedSwipeRow(onRestore: () -> Unit, onHardDelete: () -> Unit, content: @
                 ) {
                     Icon(LucideIcons.ArchiveRestore, contentDescription = "Restaurar", tint = MaterialTheme.colorScheme.onSecondaryContainer)
                 }
+
                 SwipeToDismissBoxValue.EndToStart -> Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -675,6 +680,7 @@ fun ArchivedSwipeRow(onRestore: () -> Unit, onHardDelete: () -> Unit, content: @
                 ) {
                     Icon(LucideIcons.Trash, contentDescription = "Eliminar permanentemente", tint = finance.expense)
                 }
+
                 else -> {}
             }
         },
@@ -873,7 +879,7 @@ val iconGroups: List<IconGroup> = listOf(
             "games" to vec(Icons.Outlined.SportsEsports),
             "movies" to vec(Icons.Outlined.Movie),
             "music" to vec(Icons.Outlined.MusicNote),
-            "books" to vec(Icons.Outlined.MenuBook),
+            "books" to vec(Icons.AutoMirrored.Outlined.MenuBook),
             "sports" to vec(Icons.Outlined.SportsSoccer),
             "gym" to vec(Icons.Outlined.FitnessCenter),
             "travel" to vec(Icons.Outlined.Flight),
@@ -898,7 +904,7 @@ val iconGroups: List<IconGroup> = listOf(
             "work" to vec(Icons.Outlined.Work),
             "salary" to vec(Icons.Outlined.Payments),
             "savings" to vec(Icons.Outlined.Savings),
-            "investment" to vec(Icons.Outlined.TrendingUp),
+            "investment" to vec(Icons.AutoMirrored.Outlined.TrendingUp),
             "donation" to vec(Icons.Outlined.VolunteerActivism),
             "favorite" to vec(Icons.Outlined.FavoriteBorder),
             "star" to vec(Icons.Outlined.StarBorder),

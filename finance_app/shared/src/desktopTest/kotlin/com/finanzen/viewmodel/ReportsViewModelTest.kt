@@ -6,12 +6,12 @@ import com.finanzen.data.TransactionRepository
 import com.finanzen.data.seedIfEmpty
 import com.finanzen.db.FinanzenDb
 import com.finanzen.ui.format.PeriodMode
-import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.time.Clock
 
 class ReportsViewModelTest {
     private fun freshDb(): FinanzenDb {
@@ -45,9 +45,9 @@ class ReportsViewModelTest {
         val cat = db.categoryQueries.selectByKind("EXPENSE").executeAsList().first()
         val txRepo = TransactionRepository(db)
 
-        val enero2026 = LocalDate(2026, 1, 15).toEpochDays().toLong()
-        val febrero2026 = LocalDate(2026, 2, 10).toEpochDays().toLong()
-        val enero2025 = LocalDate(2025, 1, 5).toEpochDays().toLong()
+        val enero2026 = LocalDate(2026, 1, 15).toEpochDays()
+        val febrero2026 = LocalDate(2026, 2, 10).toEpochDays()
+        val enero2025 = LocalDate(2025, 1, 5).toEpochDays()
         txRepo.add(account.id, cat.id, 1_000, account.currency, enero2026, "ene26", "EXPENSE")
         txRepo.add(account.id, cat.id, 2_000, account.currency, febrero2026, "feb26", "EXPENSE")
         txRepo.add(account.id, cat.id, 3_000, account.currency, enero2025, "ene25", "EXPENSE")
@@ -77,7 +77,7 @@ class ReportsViewModelTest {
             cat.id,
             4_000,
             "USD",
-            LocalDate(2026, 3, 10).toEpochDays().toLong(),
+            LocalDate(2026, 3, 10).toEpochDays(),
             "gasto marzo",
             "EXPENSE",
         )

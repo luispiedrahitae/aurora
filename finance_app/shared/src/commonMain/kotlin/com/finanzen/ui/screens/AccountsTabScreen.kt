@@ -95,13 +95,13 @@ import com.finanzen.ui.theme.displayFontFamily
 import com.finanzen.viewmodel.AccountsViewModel
 import com.finanzen.viewmodel.CategoriesViewModel
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
 import org.koin.compose.viewmodel.koinViewModel
+import kotlin.time.Clock
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -665,8 +665,8 @@ private fun CreditActions(card: Card, balanceMinor: Long, unbilledMinor: Long, c
     val spacing = LocalSpacing.current
     val limit = card.creditLimitMinor
     val hasLimit = limit != null && limit > 0
-    val available = if (hasLimit) limit!! + balanceMinor - unbilledMinor else 0L // = cupo − deuda facturada − compromiso sin facturar
-    val showPayButton = hasLimit && available < limit!!
+    val available = if (hasLimit) limit + balanceMinor - unbilledMinor else 0L // = cupo − deuda facturada − compromiso sin facturar
+    val showPayButton = hasLimit && available < limit
     val hasInfo = hasLimit || card.cutoffDay != null || card.dueDay != null
     var showInfo by remember { mutableStateOf(false) }
 
@@ -677,7 +677,7 @@ private fun CreditActions(card: Card, balanceMinor: Long, unbilledMinor: Long, c
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     if (hasLimit) {
-                        Text("Cupo ${fmt.format(limit!!, currency)}")
+                        Text("Cupo ${fmt.format(limit, currency)}")
                         Text("Disponible ${fmt.format(available, currency)}")
                     }
                     card.cutoffDay?.let { Text("Corte $it") }

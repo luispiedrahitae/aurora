@@ -14,10 +14,11 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.number
 import kotlinx.datetime.todayIn
+import kotlin.time.Clock
 
 /** Una categoría de gasto con su límite del mes (0 = sin presupuesto) y lo gastado en el mes.
  * [parentName] es null si [categoryId] es una categoría de nivel superior, o el nombre de su
@@ -69,10 +70,10 @@ class BudgetsViewModel(
         /** YYYYMM del mes en curso, p.ej. 202606. */
         fun currentPeriodMonth(): Long {
             val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
-            return (today.year * 100 + today.monthNumber).toLong()
+            return (today.year * 100 + today.month.number).toLong()
         }
 
-        private fun monthOf(epochDay: Long): Long = LocalDate.fromEpochDays(epochDay.toInt()).let { (it.year * 100 + it.monthNumber).toLong() }
+        private fun monthOf(epochDay: Long): Long = LocalDate.fromEpochDays(epochDay.toInt()).let { (it.year * 100 + it.month.number).toLong() }
 
         internal fun computeBudgets(
             budgets: List<Budget>,

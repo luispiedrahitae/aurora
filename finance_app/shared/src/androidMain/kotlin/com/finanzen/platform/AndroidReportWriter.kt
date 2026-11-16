@@ -118,6 +118,7 @@ internal fun writePdf(os: OutputStream, lines: List<ReportLine>) {
                     page.canvas.drawText(line.text, MARGIN, y, title)
                     y += LINE_H * 1.5f
                 }
+
                 is ReportLine.Section -> {
                     y += LINE_H * 0.5f
                     // encabezado + separador + al menos una fila, para no dejarlo huérfano al final de página.
@@ -127,6 +128,7 @@ internal fun writePdf(os: OutputStream, lines: List<ReportLine>) {
                     page.canvas.drawLine(MARGIN, y, PAGE_W - MARGIN, y, divider)
                     y += LINE_H
                 }
+
                 is ReportLine.Row -> {
                     val (left, right) = if (line.emphasis) bodyBold to bodyBoldRight else body to bodyRight
                     page.canvas.drawText(line.label, MARGIN, y, left)
@@ -135,6 +137,7 @@ internal fun writePdf(os: OutputStream, lines: List<ReportLine>) {
                     }
                     y += LINE_H
                 }
+
                 ReportLine.Divider -> {
                     // El cierre del documento (total + leyenda opcional) va justo después de un
                     // divider — se reserva espacio para que ese bloque final no quede cortado o
@@ -146,6 +149,7 @@ internal fun writePdf(os: OutputStream, lines: List<ReportLine>) {
                     // espacio, "Total de movimientos..." quedaba montado sobre la línea divisoria.
                     y += LINE_H
                 }
+
                 ReportLine.Blank -> y += LINE_H * 0.5f
             }
         }

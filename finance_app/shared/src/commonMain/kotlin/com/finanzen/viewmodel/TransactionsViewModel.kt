@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.number
 
 class TransactionsViewModel(
     private val txRepo: TransactionRepository,
@@ -117,7 +118,7 @@ class TransactionsViewModel(
         // padre completa (parentRow.spentMinor ya incluye el gasto de esta hoja).
         val (targetId, targetRow) = when {
             leafRow.limitMinor > 0 -> categoryId to leafRow
-            parentRow != null && parentRow.limitMinor > 0 -> parentId!! to parentRow
+            parentRow != null && parentRow.limitMinor > 0 -> parentId to parentRow
             else -> return
         }
         val spentAfter = targetRow.spentMinor
@@ -210,7 +211,7 @@ class TransactionsViewModel(
         return null
     }
 
-    private fun monthOf(epochDay: Long): Long = LocalDate.fromEpochDays(epochDay.toInt()).let { (it.year * 100 + it.monthNumber).toLong() }
+    private fun monthOf(epochDay: Long): Long = LocalDate.fromEpochDays(epochDay.toInt()).let { (it.year * 100 + it.month.number).toLong() }
 
     private companion object {
         // Offset para que los ids de notificación de presupuesto no choquen con los recordatorios.

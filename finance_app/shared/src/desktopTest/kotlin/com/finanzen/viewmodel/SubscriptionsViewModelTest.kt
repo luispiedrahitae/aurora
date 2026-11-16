@@ -8,12 +8,12 @@ import com.finanzen.data.SubscriptionRepository
 import com.finanzen.data.TransactionRepository
 import com.finanzen.db.FinanzenDb
 import com.finanzen.platform.NotificationScheduler
-import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.time.Clock
 
 class SubscriptionsViewModelTest {
     private fun freshDb(): FinanzenDb {
@@ -39,7 +39,7 @@ class SubscriptionsViewModelTest {
         )
     }
 
-    private fun todayEpochDay(): Long = Clock.System.todayIn(TimeZone.currentSystemDefault()).toEpochDays().toLong()
+    private fun todayEpochDay(): Long = Clock.System.todayIn(TimeZone.currentSystemDefault()).toEpochDays()
 
     @Test
     fun addSubscriptionConFechaFuturaNoCobraDeInmediato() {

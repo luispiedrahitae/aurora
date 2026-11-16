@@ -8,7 +8,7 @@ import com.finanzen.platform.BackupIO
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 
 class BackupViewModel(
     private val db: FinanzenDb,

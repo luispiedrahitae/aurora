@@ -14,18 +14,19 @@ import com.finanzen.db.Card
 import com.finanzen.db.InstallmentPlan
 import com.finanzen.db.TransactionRow
 import com.finanzen.domain.InstallmentMath
+import com.finanzen.domain.daysInMonth
 import com.finanzen.platform.NotificationScheduler
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.datetime.Clock
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
+import kotlin.time.Clock
 
 class AccountsViewModel(
     private val accountRepo: AccountRepository,
@@ -160,12 +161,12 @@ class AccountsViewModel(
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
         fun candidate(base: LocalDate): LocalDate {
             val first = LocalDate(base.year, base.month, 1)
-            val len = (first.plus(DatePeriod(months = 1)).toEpochDays() - first.toEpochDays())
+            val len = first.daysInMonth()
             return LocalDate(base.year, base.month, day.coerceIn(1, len))
         }
         val thisMonth = candidate(today)
         val target = if (thisMonth >= today) thisMonth else candidate(today.plus(DatePeriod(months = 1)))
-        return target.toEpochDays().toLong()
+        return target.toEpochDays()
     }
 
     /**
@@ -270,7 +271,7 @@ class AccountsViewModel(
         planRepo.settleAllForCard(cardId)
     }
 
-    private fun todayEpochDay(): Long = Clock.System.todayIn(TimeZone.currentSystemDefault()).toEpochDays().toLong()
+    private fun todayEpochDay(): Long = Clock.System.todayIn(TimeZone.currentSystemDefault()).toEpochDays()
 
     companion object {
         // Offsets para que los ids de notificación de tarjeta no choquen entre sí ni con otros.
@@ -294,11 +295,14 @@ class AccountsViewModel(
             for (t in txs) {
                 when (t.kind) {
                     "INCOME" -> balance[t.accountId] = (balance[t.accountId] ?: 0L) + t.amountMinor
+
                     "EXPENSE" -> balance[t.accountId] = (balance[t.accountId] ?: 0L) - t.amountMinor
+
                     "TRANSFER" -> {
                         balance[t.accountId] = (balance[t.accountId] ?: 0L) - t.amountMinor
                         t.transferAccountId?.let { to -> balance[to] = (balance[to] ?: 0L) + t.amountMinor }
                     }
+
                     "ADJUSTMENT" -> balance[t.accountId] = (balance[t.accountId] ?: 0L) + t.amountMinor
                 }
             }

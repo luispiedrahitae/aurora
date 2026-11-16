@@ -5,6 +5,7 @@ import com.finanzen.data.DEFAULT_LOCALE_INFO
 import com.finanzen.domain.DateOrder
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.isoDayNumber
+import kotlinx.datetime.number
 
 private val MESES_CORTOS = listOf("ene.", "feb.", "mar.", "abr.", "may.", "jun.", "jul.", "ago.", "sep.", "oct.", "nov.", "dic.")
 private val MESES_LARGOS = listOf("enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre")
@@ -16,18 +17,18 @@ fun mesCorto(monthNumber: Int, locale: CurrencyLocaleInfo = DEFAULT_LOCALE_INFO)
 fun mesLargo(monthNumber: Int, locale: CurrencyLocaleInfo = DEFAULT_LOCALE_INFO): String = MESES_LARGOS[monthNumber - 1]
 
 /** "Julio 2026" / "July 2026" — para cabeceras de mes/selector. */
-fun formatMesAnio(date: LocalDate, locale: CurrencyLocaleInfo = DEFAULT_LOCALE_INFO): String = "${mesLargo(date.monthNumber, locale).replaceFirstChar { it.uppercase() }} ${date.year}"
+fun formatMesAnio(date: LocalDate, locale: CurrencyLocaleInfo = DEFAULT_LOCALE_INFO): String = "${mesLargo(date.month.number, locale).replaceFirstChar { it.uppercase() }} ${date.year}"
 
 /** Clave "AAAAMM" para agrupar/filtrar por mes (Movimientos, Análisis, Cuentas). */
-fun monthPeriod(date: LocalDate): Long = (date.year * 100 + date.monthNumber).toLong()
+fun monthPeriod(date: LocalDate): Long = (date.year * 100 + date.month.number).toLong()
 
 fun periodOfEpochDay(epochDay: Long): Long = monthPeriod(LocalDate.fromEpochDays(epochDay.toInt()))
 
 /** "1 jul" / "Jul 1" — cabecera de día sin año (acordeón de Movimientos), orden según [locale]. */
 fun formatDiaMes(epochDay: Long, locale: CurrencyLocaleInfo = DEFAULT_LOCALE_INFO): String {
     val d = LocalDate.fromEpochDays(epochDay.toInt())
-    val mes = mesCorto(d.monthNumber, locale)
-    return if (locale.dateOrder == DateOrder.MDY) "$mes ${d.dayOfMonth}" else "${d.dayOfMonth} $mes"
+    val mes = mesCorto(d.month.number, locale)
+    return if (locale.dateOrder == DateOrder.MDY) "$mes ${d.day}" else "${d.day} $mes"
 }
 
 private val DIAS_SEMANA = listOf("lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo")
@@ -40,11 +41,11 @@ fun diaSemana(epochDay: Long): String = DIAS_SEMANA[LocalDate.fromEpochDays(epoc
 /** "1 jul 2026" / "Jul 1, 2026" / "2026 jul 1" — fecha completa compacta (formulario de movimiento). */
 fun formatFechaCorta(epochDay: Long, locale: CurrencyLocaleInfo = DEFAULT_LOCALE_INFO): String {
     val d = LocalDate.fromEpochDays(epochDay.toInt())
-    return formatDiaMesAnio(d.dayOfMonth, mesCorto(d.monthNumber, locale), d.year, locale.dateOrder)
+    return formatDiaMesAnio(d.day, mesCorto(d.month.number, locale), d.year, locale.dateOrder)
 }
 
 /** "1 julio 2026" / "July 1, 2026" / "2026 julio 1" — fecha completa larga (Calendario). */
-fun formatFechaLarga(date: LocalDate, locale: CurrencyLocaleInfo = DEFAULT_LOCALE_INFO): String = formatDiaMesAnio(date.dayOfMonth, mesLargo(date.monthNumber, locale), date.year, locale.dateOrder)
+fun formatFechaLarga(date: LocalDate, locale: CurrencyLocaleInfo = DEFAULT_LOCALE_INFO): String = formatDiaMesAnio(date.day, mesLargo(date.month.number, locale), date.year, locale.dateOrder)
 
 // ponytail: orden genérico día/mes/año sin conectores gramaticales (ej. el "de" del español,
 // "d. MMMM" del alemán): DateOrder solo captura el orden, no el patrón completo de cada idioma.

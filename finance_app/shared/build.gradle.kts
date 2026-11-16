@@ -10,11 +10,16 @@ plugins {
 kotlin {
     jvmToolchain(17)
 
+    compilerOptions {
+        // Las clases expect/actual siguen en Beta; el proyecto las usa a propósito (platform/).
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
+
     androidTarget()
 
     jvm("desktop")
 
-    listOf(iosX64(), iosArm64(), iosSimulatorArm64()).forEach { target ->
+    listOf(iosArm64(), iosSimulatorArm64()).forEach { target ->
         target.binaries.framework {
             baseName = "Shared"
             isStatic = true
@@ -23,11 +28,11 @@ kotlin {
 
     sourceSets {
         commonMain.dependencies {
-            implementation(compose.runtime)
-            implementation(compose.foundation)
-            implementation(compose.material3)
-            implementation(compose.materialIconsExtended)
-            implementation(compose.components.resources)
+            implementation(libs.compose.runtime)
+            implementation(libs.compose.foundation)
+            implementation(libs.compose.material3)
+            implementation(libs.compose.material.icons.extended)
+            implementation(libs.compose.components.resources)
 
             implementation(libs.kotlinx.coroutines.core)
             implementation(libs.kotlinx.datetime)
@@ -74,7 +79,7 @@ kotlin {
 
 android {
     namespace = "com.finanzen.shared"
-    compileSdk = 35
+    compileSdk = 36
     defaultConfig {
         minSdk = 26
     }

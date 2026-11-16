@@ -119,9 +119,11 @@ fun CategoriesScreen(
                                     isReserved -> {
                                         { Text("Nombre de categoría reservado") }
                                     }
+
                                     nameTaken -> {
                                         { Text("Ya existe una categoría con ese nombre") }
                                     }
+
                                     else -> null
                                 },
                                 modifier = Modifier.weight(1f),
@@ -273,9 +275,11 @@ private fun CategoryCard(
                             isReserved -> {
                                 { Text("Nombre de categoría reservado") }
                             }
+
                             nameTaken -> {
                                 { Text("Ya existe una subcategoría con ese nombre") }
                             }
+
                             else -> null
                         },
                         modifier = Modifier.weight(1f),

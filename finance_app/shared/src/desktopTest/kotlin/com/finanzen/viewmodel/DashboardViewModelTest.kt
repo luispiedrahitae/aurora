@@ -4,7 +4,6 @@ import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.finanzen.data.seedIfEmpty
 import com.finanzen.db.FinanzenDb
 import com.finanzen.ui.format.PeriodMode
-import kotlinx.datetime.Clock
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -12,6 +11,7 @@ import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.time.Clock
 
 class DashboardViewModelTest {
     private fun freshDb(): FinanzenDb {
@@ -31,7 +31,7 @@ class DashboardViewModelTest {
         val incomeCat = db.categoryQueries.selectByKind("INCOME").executeAsList().first()
 
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
-        val todayEpoch = today.toEpochDays().toLong()
+        val todayEpoch = today.toEpochDays()
 
         db.transactionQueries.insert(
             account.id, incomeCat.id, 10_000, account.currency, todayEpoch, "salario", "INCOME", null, null, null, null,
@@ -65,7 +65,7 @@ class DashboardViewModelTest {
         val incomeCat = db.categoryQueries.selectByKind("INCOME").executeAsList().first()
 
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
-        val todayEpoch = today.toEpochDays().toLong()
+        val todayEpoch = today.toEpochDays()
 
         // ingreso normal en la cuenta activa (Efectivo)
         db.transactionQueries.insert(
@@ -104,7 +104,7 @@ class DashboardViewModelTest {
         val expenseCat = db.categoryQueries.selectByKind("EXPENSE").executeAsList().first()
 
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
-        val todayEpoch = today.toEpochDays().toLong()
+        val todayEpoch = today.toEpochDays()
 
         // gasto normal en la cuenta activa (Efectivo), este año
         db.transactionQueries.insert(
@@ -143,7 +143,7 @@ class DashboardViewModelTest {
         val expenseCat = db.categoryQueries.selectByKind("EXPENSE").executeAsList().first()
 
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
-        val todayEpoch = today.toEpochDays().toLong()
+        val todayEpoch = today.toEpochDays()
 
         // Solo un gasto este año, sin ingresos.
         db.transactionQueries.insert(
@@ -173,7 +173,7 @@ class DashboardViewModelTest {
         val incomeCat = db.categoryQueries.selectByKind("INCOME").executeAsList().first()
 
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
-        val todayEpoch = today.toEpochDays().toLong()
+        val todayEpoch = today.toEpochDays()
 
         db.transactionQueries.insert(
             account.id, incomeCat.id, 10_000, account.currency, todayEpoch, "salario", "INCOME", null, null, null, null,
@@ -203,7 +203,7 @@ class DashboardViewModelTest {
         val expenseCat = db.categoryQueries.selectByKind("EXPENSE").executeAsList().first()
 
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
-        val todayEpoch = today.toEpochDays().toLong()
+        val todayEpoch = today.toEpochDays()
 
         // Tarjeta de crédito con saldo inicial 0 (name, type, currency, opening, color, archived).
         db.accountQueries.insert("Tarjeta", "CREDIT", "USD", 0, 0, 0)
@@ -242,7 +242,7 @@ class DashboardViewModelTest {
 
         val year = 2026
         // pago en junio (mes 6)
-        val juneFirst = LocalDate(year, 6, 1).toEpochDays().toLong()
+        val juneFirst = LocalDate(year, 6, 1).toEpochDays()
 
         db.transactionQueries.insert(
             cash.id, incomeCat.id, 5_000, "USD", juneFirst, "sueldo", "INCOME", null, null, null, null,
@@ -272,7 +272,7 @@ class DashboardViewModelTest {
         val expenseCat = db.categoryQueries.selectByKind("EXPENSE").executeAsList().first()
 
         // marzo de 2026: cuenta
-        val march2026 = LocalDate(2026, 3, 15).toEpochDays().toLong()
+        val march2026 = LocalDate(2026, 3, 15).toEpochDays()
         db.transactionQueries.insert(
             account.id, incomeCat.id, 7_000, account.currency, march2026, "ingreso 2026", "INCOME", null, null, null, null,
         )
@@ -280,7 +280,7 @@ class DashboardViewModelTest {
             account.id, expenseCat.id, 1_000, account.currency, march2026, "gasto 2026", "EXPENSE", null, null, null, null,
         )
         // marzo de 2025: NO debe contar en el año 2026
-        val march2025 = LocalDate(2025, 3, 15).toEpochDays().toLong()
+        val march2025 = LocalDate(2025, 3, 15).toEpochDays()
         db.transactionQueries.insert(
             account.id, incomeCat.id, 99_000, account.currency, march2025, "ingreso 2025", "INCOME", null, null, null, null,
         )
@@ -375,8 +375,8 @@ class DashboardViewModelTest {
         val expenseCat = db.categoryQueries.selectByKind("EXPENSE").executeAsList().first()
 
         // 2025: ingreso 8_000, gasto 2_000. 2026: ingreso 10_000.
-        val in2025 = LocalDate(2025, 6, 15).toEpochDays().toLong()
-        val in2026 = LocalDate(2026, 6, 15).toEpochDays().toLong()
+        val in2025 = LocalDate(2025, 6, 15).toEpochDays()
+        val in2026 = LocalDate(2026, 6, 15).toEpochDays()
         db.transactionQueries.insert(account.id, incomeCat.id, 8_000, account.currency, in2025, "salario 25", "INCOME", null, null, null, null)
         db.transactionQueries.insert(account.id, expenseCat.id, 2_000, account.currency, in2025, "gasto 25", "EXPENSE", null, null, null, null)
         db.transactionQueries.insert(account.id, incomeCat.id, 10_000, account.currency, in2026, "salario 26", "INCOME", null, null, null, null)
@@ -404,7 +404,7 @@ class DashboardViewModelTest {
         val incomeCat = db.categoryQueries.selectByKind("INCOME").executeAsList().first()
 
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
-        val todayEpoch = today.toEpochDays().toLong()
+        val todayEpoch = today.toEpochDays()
 
         // Solo ingreso este año, ningún gasto: yearExpenseFloor evita la división por cero del donut.
         db.transactionQueries.insert(
@@ -435,7 +435,7 @@ class DashboardViewModelTest {
         val cat = db.categoryQueries.selectByKind("EXPENSE").executeAsList().first { it.name == "Mascotas" }
 
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
-        val todayEpoch = today.toEpochDays().toLong()
+        val todayEpoch = today.toEpochDays()
         db.transactionQueries.insert(account.id, cat.id, 2_000, account.currency, todayEpoch, "vet", "EXPENSE", null, null, null, null)
 
         val data = DashboardViewModel.computeDashboard(
@@ -466,7 +466,7 @@ class DashboardViewModelTest {
 
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
         db.transactionQueries.insert(
-            account.id, child.id, 3_000, account.currency, today.toEpochDays().toLong(), "cena", "EXPENSE", null, null, null, null,
+            account.id, child.id, 3_000, account.currency, today.toEpochDays(), "cena", "EXPENSE", null, null, null, null,
         )
 
         val data = DashboardViewModel.computeDashboard(
@@ -523,9 +523,9 @@ class DashboardViewModelTest {
         val account = db.accountQueries.selectAll().executeAsList().first()
         val cat = db.categoryQueries.selectByKind("EXPENSE").executeAsList().first()
 
-        db.transactionQueries.insert(account.id, cat.id, 1_000, account.currency, LocalDate(2026, 1, 15).toEpochDays().toLong(), "ene26", "EXPENSE", null, null, null, null)
-        db.transactionQueries.insert(account.id, cat.id, 2_000, account.currency, LocalDate(2026, 2, 10).toEpochDays().toLong(), "feb26", "EXPENSE", null, null, null, null)
-        db.transactionQueries.insert(account.id, cat.id, 3_000, account.currency, LocalDate(2025, 1, 5).toEpochDays().toLong(), "ene25", "EXPENSE", null, null, null, null)
+        db.transactionQueries.insert(account.id, cat.id, 1_000, account.currency, LocalDate(2026, 1, 15).toEpochDays(), "ene26", "EXPENSE", null, null, null, null)
+        db.transactionQueries.insert(account.id, cat.id, 2_000, account.currency, LocalDate(2026, 2, 10).toEpochDays(), "feb26", "EXPENSE", null, null, null, null)
+        db.transactionQueries.insert(account.id, cat.id, 3_000, account.currency, LocalDate(2025, 1, 5).toEpochDays(), "ene25", "EXPENSE", null, null, null, null)
 
         val allTxs = db.transactionQueries.selectAll().executeAsList()
 
@@ -546,20 +546,20 @@ class DashboardViewModelTest {
 
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
         val referenceMonth = LocalDate(today.year, today.month, 1)
-        val expectedDays = referenceMonth.plus(DatePeriod(months = 1)).toEpochDays() - referenceMonth.toEpochDays()
+        val expectedDays = (referenceMonth.plus(DatePeriod(months = 1)).toEpochDays() - referenceMonth.toEpochDays()).toInt()
 
         // día 1 del mes: ingreso y gasto
         db.transactionQueries.insert(
-            account.id, incomeCat.id, 5_000, account.currency, referenceMonth.toEpochDays().toLong(), "ingreso día 1", "INCOME", null, null, null, null,
+            account.id, incomeCat.id, 5_000, account.currency, referenceMonth.toEpochDays(), "ingreso día 1", "INCOME", null, null, null, null,
         )
         db.transactionQueries.insert(
-            account.id, expenseCat.id, 2_000, account.currency, referenceMonth.toEpochDays().toLong(), "gasto día 1", "EXPENSE", null, null, null, null,
+            account.id, expenseCat.id, 2_000, account.currency, referenceMonth.toEpochDays(), "gasto día 1", "EXPENSE", null, null, null, null,
         )
 
         // día 15 del mes: otro ingreso, para distinguir por día (no por mes)
         val day15 = referenceMonth.plus(DatePeriod(days = 14))
         db.transactionQueries.insert(
-            account.id, incomeCat.id, 3_000, account.currency, day15.toEpochDays().toLong(), "ingreso día 15", "INCOME", null, null, null, null,
+            account.id, incomeCat.id, 3_000, account.currency, day15.toEpochDays(), "ingreso día 15", "INCOME", null, null, null, null,
         )
 
         val trend = DashboardViewModel.computeDailyTrend(db.transactionQueries.selectAll().executeAsList(), referenceMonth)
@@ -593,7 +593,7 @@ class DashboardViewModelTest {
 
         val month = LocalDate(2026, 6, 1)
         // ingreso el día 10 de junio
-        val day10 = month.plus(DatePeriod(days = 9)).toEpochDays().toLong()
+        val day10 = month.plus(DatePeriod(days = 9)).toEpochDays()
         db.transactionQueries.insert(cash.id, incomeCat.id, 2_000, "USD", day10, "sueldo", "INCOME", null, null, null, null)
 
         val trend = DashboardViewModel.computeDailyNetWorth(accounts, db.transactionQueries.selectAll().executeAsList(), month)
@@ -638,7 +638,7 @@ class DashboardViewModelTest {
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
         val firstOfMonth = LocalDate(today.year, today.month, 1)
 
-        db.transactionQueries.insert(account.id, expenseCat.id, 1_000, account.currency, today.toEpochDays().toLong(), "gasto", "EXPENSE", null, null, null, null)
+        db.transactionQueries.insert(account.id, expenseCat.id, 1_000, account.currency, today.toEpochDays(), "gasto", "EXPENSE", null, null, null, null)
 
         val currentMonth = DashboardViewModel.computeDashboard(
             accounts = db.accountQueries.selectAll().executeAsList(),
@@ -687,12 +687,12 @@ class DashboardViewModelTest {
         // categoría A: 3 gastos de 100 (conteo alto, monto bajo)
         repeat(3) {
             db.transactionQueries.insert(
-                account.id, catA.id, 100, "USD", referenceMonth.toEpochDays().toLong(), "cafe", "EXPENSE", null, null, null, null,
+                account.id, catA.id, 100, "USD", referenceMonth.toEpochDays(), "cafe", "EXPENSE", null, null, null, null,
             )
         }
         // categoría B: 1 gasto de 10_000 (conteo bajo, monto alto)
         db.transactionQueries.insert(
-            account.id, catB.id, 10_000, "USD", referenceMonth.toEpochDays().toLong(), "tv", "EXPENSE", null, null, null, null,
+            account.id, catB.id, 10_000, "USD", referenceMonth.toEpochDays(), "tv", "EXPENSE", null, null, null, null,
         )
 
         val frequent = DashboardViewModel.computeFrequentExpenses(
@@ -743,7 +743,7 @@ class DashboardViewModelTest {
             val cat = db.categoryQueries.selectAll().executeAsList().last()
             repeat(count) {
                 db.transactionQueries.insert(
-                    account.id, cat.id, 100, "USD", referenceMonth.toEpochDays().toLong(), "gasto", "EXPENSE", null, null, null, null,
+                    account.id, cat.id, 100, "USD", referenceMonth.toEpochDays(), "gasto", "EXPENSE", null, null, null, null,
                 )
             }
         }
@@ -788,12 +788,12 @@ class DashboardViewModelTest {
         // la transacción insertada MÁS RECIENTE. Como "Segunda" se insertó después, aparece primero.
         repeat(2) {
             db.transactionQueries.insert(
-                account.id, primera.id, 100, "USD", referenceMonth.toEpochDays().toLong(), "a", "EXPENSE", null, null, null, null,
+                account.id, primera.id, 100, "USD", referenceMonth.toEpochDays(), "a", "EXPENSE", null, null, null, null,
             )
         }
         repeat(2) {
             db.transactionQueries.insert(
-                account.id, segunda.id, 100, "USD", referenceMonth.toEpochDays().toLong(), "b", "EXPENSE", null, null, null, null,
+                account.id, segunda.id, 100, "USD", referenceMonth.toEpochDays(), "b", "EXPENSE", null, null, null, null,
             )
         }
 
@@ -846,7 +846,7 @@ class DashboardViewModelTest {
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
         val referenceMonth = LocalDate(today.year, today.month, 1)
         db.transactionQueries.insert(
-            account.id, child.id, 100, "USD", referenceMonth.toEpochDays().toLong(), "cena", "EXPENSE", null, null, null, null,
+            account.id, child.id, 100, "USD", referenceMonth.toEpochDays(), "cena", "EXPENSE", null, null, null, null,
         )
 
         val frequent = DashboardViewModel.computeFrequentExpenses(
@@ -871,7 +871,7 @@ class DashboardViewModelTest {
 
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
         db.transactionQueries.insert(
-            account.id, child.id, 100, "USD", today.toEpochDays().toLong(), "cena", "EXPENSE", null, null, null, null,
+            account.id, child.id, 100, "USD", today.toEpochDays(), "cena", "EXPENSE", null, null, null, null,
         )
 
         val breakdown = DashboardViewModel.computeCategoryBreakdown(
@@ -905,7 +905,7 @@ class DashboardViewModelTest {
         val transporte = cats.first { it.name == "Transporte" }
 
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
-        val epoch = today.toEpochDays().toLong()
+        val epoch = today.toEpochDays()
         db.transactionQueries.insert(account.id, restaurantes.id, 300, "USD", epoch, "cena", "EXPENSE", null, null, null, null)
         db.transactionQueries.insert(account.id, cafe.id, 100, "USD", epoch, "cafe", "EXPENSE", null, null, null, null)
         db.transactionQueries.insert(account.id, transporte.id, 400, "USD", epoch, "bus", "EXPENSE", null, null, null, null)
@@ -934,7 +934,7 @@ class DashboardViewModelTest {
 
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
         db.transactionQueries.insert(
-            account.id, cat.id, 100, "USD", today.toEpochDays().toLong(), "bus", "EXPENSE", null, null, null, null,
+            account.id, cat.id, 100, "USD", today.toEpochDays(), "bus", "EXPENSE", null, null, null, null,
         )
 
         val breakdown = DashboardViewModel.computeCategoryBreakdown(
@@ -966,7 +966,7 @@ class DashboardViewModelTest {
         val spotify = db.subscriptionQueries.selectAll().executeAsList().first { it.name == "Spotify" }
 
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
-        val epoch = today.toEpochDays().toLong()
+        val epoch = today.toEpochDays()
         db.transactionQueries.insert(account.id, leaf.id, 500, "USD", epoch, "Netflix", "EXPENSE", null, null, null, netflix.id)
         db.transactionQueries.insert(account.id, leaf.id, 300, "USD", epoch, "Spotify", "EXPENSE", null, null, null, spotify.id)
 
@@ -995,7 +995,7 @@ class DashboardViewModelTest {
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
         val referenceMonth = LocalDate(today.year, today.month, 1)
         db.transactionQueries.insert(
-            account.id, cat.id, 100, "USD", referenceMonth.toEpochDays().toLong(), "bus", "EXPENSE", null, null, null, null,
+            account.id, cat.id, 100, "USD", referenceMonth.toEpochDays(), "bus", "EXPENSE", null, null, null, null,
         )
 
         val frequent = DashboardViewModel.computeFrequentExpenses(

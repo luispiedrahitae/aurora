@@ -41,6 +41,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.finanzen.db.Category
 import com.finanzen.db.TransactionRow
+import com.finanzen.domain.daysInMonth
 import com.finanzen.ui.components.CategoryAvatar
 import com.finanzen.ui.components.EmptyState
 import com.finanzen.ui.components.FinanceCard
@@ -57,7 +58,6 @@ import com.finanzen.ui.theme.LocalDateLocale
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.viewmodel.TransactionsViewModel
-import kotlinx.datetime.Clock
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -65,12 +65,13 @@ import kotlinx.datetime.isoDayNumber
 import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
 import org.koin.compose.viewmodel.koinViewModel
+import kotlin.time.Clock
 
 private val WEEKDAYS = listOf("L", "M", "X", "J", "V", "S", "D")
 
-private fun LocalDate.epochDay(): Long = toEpochDays().toLong()
+private fun LocalDate.epochDay(): Long = toEpochDays()
 
-private fun daysInMonth(firstOfMonth: LocalDate): Int = (firstOfMonth.plus(DatePeriod(months = 1)).toEpochDays() - firstOfMonth.toEpochDays())
+private fun daysInMonth(firstOfMonth: LocalDate): Int = firstOfMonth.daysInMonth()
 
 @Composable
 fun CalendarScreen(

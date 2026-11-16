@@ -234,10 +234,13 @@ private fun PinSetupCard(
                         }
                         when {
                             pin.length < 4 -> error = SHORT_PIN
+
                             pin != confirm -> error = PIN_MISMATCH
+
                             requireCurrent -> onVerifyCurrent(current) { verifyError ->
                                 if (verifyError == null) save() else error = verifyError
                             }
+
                             else -> save()
                         }
                     },

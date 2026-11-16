@@ -6,12 +6,12 @@ import com.finanzen.data.SubscriptionRepository
 import com.finanzen.data.TransactionRepository
 import com.finanzen.db.FinanzenDb
 import com.finanzen.platform.NotificationScheduler
-import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+import kotlin.time.Clock
 
 class SubscriptionCatchUpTest {
     private fun freshDb(): FinanzenDb {
@@ -20,7 +20,7 @@ class SubscriptionCatchUpTest {
         return FinanzenDb(driver)
     }
 
-    private fun todayEpochDay(): Long = Clock.System.todayIn(TimeZone.currentSystemDefault()).toEpochDays().toLong()
+    private fun todayEpochDay(): Long = Clock.System.todayIn(TimeZone.currentSystemDefault()).toEpochDays()
 
     private fun anyCategoryId(db: FinanzenDb): Long {
         db.categoryQueries.insert(parentId = null, name = "Suscripciones", icon = "", color = 0, kind = "EXPENSE")

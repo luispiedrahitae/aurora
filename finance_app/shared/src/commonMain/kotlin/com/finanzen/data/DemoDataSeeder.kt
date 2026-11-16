@@ -3,8 +3,10 @@ package com.finanzen.data
 import com.finanzen.db.FinanzenDb
 import com.finanzen.domain.InstallmentMath
 import com.finanzen.domain.RecurrenceSchedule
+import com.finanzen.domain.daysInMonth
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.number
 import kotlinx.datetime.plus
 import kotlin.random.Random
 
@@ -90,7 +92,7 @@ fun seedDemoTransactions(db: FinanzenDb, today: LocalDate) {
         val expenseChoices = buildChoices(categoryRepo, topExpenseCats, EXPENSE_SUBCATEGORIES, "EXPENSE")
         val incomeChoices = buildChoices(categoryRepo, categoryRepo.byKind("INCOME").filter { it.parentId == null }, INCOME_SUBCATEGORIES, "INCOME")
 
-        val todayEpochDay = today.toEpochDays().toLong()
+        val todayEpochDay = today.toEpochDays()
         seedRecurringInstruments(
             txRepo = txRepo,
             cardRepo = cardRepo,
@@ -110,9 +112,9 @@ fun seedDemoTransactions(db: FinanzenDb, today: LocalDate) {
         val random = Random(20250101)
         val historyStart = today.plus(DatePeriod(months = -47))
         var year = historyStart.year
-        var month = historyStart.monthNumber
-        while (year < today.year || (year == today.year && month <= today.monthNumber)) {
-            val lastDay = if (year == today.year && month == today.monthNumber) today.dayOfMonth else daysInMonth(year, month)
+        var month = historyStart.month.number
+        while (year < today.year || (year == today.year && month <= today.month.number)) {
+            val lastDay = if (year == today.year && month == today.month.number) today.day else daysInMonth(year, month)
             seedMonth(txRepo, random, accountIds, currency, scale, expenseChoices, incomeChoices, year, month, lastDay)
             month++
             if (month > 12) {
@@ -196,7 +198,7 @@ private fun seedRecurringInstruments(
 
     // Suscripción: cobro el día 6 de cada mes desde enero 2025.
     val subChargeMinor = 15L * scale
-    val subStart = LocalDate(2025, 1, 6).toEpochDays().toLong()
+    val subStart = LocalDate(2025, 1, 6).toEpochDays()
     val subId = subsRepo.add(
         name = "Streaming Plus",
         amountMinor = subChargeMinor,
@@ -216,7 +218,7 @@ private fun seedRecurringInstruments(
 
     // Inversión periódica: aporte el día 9 de cada mes desde enero 2025.
     val investMinor = 100L * scale
-    val investStart = LocalDate(2025, 1, 9).toEpochDays().toLong()
+    val investStart = LocalDate(2025, 1, 9).toEpochDays()
     val investId = investRepo.add(
         name = "Fondo indexado",
         amountMinor = investMinor,
@@ -238,7 +240,7 @@ private fun seedRecurringInstruments(
     // Plan de cuotas: compra financiada desde enero 2025 en la tarjeta de crédito nueva, cuota el día 15.
     cardRepo.add(creditAccountId, "4242", "VISA", creditLimitMinor = 5000L * scale, cutoffDay = 20L, dueDay = 5L, interestRate = 45.0)
     val card = cardRepo.byAccount(creditAccountId) ?: error("tarjeta recién creada no encontrada")
-    val planStart = LocalDate(2025, 1, 15).toEpochDays().toLong()
+    val planStart = LocalDate(2025, 1, 15).toEpochDays()
     val totalAmountMinor = 1200L * scale
     val installments = 24L
     val planId = planRepo.add(
@@ -297,7 +299,7 @@ private fun seedMonth(
 
     kinds.forEachIndexed { index, kind ->
         val day = days[index]
-        val epochDay = LocalDate(year, month, day).toEpochDays().toLong()
+        val epochDay = LocalDate(year, month, day).toEpochDays()
         val fromAccount = accountIds.random(random)
         when (kind) {
             "TRANSFER" -> {
@@ -305,15 +307,18 @@ private fun seedMonth(
                 val amount = randomAmountMinor(TRANSFER_RANGE, scale, random)
                 txRepo.addTransfer(fromAccount, toAccount, amount, currency, epochDay, "Transferencia")
             }
+
             "EXPENSE" -> {
                 val choice = expenseChoices.random(random)
                 val amount = randomAmountMinor(EXPENSE_RANGES[choice.topName] ?: 10L..100L, scale, random)
                 txRepo.add(fromAccount, choice.id, amount, currency, epochDay, choice.label, "EXPENSE")
             }
+
             "ADJUSTMENT" -> {
                 val amount = randomAmountMinor(ADJUSTMENT_RANGE, scale, random) * if (random.nextBoolean()) 1L else -1L
                 txRepo.addAdjustment(fromAccount, amount, currency, epochDay, "Ajuste de saldo")
             }
+
             else -> {
                 val choice = incomeChoices.random(random)
                 val amount = randomAmountMinor(INCOME_RANGES[choice.topName] ?: 50L..500L, scale, random)
@@ -346,7 +351,7 @@ private fun randomAmountMinor(range: LongRange, scale: Long, random: Random): Lo
 
 private fun daysInMonth(year: Int, month: Int): Int {
     val first = LocalDate(year, month, 1)
-    return first.plus(DatePeriod(months = 1)).toEpochDays() - first.toEpochDays()
+    return first.daysInMonth()
 }
 
 private fun scaleFor(decimals: Long): Long {

@@ -20,7 +20,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.TrendingUp
+import androidx.compose.material.icons.automirrored.outlined.TrendingUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -158,7 +158,9 @@ fun InvestmentsScreen(
             onConfirm = { id, action, amountMinor, accountId ->
                 when (action) {
                     FundAction.Contribute -> vm.contribute(id, amountMinor, accountId)
+
                     FundAction.Withdraw -> vm.withdraw(id, amountMinor)
+
                     FundAction.Close -> open.firstOrNull { it.id == id }?.let { inv ->
                         pendingClose = inv to amountMinor
                     }
@@ -558,7 +560,7 @@ private fun InvestmentItem(
 @Composable
 private fun InvestmentHeader(name: String, subtitle: String, trailing: @Composable () -> Unit = {}) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(LocalSpacing.current.md)) {
-        IconAvatar(Icons.Outlined.TrendingUp)
+        IconAvatar(Icons.AutoMirrored.Outlined.TrendingUp)
         Column(modifier = Modifier.weight(1f)) {
             Text(name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
             Text(subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

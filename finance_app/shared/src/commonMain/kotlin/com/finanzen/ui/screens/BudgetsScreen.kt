@@ -53,13 +53,13 @@ import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.ui.theme.displayFontFamily
 import com.finanzen.viewmodel.BudgetRow
 import com.finanzen.viewmodel.BudgetsViewModel
-import kotlinx.datetime.Clock
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
 import org.koin.compose.viewmodel.koinViewModel
+import kotlin.time.Clock
 
 /**
  * Presupuestos del mes. Pestaña de nivel superior. Lista las categorías con presupuesto
@@ -151,11 +151,14 @@ fun BudgetsScreen(
             )
             when {
                 !data.loaded -> Box(Modifier.fillMaxSize())
+
                 data.rows.isEmpty() ->
                     // Sin categorías de gasto no hay FAB: el botón lleva al único sitio donde se resuelve.
                     EmptyMessage("Sin presupuestos", "Crea categorías de gasto para asignarles presupuesto.", "Ir a Categorías", onOpenCategories)
+
                 budgeted.isEmpty() ->
                     EmptyMessage("Sin presupuestos", "Usa el botón + para asignar uno a una categoría.")
+
                 else ->
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),

@@ -79,13 +79,13 @@ import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.viewmodel.TransactionsViewModel
 import kotlinx.coroutines.launch
-import kotlinx.datetime.Clock
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
 import org.koin.compose.viewmodel.koinViewModel
+import kotlin.time.Clock
 
 private fun dayIncome(rows: List<TransactionRow>): Long = rows.filter { it.kind == "INCOME" }.sumOf { it.amountMinor }
 
@@ -113,7 +113,7 @@ fun TransactionsScreen(
     val dateLocale = LocalDateLocale.current
     var query by remember { mutableStateOf("") }
     val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
-    val todayEpochDay = remember(today) { today.toEpochDays().toLong() }
+    val todayEpochDay = remember(today) { today.toEpochDays() }
     var month by remember { mutableStateOf(LocalDate(today.year, today.month, 1)) }
     // Días expandidos (acordeón). Por defecto solo el día de hoy abre; el resto queda
     // colapsado. Ausente en el mapa = usa el default; una vez tocado, el valor explícito manda.
@@ -222,7 +222,7 @@ fun TransactionsScreen(
                                         .animateItem(),
                                 ) {
                                     DayHeader(
-                                        dayNumber = d.dayOfMonth.toString().padStart(2, '0'),
+                                        dayNumber = d.day.toString().padStart(2, '0'),
                                         weekday = diaSemana(day),
                                         count = dayRows.size,
                                         incomeMinor = dayIncome(dayRows),
@@ -280,6 +280,7 @@ fun TransactionsScreen(
                     when (block) {
                         is TransactionsViewModel.DeleteBlock.Subscription ->
                             "\"${block.name}\" es una suscripción periódica. Elimínala desde la pantalla de Suscripciones — una vez eliminada, podrás borrar este movimiento aquí."
+
                         is TransactionsViewModel.DeleteBlock.Investment ->
                             "\"${block.name}\" es una inversión periódica. Gestiónala desde la pantalla de Inversiones."
                     },
@@ -435,12 +436,15 @@ private fun TransactionItem(
                 // La suscripción se distingue aun si tiene categoría (igual que una transferencia
                 // nunca se pierde detrás de su categoría) — de ahí que vaya antes del chequeo de categoría.
                 isSubscription -> KindAvatar(kind = row.kind, size = DayLeadSize, icon = Icons.Outlined.Autorenew)
+
                 // Transferencias, ajustes e inversiones usan una categoría auto-asignada por el
                 // sistema (no elegida por el usuario) — su inicial no aporta nada, así que el
                 // avatar usa la inicial de la nota del movimiento en su lugar.
                 isTransfer || isAdjustment || isInvestment ->
                     CategoryAvatar(name = row.note.ifBlank { kindLabel(row.kind) }, size = DayLeadSize)
+
                 category != null -> CategoryAvatar(name = category.name, size = DayLeadSize)
+
                 else -> KindAvatar(kind = row.kind, size = DayLeadSize)
             }
             // Mismo formato que la cabecera del día: título como el nombre del día, subtítulo como "N movimientos".

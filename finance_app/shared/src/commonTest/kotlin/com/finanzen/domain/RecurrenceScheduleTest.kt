@@ -8,7 +8,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class RecurrenceScheduleTest {
-    private fun epoch(y: Int, m: Int, d: Int) = LocalDate(y, m, d).toEpochDays().toLong()
+    private fun epoch(y: Int, m: Int, d: Int) = LocalDate(y, m, d).toEpochDays()
     private fun dateOf(epochDay: Long) = LocalDate.fromEpochDays(epochDay.toInt())
     private fun fmt(epochDays: List<Long>) = epochDays.map { dateOf(it).toString() }
 

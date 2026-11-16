@@ -6,9 +6,9 @@ import com.finanzen.data.TransactionRepository
 import com.finanzen.db.Subscription
 import com.finanzen.domain.RecurrenceSchedule
 import com.finanzen.platform.NotificationScheduler
-import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Clock
 
 /**
  * Cobra las suscripciones vencidas. Compartida entre el catch-up de arranque de la app (ver
@@ -56,5 +56,5 @@ class SubscriptionCatchUp(
         )
     }
 
-    private fun todayEpochDay(): Long = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date.toEpochDays().toLong()
+    private fun todayEpochDay(): Long = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date.toEpochDays()
 }

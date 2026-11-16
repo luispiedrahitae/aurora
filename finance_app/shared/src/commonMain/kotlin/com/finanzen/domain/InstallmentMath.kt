@@ -2,6 +2,7 @@ package com.finanzen.domain
 
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.number
 import kotlinx.datetime.plus
 import kotlin.math.pow
 import kotlin.math.roundToLong
@@ -32,17 +33,17 @@ object InstallmentMath {
         if (todayEpochDay < startEpochDay) return 0
         val start = LocalDate.fromEpochDays(startEpochDay.toInt())
         val today = LocalDate.fromEpochDays(todayEpochDay.toInt())
-        val months = (today.year - start.year) * 12 + (today.monthNumber - start.monthNumber)
+        val months = (today.year - start.year) * 12 + (today.month.number - start.month.number)
         return months.toLong().coerceIn(0, installments)
     }
 
     /** Fecha (epoch day) de la cuota [index] (0-based): mismo día de mes que el inicio, acotado a fin de mes. */
     fun installmentDueDate(startEpochDay: Long, index: Long): Long {
         val start = LocalDate.fromEpochDays(startEpochDay.toInt())
-        val firstOfTargetMonth = LocalDate(start.year, start.monthNumber, 1).plus(DatePeriod(months = index.toInt()))
-        val daysInTargetMonth = firstOfTargetMonth.plus(DatePeriod(months = 1)).toEpochDays() - firstOfTargetMonth.toEpochDays()
-        val day = minOf(start.dayOfMonth, daysInTargetMonth)
-        return LocalDate(firstOfTargetMonth.year, firstOfTargetMonth.monthNumber, day).toEpochDays().toLong()
+        val firstOfTargetMonth = LocalDate(start.year, start.month.number, 1).plus(DatePeriod(months = index.toInt()))
+        val daysInTargetMonth = firstOfTargetMonth.daysInMonth()
+        val day = minOf(start.day, daysInTargetMonth)
+        return LocalDate(firstOfTargetMonth.year, firstOfTargetMonth.month.number, day).toEpochDays()
     }
 
     /** Compromiso restante (aún no facturado) de un plan; 0 si está saldado antes de tiempo o ya completo. */

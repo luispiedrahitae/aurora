@@ -2,6 +2,7 @@ package com.finanzen.domain
 
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.number
 import kotlinx.datetime.plus
 import kotlin.math.roundToLong
 
@@ -52,21 +53,21 @@ object RecurrenceSchedule {
     fun nextOccurrenceAfter(fromEpochDay: Long, frequency: String, interval: Long): Long {
         val from = LocalDate.fromEpochDays(fromEpochDay.toInt())
         if (frequency != "MONTHLY") {
-            return from.plus(DatePeriod(days = interval.coerceAtLeast(1).toInt())).toEpochDays().toLong()
+            return from.plus(DatePeriod(days = interval.coerceAtLeast(1).toInt())).toEpochDays()
         }
         val day = interval.coerceIn(1, 31).toInt()
-        var cand = dayInMonth(from.year, from.monthNumber, day)
+        var cand = dayInMonth(from.year, from.month.number, day)
         if (cand <= from) {
-            val nm = LocalDate(from.year, from.monthNumber, 1).plus(DatePeriod(months = 1))
-            cand = dayInMonth(nm.year, nm.monthNumber, day)
+            val nm = LocalDate(from.year, from.month.number, 1).plus(DatePeriod(months = 1))
+            cand = dayInMonth(nm.year, nm.month.number, day)
         }
-        return cand.toEpochDays().toLong()
+        return cand.toEpochDays()
     }
 
     /** Día [day] del mes [m]/[y], recortado al último día si el mes es más corto. */
     private fun dayInMonth(y: Int, m: Int, day: Int): LocalDate {
         val first = LocalDate(y, m, 1)
-        val daysInMonth = first.plus(DatePeriod(months = 1)).toEpochDays() - first.toEpochDays()
+        val daysInMonth = first.daysInMonth()
         return LocalDate(y, m, minOf(day, daysInMonth))
     }
 }

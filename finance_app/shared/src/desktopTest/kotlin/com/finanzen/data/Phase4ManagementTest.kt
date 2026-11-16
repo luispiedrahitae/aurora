@@ -8,7 +8,6 @@ import com.finanzen.ui.format.monthPeriod
 import com.finanzen.viewmodel.AccountsViewModel
 import com.finanzen.viewmodel.BudgetsViewModel
 import com.finanzen.viewmodel.TransactionsViewModel
-import kotlinx.datetime.Clock
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
@@ -19,6 +18,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.time.Clock
 
 class Phase4ManagementTest {
     private fun freshDb(): FinanzenDb {
@@ -169,7 +169,7 @@ class Phase4ManagementTest {
 
         val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
         val start = today.minus(DatePeriod(months = 3))
-        val startEpoch = start.toEpochDays().toLong()
+        val startEpoch = start.toEpochDays()
         val cat = db.categoryQueries.selectByKind("EXPENSE").executeAsList().first()
         val planId = planRepo.add(card.id, categoryId = cat.id, totalAmountMinor = 120_000, installments = 12, interestRate = 0.0, startDateEpochDay = startEpoch, description = "TV")
         // La cuota 1 ya se registra al crear el plan (lo hace TransactionsViewModel.save en producción).
@@ -179,7 +179,7 @@ class Phase4ManagementTest {
         // Construir el ViewModel dispara el catch-up en su init.
         AccountsViewModel(accountRepo, txRepo, cardRepo, planRepo, SubscriptionRepository(db), InvestmentRepository(db), SettingsRepository(db), NotificationScheduler())
 
-        val expected = (InstallmentMath.elapsedInstallments(startEpoch, today.toEpochDays().toLong(), 12) + 1).coerceAtMost(12)
+        val expected = (InstallmentMath.elapsedInstallments(startEpoch, today.toEpochDays(), 12) + 1).coerceAtMost(12)
         assertEquals(expected, db.transactionQueries.countByInstallmentPlan(planId).executeAsOne())
 
         // Abrir la pantalla de Cuentas otra vez el mismo día no debe duplicar cuotas.
@@ -200,7 +200,7 @@ class Phase4ManagementTest {
         val savingsId = accountRepo.add("Ahorros", "SAVINGS", "USD", openingBalanceMinor = 500_000)
         val creditId = vm.addAccount(type = "CREDIT", name = "Visa", creditLimitMinor = 1_000_000L, interestRate = 0.0)!!
         val card = cardRepo.byAccount(creditId)!!
-        val today = Clock.System.todayIn(TimeZone.currentSystemDefault()).toEpochDays().toLong()
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault()).toEpochDays()
         val cat = db.categoryQueries.selectByKind("EXPENSE").executeAsList().first()
         val planId = planRepo.add(card.id, categoryId = cat.id, totalAmountMinor = 120_000, installments = 12, interestRate = 0.0, startDateEpochDay = today, description = "TV")
         txRepo.add(creditId, cat.id, InstallmentMath.monthlyPaymentMinor(120_000, 12, 0.0), "USD", today, "TV", "EXPENSE", installmentPlanId = planId)
@@ -266,7 +266,7 @@ class Phase4ManagementTest {
         budgetRepo.setLimit(cat.id, period, 50_000)
 
         // gasto en el mes actual (epochDay derivado del periodo no es trivial; usamos hoy)
-        val today = Clock.System.todayIn(TimeZone.currentSystemDefault()).toEpochDays().toLong()
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault()).toEpochDays()
         TransactionRepository(db).add(account.id, cat.id, 12_000, account.currency, today, "compra", "EXPENSE")
 
         val data = BudgetsViewModel.computeBudgets(
@@ -297,7 +297,7 @@ class Phase4ManagementTest {
         val period = BudgetsViewModel.currentPeriodMonth()
         budgetRepo.setLimit(parent.id, period, 50_000) // presupuesto de "categoría completa"
 
-        val today = Clock.System.todayIn(TimeZone.currentSystemDefault()).toEpochDays().toLong()
+        val today = Clock.System.todayIn(TimeZone.currentSystemDefault()).toEpochDays()
         // El gasto real siempre se guarda en la hoja, nunca en el padre (ver Transaction.sq).
         TransactionRepository(db).add(account.id, leaf.id, 12_000, account.currency, today, "veterinario", "EXPENSE")
 

@@ -6,6 +6,7 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.allocArray
 import kotlinx.cinterop.convert
+import kotlinx.cinterop.get
 import kotlinx.cinterop.memScoped
 import kotlinx.cinterop.refTo
 import kotlinx.cinterop.usePinned
@@ -46,7 +47,7 @@ actual fun sha256HexIterated(seed: String, iterations: Int): String = memScoped 
             out[i * 2] = HEX_CHARS[v ushr 4]
             out[i * 2 + 1] = HEX_CHARS[v and 0x0F]
         }
-        hex = String(out)
+        hex = out.concatToString()
         current = hex.encodeToByteArray()
     }
     hex

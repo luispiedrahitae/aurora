@@ -59,14 +59,15 @@ import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.ui.theme.motionTween
 import com.finanzen.viewmodel.DashboardViewModel
 import com.finanzen.viewmodel.SettingsViewModel
-import kotlinx.datetime.Clock
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.number
 import kotlinx.datetime.plus
 import kotlinx.datetime.todayIn
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import kotlin.time.Clock
 
 @Composable
 fun DashboardScreen(
@@ -136,7 +137,7 @@ fun DashboardScreen(
             }
 
             val prevLabel = when (mode) {
-                PeriodMode.MONTH -> mesLargo(month.plus(DatePeriod(months = -1)).monthNumber).replaceFirstChar { it.uppercase() }
+                PeriodMode.MONTH -> mesLargo(month.plus(DatePeriod(months = -1)).month.number).replaceFirstChar { it.uppercase() }
                 PeriodMode.YEAR -> "${year - 1}"
             }
             item {
@@ -194,8 +195,8 @@ fun DashboardScreen(
                 item {
                     val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
                     val todayIndex = when (mode) {
-                        PeriodMode.MONTH -> if (month.year == today.year && month.monthNumber == today.monthNumber) today.dayOfMonth - 1 else null
-                        PeriodMode.YEAR -> if (year == today.year) today.monthNumber - 1 else null
+                        PeriodMode.MONTH -> if (month.year == today.year && month.month.number == today.month.number) today.day - 1 else null
+                        PeriodMode.YEAR -> if (year == today.year) today.month.number - 1 else null
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
                         SectionHeader("Ingresos vs gastos")

@@ -19,10 +19,11 @@ import com.finanzen.ui.format.periodOfEpochDay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.datetime.Clock
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.number
 import kotlinx.datetime.todayIn
+import kotlin.time.Clock
 
 data class ExportStatus(val message: String, val isError: Boolean)
 
@@ -110,7 +111,7 @@ class ReportsViewModel(
         val netWorthTxs = allTxs.filter { it.accountId in netWorthAccountIds }
         val netWorthByMonth = DashboardViewModel.computeMonthlyNetWorth(netWorthAccounts, netWorthTxs, periodYear())
         val netWorthMinor = when (_mode.value) {
-            PeriodMode.MONTH -> netWorthByMonth.getOrNull(_month.value.monthNumber - 1)?.netWorthMinor ?: 0L
+            PeriodMode.MONTH -> netWorthByMonth.getOrNull(_month.value.month.number - 1)?.netWorthMinor ?: 0L
             PeriodMode.YEAR -> netWorthByMonth.lastOrNull()?.netWorthMinor ?: 0L
         }
 

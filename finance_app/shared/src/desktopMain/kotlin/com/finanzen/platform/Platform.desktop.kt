@@ -61,12 +61,16 @@ actual class ReportExporter {
         val body = lines.joinToString("\n") { line ->
             when (line) {
                 is ReportLine.Title -> "\n${line.text}\n${"=".repeat(line.text.length)}"
+
                 is ReportLine.Section -> "\n-- ${line.text} --"
+
                 is ReportLine.Row -> {
                     val prefix = if (line.emphasis) "* " else "  "
                     if (line.value.isEmpty()) "$prefix${line.label}" else "$prefix${line.label.padEnd(42)}${line.value}"
                 }
+
                 ReportLine.Divider -> "-".repeat(40)
+
                 ReportLine.Blank -> ""
             }
         }

@@ -7,9 +7,9 @@ import com.finanzen.db.TransactionRow
 import com.finanzen.domain.Money
 import com.finanzen.platform.ReportLine
 import com.finanzen.ui.format.formatFechaLarga
-import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
+import kotlin.time.Clock
 
 /** Una fila de presupuesto ya agregada para el periodo del reporte (mes o suma de un año). */
 data class BudgetSummaryRow(
@@ -46,7 +46,7 @@ object ReportBuilder {
             val subcategory = when {
                 r.subscriptionId != null -> subById[r.subscriptionId]?.name ?: leaf?.name ?: ""
                 r.investmentId != null -> invById[r.investmentId]?.name ?: leaf?.name ?: ""
-                parent != null -> leaf?.name ?: ""
+                parent != null -> leaf.name
                 else -> ""
             }
             sb.append(r.date).append(',')
@@ -111,8 +111,10 @@ object ReportBuilder {
                 val childTotals: Map<String, Long> = when (parentName) {
                     "Suscripciones" -> parentRows.groupBy { tx -> tx.subscriptionId?.let { subscriptionById[it] }?.name ?: catById[tx.categoryId]?.name ?: "Suscripción" }
                         .mapValues { (_, list) -> list.sumOf { it.amountMinor } }
+
                     "Inversiones" -> parentRows.groupBy { tx -> tx.investmentId?.let { investmentById[it] }?.name ?: catById[tx.categoryId]?.name ?: "Inversión" }
                         .mapValues { (_, list) -> list.sumOf { it.amountMinor } }
+
                     else -> parentRows.groupBy { it.categoryId }
                         .filterKeys { it != parentId }
                         .mapValues { (_, list) -> list.sumOf { it.amountMinor } }

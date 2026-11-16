@@ -241,8 +241,10 @@ private fun KeypadCell(label: String, modifier: Modifier, onClick: () -> Unit) {
         Box(contentAlignment = Alignment.Center) {
             when (label) {
                 "←" -> Icon(LucideIcons.Backspace, contentDescription = "Borrar dígito")
+
                 // "OK" se anuncia por lo que hace.
                 "OK" -> Text(label, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.semantics { contentDescription = "Desbloquear" })
+
                 else -> Text(label, style = MaterialTheme.typography.headlineSmall)
             }
         }

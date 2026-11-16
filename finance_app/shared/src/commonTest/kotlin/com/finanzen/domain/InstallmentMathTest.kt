@@ -40,7 +40,7 @@ class InstallmentMathTest {
     @Test
     fun installmentDueDateAcotaFinDeMesCorto() {
         // Compra el 31 de enero (2024, bisiesto): la cuota 1 no puede caer en 31 de febrero, se acota a 29.
-        val start = LocalDate(2024, 1, 31).toEpochDays().toLong()
+        val start = LocalDate(2024, 1, 31).toEpochDays()
         val due1 = InstallmentMath.installmentDueDate(start, 1)
         assertEquals(LocalDate(2024, 2, 29), LocalDate.fromEpochDays(due1.toInt()))
     }
@@ -65,7 +65,7 @@ class InstallmentMathTest {
     fun installmentDueDateAcotaFinDeMesCortoNoBisiesto() {
         // Compra el 31 de enero de 2026 (NO bisiesto): la cuota 1 se acota a 28 feb, no 29.
         // (installmentDueDateAcotaFinDeMesCorto ya cubre el caso bisiesto 2024; este cubre el no-bisiesto).
-        val start = LocalDate(2026, 1, 31).toEpochDays().toLong()
+        val start = LocalDate(2026, 1, 31).toEpochDays()
         val due1 = InstallmentMath.installmentDueDate(start, 1)
         assertEquals(LocalDate(2026, 2, 28), LocalDate.fromEpochDays(due1.toInt()))
     }
@@ -74,7 +74,7 @@ class InstallmentMathTest {
     fun installmentDueDateConIndiceNegativoRetrocedeMeses() {
         // index negativo no está documentado como caso de uso, pero no revienta: retrocede meses
         // igual que avanza. 31 ene 2024, index=-1 -> diciembre 2023 (31 días, sin recorte).
-        val start = LocalDate(2024, 1, 31).toEpochDays().toLong()
+        val start = LocalDate(2024, 1, 31).toEpochDays()
         val due = InstallmentMath.installmentDueDate(start, -1)
         assertEquals(LocalDate(2023, 12, 31), LocalDate.fromEpochDays(due.toInt()))
     }
@@ -82,8 +82,8 @@ class InstallmentMathTest {
     @Test
     fun remainingCommitmentAMitadDePlazo() {
         // 12 cuotas de 10_000 sin interés; a los 5 meses transcurridos (6 ya facturadas), quedan 6.
-        val start = LocalDate(2026, 1, 1).toEpochDays().toLong()
-        val today = LocalDate(2026, 6, 1).toEpochDays().toLong()
+        val start = LocalDate(2026, 1, 1).toEpochDays()
+        val today = LocalDate(2026, 6, 1).toEpochDays()
         val expected = InstallmentMath.monthlyPaymentMinor(120_000, 12, 0.0) * 6
         assertEquals(expected, InstallmentMath.remainingCommitmentMinor(120_000, 12, 0.0, start, today, settled = false))
     }

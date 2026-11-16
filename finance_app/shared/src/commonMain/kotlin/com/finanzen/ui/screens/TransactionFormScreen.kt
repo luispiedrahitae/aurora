@@ -58,10 +58,10 @@ import com.finanzen.ui.theme.displayFontFamily
 import com.finanzen.viewmodel.InvestmentsViewModel
 import com.finanzen.viewmodel.SubscriptionsViewModel
 import com.finanzen.viewmodel.TransactionsViewModel
-import kotlinx.datetime.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.todayIn
 import org.koin.compose.viewmodel.koinViewModel
+import kotlin.time.Clock
 
 /** Alta/edición de movimiento, en un [ModalBottomSheet] (no una pantalla completa) — mismo patrón
  * que `AccountFormDialog` en `AccountsTabScreen.kt`. El estado de qué mostrar (nuevo/edición) vive
@@ -110,7 +110,7 @@ fun TransactionFormScreen(
     var showAddSubcategory by remember { mutableStateOf(false) }
     var newSubcategoryName by remember { mutableStateOf("") }
     var dateEpochDay by remember {
-        mutableStateOf(existing?.date ?: Clock.System.todayIn(TimeZone.currentSystemDefault()).toEpochDays().toLong())
+        mutableStateOf(existing?.date ?: Clock.System.todayIn(TimeZone.currentSystemDefault()).toEpochDays())
     }
     var cuotasText by remember { mutableStateOf("") }
     var blockedDelete by remember { mutableStateOf<TransactionsViewModel.DeleteBlock?>(null) }
@@ -501,8 +501,11 @@ fun TransactionFormScreen(
                     if (editingSubscription != null) {
                         when {
                             movementName.isBlank() -> error = NAME_ERROR
+
                             minor <= 0 -> error = AMOUNT_ERROR
+
                             !recurValid -> error = RECURRENCE_ERROR
+
                             else -> {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 val frequency = if (recurMonthly) "MONTHLY" else "DAILY"
@@ -514,9 +517,13 @@ fun TransactionFormScreen(
                     } else if (editingInvestment != null) {
                         when {
                             movementName.isBlank() -> error = NAME_ERROR
+
                             account == null -> error = "Crea una cuenta primero (pestaña Cuentas)."
+
                             minor <= 0 -> error = AMOUNT_ERROR
+
                             periodic && !recurValid -> error = RECURRENCE_ERROR
+
                             else -> {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 val frequency = if (!periodic) {
@@ -541,8 +548,11 @@ fun TransactionFormScreen(
                         val dest = selectedDest
                         when {
                             account == null || dest == null -> error = "Elige cuenta origen y destino."
+
                             account.id == dest.id -> error = "Origen y destino deben ser distintos."
+
                             minor <= 0 -> error = AMOUNT_ERROR
+
                             else -> {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 vm.saveTransfer(existing?.id, account.id, dest.id, minor, "", dateEpochDay)
@@ -552,8 +562,11 @@ fun TransactionFormScreen(
                     } else if (kind == "SUBSCRIPTION") {
                         when {
                             movementName.isBlank() -> error = NAME_ERROR
+
                             minor <= 0 -> error = AMOUNT_ERROR
+
                             !recurValid -> error = RECURRENCE_ERROR
+
                             else -> {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 val frequency = if (recurMonthly) "MONTHLY" else "DAILY"
@@ -565,9 +578,13 @@ fun TransactionFormScreen(
                     } else if (kind == "INVESTMENT") {
                         when {
                             movementName.isBlank() -> error = NAME_ERROR
+
                             account == null -> error = "Crea una cuenta primero (pestaña Cuentas)."
+
                             minor <= 0 -> error = AMOUNT_ERROR
+
                             periodic && !recurValid -> error = RECURRENCE_ERROR
+
                             else -> {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 val frequency = if (!periodic) {
@@ -591,9 +608,13 @@ fun TransactionFormScreen(
                     } else {
                         when {
                             account == null -> error = "Crea una cuenta primero (pestaña Cuentas)."
+
                             categoryId == null -> error = CATEGORY_ERROR
+
                             subcategoryId == null -> error = SUBCATEGORY_ERROR
+
                             minor <= 0 -> error = AMOUNT_ERROR
+
                             else -> {
                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 // Sin campo de nota manual, la nota es siempre el nombre de la
@@ -690,6 +711,7 @@ fun TransactionFormScreen(
                     when (block) {
                         is TransactionsViewModel.DeleteBlock.Subscription ->
                             "\"${block.name}\" es una suscripción periódica. Elimínala desde la pantalla de Suscripciones — una vez eliminada, podrás borrar este movimiento aquí."
+
                         is TransactionsViewModel.DeleteBlock.Investment ->
                             "\"${block.name}\" es una inversión periódica. Gestiónala desde la pantalla de Inversiones."
                     },
