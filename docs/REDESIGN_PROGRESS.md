@@ -5,8 +5,12 @@ Rama de trabajo: `redesign` · Respaldo intocable: `backup/pre-redesign` (2da1f2
 
 ## Estado actual
 
-**Fase 2 — Estándares: hecha.** Siguiente paso: **Fase 3**, crear el design system y las pantallas
-en Claude Design y detenerse en el ⛔ Checkpoint 2.
+**⛔ Checkpoint 2 — esperando aprobación del diseño.** El design system y las pantallas están en
+Claude Design; no se ha tocado código de UI. Siguiente paso tras aprobar: implementar tokens y
+componentes en `ui/theme/` y `ui/components/` y migrar pantalla por pantalla.
+
+- Design system: https://claude.ai/artifact/QdRX1cFzN6aWpb9gnEXy5s
+- Pantallas: https://claude.ai/artifact/D5SE4kr7NDM584HCZmj2th
 
 ## Fases
 
@@ -16,7 +20,7 @@ en Claude Design y detenerse en el ⛔ Checkpoint 2.
 | 1 — Auditoría | ✅ Hecha (2026-11-16) | Informe entregado en el chat |
 | ⛔ Checkpoint 1 | ✅ Aprobado (2026-11-16) | Decisiones en la tabla de abajo |
 | 2 — Estándares | ✅ Hecha (2026-11-16) | Ver "Fase 2 paso a paso" |
-| 3 — Design system (Claude Design) | ⏳ Pendiente | ⛔ Checkpoint 2 antes de tocar código |
+| 3 — Design system (Claude Design) | 🔄 Diseño hecho (2026-11-16), implementación pendiente | ⛔ Checkpoint 2: esperando aprobación |
 | 4 — Simulaciones | ⏳ Pendiente | ⛔ Checkpoint 3 (modelo + fórmulas) antes de implementar |
 | 5 — Verificación y entrega | ⏳ Pendiente | |
 
@@ -45,6 +49,22 @@ Movido a otras fases, donde ese código se reescribe de todos modos:
   estados (vía adaptadores de columna de SQLDelight); mover a `domain/` los cálculos que hoy viven
   en ViewModels (`fundTotals`, `yieldMinor`, `computeBudgets`, agregación del dashboard); quitar
   los 5 `!!` restantes.
+
+## Fase 3 paso a paso
+
+- [x] Design system en Claude Design: 26 colores (claro y oscuro, contraste verificado), 12 estilos
+      de texto, espaciado, radios, sombras, guía de uso y 14 componentes con vista previa (Button,
+      Chip, TextField, Card, ListRow, Badge, Table, ProgressBar, LineChart, BarChart, BottomNav,
+      TopBar, EmptyState, LoadingState, ErrorState).
+- [x] 9 pantallas: Resumen (claro y oscuro), Movimientos, Presupuesto vs. gasto real, Tendencias
+      de gasto, Fondos de inversión, Simular fondo, Proyección y Comparar fondos.
+- [ ] ⛔ Aprobación del usuario.
+- [ ] Tokens y componentes en Compose; fuentes Bricolage Grotesque, IBM Plex Sans e IBM Plex Mono.
+- [ ] Migrar las pantallas y reescribir `DESIGN.md`.
+
+Dirección del diseño: libro contable plano (bordes finos, sin sombras en cards), verde salvia como
+color de acción, ingresos en azul petróleo y gastos en naranja (se distinguen con daltonismo
+rojo-verde), cifras tabulares y una cifra principal por pantalla.
 
 ## Decisiones
 
