@@ -8,6 +8,10 @@ complexity:
   LongParameterList:
     functionThreshold: 8
     constructorThreshold: 8
+    # Un composable recibe por convención modifier, estilo, colores y lambdas opcionales con valor
+    # por defecto; contarlos como "demasiados parámetros" empuja a agruparlos en objetos artificiales.
+    ignoreAnnotated: ['Composable']
+    ignoreDefaultParameters: true
   CyclomaticComplexMethod:
     threshold: 20
   TooManyFunctions:
@@ -17,7 +21,9 @@ complexity:
 style:
   MagicNumber:
     # Los source sets KMP (commonTest, desktopTest) no caen en los excludes por defecto de Detekt.
-    excludes: ['**/commonTest/**', '**/desktopTest/**']
+    # `ui/theme/` es donde viven los tokens de diseño (colores, tamaños de letra, radios): ahí los
+    # números son la definición misma, no valores mágicos.
+    excludes: ['**/commonTest/**', '**/desktopTest/**', '**/ui/theme/**']
     ignoreNumbers: ['-1', '0', '1', '2', '10', '100', '1000']
     ignoreEnums: true
     ignoreRanges: true
@@ -36,3 +42,7 @@ naming:
     # PascalCase permitido (Composables); además ignora funciones @Composable explícitamente.
     functionPattern: '[a-zA-Z][a-zA-Z0-9]*'
     ignoreAnnotated: ['Composable']
+  # En Compose un archivo agrupa una familia de composables junto a su enum de variantes
+  # (Buttons.kt con SageButtonKind, Avatars.kt con AvatarTone); el nombre sigue a los composables.
+  MatchingDeclarationName:
+    active: false
