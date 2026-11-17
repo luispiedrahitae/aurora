@@ -5,9 +5,10 @@ Rama de trabajo: `redesign` · Respaldo intocable: `backup/pre-redesign` (2da1f2
 
 ## Estado actual
 
-**⛔ Checkpoint 2 — esperando aprobación del diseño.** El design system y las pantallas están en
-Claude Design; no se ha tocado código de UI. Siguiente paso tras aprobar: implementar tokens y
-componentes en `ui/theme/` y `ui/components/` y migrar pantalla por pantalla.
+**Fase 3 — implementación en curso.** Checkpoint 2 aprobado el 2026-11-17 ("continua ya lo
+revise"). Hecho: tema (tokens, fuentes, modo oscuro), componentes base, navegación y 10 pantallas
+de ajustes. Siguiente: Categorías, Suscripciones, Calendario, Movimientos, formulario de
+movimiento, Cuentas, Presupuesto, Resumen y Fondos; luego `DESIGN.md` y `allWarningsAsErrors`.
 
 - Design system: https://claude.ai/artifact/QdRX1cFzN6aWpb9gnEXy5s
 - Pantallas: https://claude.ai/artifact/D5SE4kr7NDM584HCZmj2th
@@ -20,7 +21,7 @@ componentes en `ui/theme/` y `ui/components/` y migrar pantalla por pantalla.
 | 1 — Auditoría | ✅ Hecha (2026-11-16) | Informe entregado en el chat |
 | ⛔ Checkpoint 1 | ✅ Aprobado (2026-11-16) | Decisiones en la tabla de abajo |
 | 2 — Estándares | ✅ Hecha (2026-11-16) | Ver "Fase 2 paso a paso" |
-| 3 — Design system (Claude Design) | 🔄 Diseño hecho (2026-11-16), implementación pendiente | ⛔ Checkpoint 2: esperando aprobación |
+| 3 — Design system (Claude Design) | 🔄 Diseño aprobado (2026-11-17), implementación en curso | ⛔ Checkpoint 2: ✅ aprobado |
 | 4 — Simulaciones | ⏳ Pendiente | ⛔ Checkpoint 3 (modelo + fórmulas) antes de implementar |
 | 5 — Verificación y entrega | ⏳ Pendiente | |
 
@@ -61,9 +62,19 @@ Movido a otras fases, donde ese código se reescribe de todos modos:
 - [x] 5 pantallas más (2026-11-17): Cuentas y tarjetas, Nuevo movimiento, Suscripciones,
       Calendario y Más. La barra inferior de todas apunta ya a Cuentas y Más.
 - [x] 10 pantallas secundarias (2026-11-17), enlazadas desde Más.
-- [ ] ⛔ Aprobación del usuario.
-- [ ] Tokens y componentes en Compose; fuentes Caprasimo, IBM Plex Sans e IBM Plex Mono.
-- [ ] Migrar las pantallas y reescribir `DESIGN.md`.
+- [x] ⛔ Aprobación del usuario (2026-11-17).
+- [x] Tema: tokens de color claro/oscuro, escala tipográfica Caprasimo + IBM Plex (fuentes y
+      licencia OFL en `finance_app/licenses/`), radios 6/10/16, espaciado 4–48, preferencia de tema
+      Automático/Claro/Oscuro (antes la app forzaba claro). Nombres de acento con mayúscula inicial.
+- [x] Componentes: `FinanceComponents.kt` dividido por tema; tarjeta plana con borde, avatares,
+      botones, campos, filas de menú/interruptor/radio, segmentado, chips, insignias, avisos y
+      estados vacío/carga/error. Detekt ajustado a Compose (ver `config/detekt/detekt.yml`).
+- [x] Navegación: barra inferior y rail Sage, cabeceras, rutas en `Routes`.
+- [x] Pantallas: Más, Acerca de, Sugerencias, Reportes, Notificaciones, Moneda, Apariencia,
+      Seguridad, Copia de seguridad, Bloqueo con PIN.
+- [ ] Pantallas: Categorías, Suscripciones, Calendario, Movimientos, formulario, Cuentas,
+      Presupuesto, Resumen, Fondos.
+- [ ] Reescribir `DESIGN.md`, quitar las 4 APIs obsoletas y activar `allWarningsAsErrors`.
 
 Dirección del diseño: libro contable plano (bordes finos, sin sombras en cards) con la identidad de
 la app Sage actual: fondo crema, terracota como color de acción, verde salvia para ingresos y
@@ -81,7 +92,14 @@ numerales tabulares; una cifra principal por pantalla.
   subcategorías; "+ Subcategoría", "Renombrar" y "Eliminar" en una sola fila. Apariencia: nombres
   de color con cada palabra en mayúscula inicial ("Oliva Oscuro") y mismo espacio entre colores
   aunque el nombre ocupe dos renglones. **Al implementar:** cambiar también las etiquetas de
-  `AccentPreset` en `ui/theme/Accent.kt` a mayúscula inicial por palabra.
+  `AccentPreset` en `ui/theme/Accent.kt` a mayúscula inicial por palabra. (Hecho.)
+- 2026-11-17, decisiones de implementación: se incluye el selector de tema (el usuario lo vio en el
+  diseño y aprobó); "Última copia: hace N días" queda fuera porque la app no guarda esa fecha. La
+  biometría no tiene interruptor propio en la app (se ofrece sola si hay PIN), así que Seguridad la
+  explica en una tarjeta en vez de mostrar un interruptor sin efecto. El bloqueo añade un botón
+  "Entrar" porque el PIN mide de 4 a 8 dígitos y no puede enviarse solo. Las fuentes Figtree y
+  `PlatformColorScheme.kt` (color dinámico) quedan sin uso: candidatos a borrar, pendiente de
+  aprobación.
 
 ## Decisiones
 
