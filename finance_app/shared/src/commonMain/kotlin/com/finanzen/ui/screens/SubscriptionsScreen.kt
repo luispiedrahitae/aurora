@@ -1,19 +1,15 @@
 package com.finanzen.ui.screens
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
@@ -27,24 +23,39 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.finanzen.db.Subscription
 import com.finanzen.ui.components.AddFab
 import com.finanzen.ui.components.BentoTileSize
 import com.finanzen.ui.components.BottomSnackbarHost
 import com.finanzen.ui.components.EmptyState
+import com.finanzen.ui.components.FabClearance
 import com.finanzen.ui.components.FinanceCard
+import com.finanzen.ui.components.GroupCard
 import com.finanzen.ui.components.IconAvatar
+import com.finanzen.ui.components.ListRow
+import com.finanzen.ui.components.LoadingState
 import com.finanzen.ui.components.MoneyText
+import com.finanzen.ui.components.Overline
+import com.finanzen.ui.components.RowDivider
+import com.finanzen.ui.components.ScreenList
 import com.finanzen.ui.components.SubScreenHeader
 import com.finanzen.ui.components.SwipeToDeleteRow
+import com.finanzen.ui.components.TitledSection
+import com.finanzen.ui.format.diaSemana
+import com.finanzen.ui.format.formatDiaMes
 import com.finanzen.ui.icons.LucideIcons
+import com.finanzen.ui.theme.LocalDateLocale
 import com.finanzen.ui.theme.LocalFinanceColors
+import com.finanzen.ui.theme.LocalMoneyFormat
+import com.finanzen.ui.theme.LocalSageType
 import com.finanzen.viewmodel.DashboardViewModel
 import com.finanzen.viewmodel.SubscriptionsViewModel
 import kotlinx.coroutines.launch
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.todayIn
 import org.koin.compose.viewmodel.koinViewModel
+import kotlin.time.Clock
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -89,113 +100,143 @@ fun SubscriptionsScreen(
         TransactionFormScreen(transactionId = null, initialKind = "SUBSCRIPTION", onDismiss = { creating = false })
     }
 
-    Scaffold(
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        // Alta directa aquí, como "+ Presupuesto": el estado vacío ya no manda a otra pantalla.
-        floatingActionButton = { AddFab(label = "Suscripción", onClick = { creating = true }) },
-    ) { inner ->
-        Column(Modifier.fillMaxSize().padding(inner)) {
+    val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()).toEpochDays() }
+    val dateLocale = LocalDateLocale.current
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
             SubScreenHeader(title = "Suscripciones", onBack = onBack)
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                // Abajo 96dp para que el FAB no tape la última tarjeta (igual que Movimientos).
-                contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
+            val visible = subs.filter { it.id !in pendingDeleteIds }.sortedBy { it.nextChargeDate }
+            ScreenList(bottomPadding = FabClearance) {
                 if (!loaded) {
-                    // Sin contenido hasta la primera lectura: evita el "Sin suscripciones" fugaz.
-                } else if (subs.isEmpty()) {
+                    item { LoadingState() }
+                } else if (visible.isEmpty()) {
                     item {
-                        Box(Modifier.fillMaxWidth().padding(top = 48.dp), contentAlignment = Alignment.Center) {
-                            EmptyState(
-                                icon = LucideIcons.Repeat,
-                                title = "Sin suscripciones",
-                                subtitle = "Usa el botón + para añadir una; cada cobro se registrará en Movimientos.",
-                                modifier = Modifier.padding(32.dp),
-                            )
-                        }
+                        EmptyState(
+                            icon = LucideIcons.Repeat,
+                            title = "Sin suscripciones",
+                            subtitle = "Añade una y cada cobro se registrará solo en Movimientos.",
+                            actionLabel = "Añadir suscripción",
+                            onAction = { creating = true },
+                        )
                     }
                 } else {
                     item {
-                        // Total mensual comprometido: la cifra que responde "¿cuánto me cuestan al mes?".
-                        val monthlyCost = remember(subs) { DashboardViewModel.computeSubscriptionMonthlyCost(subs) }
-                        // Mismo padding (16dp) que SubscriptionItem: el texto arranca alineado con sus iconos.
-                        FinanceCard(modifier = Modifier.fillMaxWidth(), size = BentoTileSize.Small, contentPadding = PaddingValues(16.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                            ) {
-                                Text("Costo mensual", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                        // La cifra que responde "¿cuánto me cuestan al mes?".
+                        val monthlyCost = remember(visible) { DashboardViewModel.computeSubscriptionMonthlyCost(visible) }
+                        FinanceCard(Modifier.fillMaxWidth(), size = BentoTileSize.Hero) {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Overline("Costo mensual")
                                 MoneyText(
-                                    amountMinor = monthlyCost,
+                                    amountMinor = -monthlyCost,
                                     currency = vm.baseCurrency,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = FontWeight.SemiBold,
+                                    style = LocalSageType.current.amountHero,
+                                    signed = true,
                                     colorOverride = LocalFinanceColors.current.expense,
+                                )
+                                Text(
+                                    "${LocalMoneyFormat.current.format(monthlyCost * MONTHS_PER_YEAR, vm.baseCurrency, false)} al año en " +
+                                        "${visible.size} ${if (visible.size == 1) "suscripción" else "suscripciones"}. Cada cobro se registra solo en Movimientos.",
+                                    style = LocalSageType.current.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
                         }
                     }
-                    items(subs.filter { it.id !in pendingDeleteIds }, key = { it.id }) { s ->
-                        SwipeToDeleteRow(onSwipeToDelete = {
-                            requestDelete(s)
-                            true
-                        }) {
-                            SubscriptionItem(
-                                name = s.name,
-                                amountMinor = s.amountMinor,
-                                currency = s.currency,
-                                accountName = accountsById[s.accountId]?.name,
-                                recurrenceText = recurrenceText(s.frequency, s.intervalCount),
-                                onClick = { editingId = s.id },
-                            )
+                    val next = visible.first()
+                    item {
+                        TitledSection("Próximo cobro") {
+                            GroupCard {
+                                SubscriptionRow(
+                                    sub = next,
+                                    subtitle = listOfNotNull(
+                                        "${diaSemana(next.nextChargeDate).replaceFirstChar { it.uppercase() }} ${formatDiaMes(next.nextChargeDate, dateLocale)}",
+                                        daysUntilLabel(next.nextChargeDate - today),
+                                        accountsById[next.accountId]?.name,
+                                    ).joinToString(" · "),
+                                    onClick = { editingId = next.id },
+                                    onDelete = { requestDelete(next) },
+                                )
+                            }
+                        }
+                    }
+                    if (visible.size > 1) {
+                        item {
+                            TitledSection("Las demás") {
+                                GroupCard {
+                                    visible.drop(1).forEachIndexed { index, s ->
+                                        if (index > 0) RowDivider()
+                                        SubscriptionRow(
+                                            sub = s,
+                                            subtitle = listOfNotNull(
+                                                recurrenceText(s.frequency, s.intervalCount),
+                                                "próximo ${formatDiaMes(s.nextChargeDate, dateLocale)}",
+                                                accountsById[s.accountId]?.name,
+                                            ).joinToString(" · "),
+                                            onClick = { editingId = s.id },
+                                            onDelete = { requestDelete(s) },
+                                        )
+                                    }
+                                }
+                                Text(
+                                    "Toca una suscripción para cambiar el monto o el día de cobro; desliza a la izquierda para cancelarla.",
+                                    style = LocalSageType.current.caption,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
                     }
                 }
             }
         }
-        BottomSnackbarHost(snackbarHostState)
+        AddFab(
+            label = "Nueva suscripción",
+            onClick = { creating = true },
+            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+        )
+        BottomSnackbarHost(snackbarHostState, aboveFab = true)
     }
+}
+
+private const val MONTHS_PER_YEAR = 12
+
+private fun daysUntilLabel(days: Long): String = when {
+    days < 0 -> "pendiente"
+    days == 0L -> "hoy"
+    days == 1L -> "mañana"
+    else -> "en $days días"
 }
 
 /** Texto de recurrencia corto para la fila de suscripción. Nunca muestra el código crudo de la BD. */
 private fun recurrenceText(frequency: String, intervalCount: Long): String = when (frequency) {
-    "MONTHLY" -> "Día $intervalCount"
+    "MONTHLY" -> "Día $intervalCount de cada mes"
     "DAILY" -> if (intervalCount == 1L) "Cada día" else "Cada $intervalCount días"
     "WEEKLY" -> "Semanal"
     "YEARLY" -> "Anual"
     else -> "Periódica"
 }
 
-/** Tarjeta de suscripción: icono · nombre + cuenta · recurrencia · monto. Tocar edita, deslizar elimina. */
+/** Fila de suscripción: avatar, nombre, detalle y monto. Tocar edita; deslizar a la izquierda cancela. */
 @Composable
-private fun SubscriptionItem(
-    name: String,
-    amountMinor: Long,
-    currency: String,
-    accountName: String?,
-    recurrenceText: String,
-    onClick: () -> Unit,
-) {
-    val finance = LocalFinanceColors.current
-    FinanceCard(modifier = Modifier.fillMaxWidth(), onClick = onClick, contentPadding = PaddingValues(16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconAvatar(LucideIcons.Repeat)
-            Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                Text(name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-                Text(
-                    listOfNotNull(accountName, recurrenceText).joinToString(" · "),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            MoneyText(
-                amountMinor = -amountMinor,
-                currency = currency,
-                style = MaterialTheme.typography.bodyLarge,
-                signed = true,
-                colorOverride = finance.expense,
+private fun SubscriptionRow(sub: Subscription, subtitle: String, onClick: () -> Unit, onDelete: () -> Unit) {
+    SwipeToDeleteRow(onSwipeToDelete = {
+        onDelete()
+        true
+    }) {
+        Box(Modifier.background(MaterialTheme.colorScheme.surface)) {
+            ListRow(
+                title = sub.name,
+                subtitle = subtitle,
+                leading = { IconAvatar(LucideIcons.Repeat) },
+                onClick = onClick,
+                trailing = {
+                    MoneyText(
+                        amountMinor = -sub.amountMinor,
+                        currency = sub.currency,
+                        style = LocalSageType.current.amountMd,
+                        signed = true,
+                        colorOverride = LocalFinanceColors.current.expense,
+                    )
+                },
             )
         }
     }
