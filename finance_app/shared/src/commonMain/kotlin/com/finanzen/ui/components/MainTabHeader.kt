@@ -20,8 +20,8 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.finanzen.ui.icons.LucideIcons
+import com.finanzen.ui.theme.LocalSageType
 import com.finanzen.ui.theme.LocalSpacing
-import com.finanzen.ui.theme.displayFontFamily
 
 /**
  * Header unificado de las 4 pestañas principales. Aporta el inset de status bar (única fuente del
@@ -41,28 +41,22 @@ fun MainTabHeader(
         modifier = modifier
             .fillMaxWidth()
             .windowInsetsPadding(WindowInsets.statusBars)
-            .padding(start = spacing.lg, end = spacing.lg, top = spacing.lg, bottom = spacing.sm)
-            // Piso común con SubScreenHeader (que lo mide su IconButton de "volver") para que el
-            // título quede a la misma altura tenga o no `action`, y sea igual en las 5 pantallas
-            // que usan este header (Resumen/Movimientos/Cuentas/Presupuesto/Más).
-            .heightIn(min = 48.dp),
+            .padding(start = spacing.lg, end = spacing.sm, top = spacing.sm, bottom = spacing.xs)
+            // Barra superior Sage: 56 dp de alto mínimo, igual en las cinco pestañas tenga o no acción.
+            .heightIn(min = 56.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
             Text(
-                // Sage.dc.html: h1 de pantalla principal es 24px bold (Resumen) / 22px en el resto
-                // de pestañas — headlineSmall (24sp, ya Bold en Type.kt) es la talla común más
-                // cercana a las dos, en vez del headlineMedium de 28sp que quedaba visiblemente
-                // grande frente al handoff. La fuente display (Caprasimo) es exclusiva de este
-                // título — el resto de la tipografía se queda en Figtree.
                 title,
                 modifier = Modifier.semantics { heading() },
-                style = MaterialTheme.typography.headlineSmall.copy(fontFamily = displayFontFamily()),
+                style = LocalSageType.current.titleScreen,
+                color = MaterialTheme.colorScheme.onSurface,
             )
             if (subtitle != null) {
                 Text(
                     subtitle,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = LocalSageType.current.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -90,10 +84,8 @@ fun SubScreenHeader(
         modifier = modifier
             .fillMaxWidth()
             .windowInsetsPadding(WindowInsets.statusBars)
-            // top = spacing.lg, igual que MainTabHeader, para que el título arranque a la misma
-            // distancia del status bar en ambos headers (antes era spacing.xs y quedaba más alto).
-            .padding(start = spacing.xs, end = spacing.lg, top = spacing.lg, bottom = spacing.sm)
-            .heightIn(min = 48.dp),
+            .padding(start = spacing.xs, end = spacing.sm, top = spacing.sm, bottom = spacing.xs)
+            .heightIn(min = 56.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(onClick = onBack) {
@@ -102,7 +94,8 @@ fun SubScreenHeader(
         Text(
             title,
             modifier = Modifier.weight(1f).semantics { heading() },
-            style = MaterialTheme.typography.headlineSmall.copy(fontFamily = displayFontFamily()),
+            style = LocalSageType.current.titleTopBar,
+            color = MaterialTheme.colorScheme.onSurface,
         )
         if (action != null) action()
     }
@@ -123,8 +116,9 @@ fun SheetHeader(title: String, onDismiss: () -> Unit, modifier: Modifier = Modif
     ) {
         Text(
             title,
-            modifier = Modifier.semantics { heading() },
-            style = MaterialTheme.typography.headlineSmall.copy(fontFamily = displayFontFamily()),
+            modifier = Modifier.weight(1f).semantics { heading() },
+            style = LocalSageType.current.titleTopBar,
+            color = MaterialTheme.colorScheme.onSurface,
         )
         IconButton(onClick = onDismiss) {
             Icon(LucideIcons.X, contentDescription = "Cerrar")

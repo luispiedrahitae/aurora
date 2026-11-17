@@ -10,3 +10,19 @@ enum class TopDestination(val route: String, val label: String) {
     Budgets("budgets_tab", "Presupuesto"),
     More("more", "Más"),
 }
+
+/** Rutas de las pantallas secundarias (se abren desde Más o desde otra pantalla, con flecha atrás). */
+object Routes {
+    const val SUBSCRIPTIONS = "subscriptions"
+    const val INVESTMENTS = "investments"
+    const val CALENDAR = "calendar"
+    const val REPORTS = "reports"
+    const val CATEGORIES = "categories"
+    const val APPEARANCE = "settings"
+    const val CURRENCY = "currency"
+    const val NOTIFICATIONS = "notifications"
+    const val SECURITY = "security"
+    const val BACKUP = "backup"
+    const val ABOUT = "about"
+    const val SUGGESTIONS = "suggestions"
+}
