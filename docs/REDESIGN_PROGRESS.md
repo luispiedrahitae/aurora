@@ -77,6 +77,11 @@ numerales tabulares; una cifra principal por pantalla.
   Apariencia, Moneda, Notificaciones, Seguridad, Copia de seguridad, Bloqueo con PIN, Acerca de y
   Sugerencias. Total en el lienzo: 24 pantallas. Propuestas nuevas a confirmar: selector de tema
   (Automático/Claro/Oscuro) en Apariencia y "Última copia: hace N días" en Copia de seguridad.
+- 2026-11-17: ajustes pedidos por el usuario. Categorías: margen entre la línea separadora y las
+  subcategorías; "+ Subcategoría", "Renombrar" y "Eliminar" en una sola fila. Apariencia: nombres
+  de color con cada palabra en mayúscula inicial ("Oliva Oscuro") y mismo espacio entre colores
+  aunque el nombre ocupe dos renglones. **Al implementar:** cambiar también las etiquetas de
+  `AccentPreset` en `ui/theme/Accent.kt` a mayúscula inicial por palabra.
 
 ## Decisiones
 
