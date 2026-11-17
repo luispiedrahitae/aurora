@@ -60,6 +60,7 @@ Movido a otras fases, donde ese código se reescribe de todos modos:
       de gasto, Fondos de inversión, Simular fondo, Proyección y Comparar fondos.
 - [x] 5 pantallas más (2026-11-17): Cuentas y tarjetas, Nuevo movimiento, Suscripciones,
       Calendario y Más. La barra inferior de todas apunta ya a Cuentas y Más.
+- [x] 10 pantallas secundarias (2026-11-17), enlazadas desde Más.
 - [ ] ⛔ Aprobación del usuario.
 - [ ] Tokens y componentes en Compose; fuentes Caprasimo, IBM Plex Sans e IBM Plex Mono.
 - [ ] Migrar las pantallas y reescribir `DESIGN.md`.
@@ -71,9 +72,11 @@ numerales tabulares; una cifra principal por pantalla.
 
 - 2026-11-17: primera versión (verde/azul petróleo/naranja, títulos Bricolage) cambiada a pedido
   del usuario por la paleta y la letra de títulos de la app actual.
-- 2026-11-17: diseñadas las 5 plantillas que faltaban. Sin diseñar todavía (usarán los mismos
-  componentes): Categorías, Reportes, Apariencia, Moneda, Notificaciones, Seguridad, Copia de
-  seguridad, Bloqueo con PIN, Acerca de y Sugerencias.
+- 2026-11-17: diseñadas las 5 plantillas que faltaban.
+- 2026-11-17: diseñadas, a pedido del usuario, las 10 pantallas secundarias: Categorías, Reportes,
+  Apariencia, Moneda, Notificaciones, Seguridad, Copia de seguridad, Bloqueo con PIN, Acerca de y
+  Sugerencias. Total en el lienzo: 24 pantallas. Propuestas nuevas a confirmar: selector de tema
+  (Automático/Claro/Oscuro) en Apariencia y "Última copia: hace N días" en Copia de seguridad.
 
 ## Decisiones
 
