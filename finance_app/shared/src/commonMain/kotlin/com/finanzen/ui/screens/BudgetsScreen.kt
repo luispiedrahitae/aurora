@@ -240,14 +240,12 @@ private fun BudgetFormDialog(
                 // Al editar, la categoría queda fija (como el tipo de cuenta): cambiarla escribía el
                 // límite sobre otra categoría y dejaba el presupuesto original intacto.
                 enabled = preselected == null,
-                plainLabel = true,
             )
             MoneyField(
                 amountMinor = limitMinor,
                 onAmountChange = { limitMinor = it },
                 currencyCode = currency,
                 label = "Límite del mes",
-                plainLabel = true,
                 modifier = Modifier.fillMaxWidth(),
             )
             Button(

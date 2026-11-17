@@ -2,39 +2,36 @@ package com.finanzen.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.finanzen.ui.components.FinanceCard
+import com.finanzen.ui.components.IconAvatar
+import com.finanzen.ui.components.InlineNotice
 import com.finanzen.ui.components.MonthSelector
-import com.finanzen.ui.components.PeriodModeChip
+import com.finanzen.ui.components.NoticeTone
+import com.finanzen.ui.components.SageButton
+import com.finanzen.ui.components.SageButtonKind
+import com.finanzen.ui.components.ScreenColumn
+import com.finanzen.ui.components.SegmentedControl
 import com.finanzen.ui.components.SubScreenHeader
 import com.finanzen.ui.components.YearSelector
 import com.finanzen.ui.format.PeriodMode
 import com.finanzen.ui.format.formatMesAnio
 import com.finanzen.ui.icons.LucideIcons
 import com.finanzen.ui.theme.LocalDateLocale
-import com.finanzen.ui.theme.LocalFinanceColors
-import com.finanzen.ui.theme.LocalSpacing
-import com.finanzen.ui.theme.displayFontFamily
+import com.finanzen.ui.theme.LocalSageType
 import com.finanzen.viewmodel.ReportsViewModel
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
@@ -56,22 +53,15 @@ fun ReportsScreen(
     val periodLabel = vm.periodLabel()
 
     Column(Modifier.fillMaxSize()) {
-        SubScreenHeader(
-            title = "Reportes",
-            onBack = onBack,
-            action = {
-                PeriodModeChip(
-                    mode = mode,
-                    onToggle = { vm.setMode(if (mode == PeriodMode.MONTH) PeriodMode.YEAR else PeriodMode.MONTH) },
+        SubScreenHeader(title = "Reportes", onBack = onBack)
+        ScreenColumn {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                SegmentedControl(
+                    options = PeriodMode.entries.toList(),
+                    selected = mode,
+                    onSelect = vm::setMode,
+                    label = { if (it == PeriodMode.MONTH) "Mes" else "Año" },
                 )
-            },
-        )
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            item {
                 if (mode == PeriodMode.MONTH) {
                     MonthSelector(
                         label = formatMesAnio(month, LocalDateLocale.current),
@@ -92,26 +82,35 @@ fun ReportsScreen(
                 }
             }
             status?.let { s ->
-                item { StatusBanner(s.message, s.isError, onDismiss = { vm.clearStatus() }) }
-            }
-            item {
-                ReportCard(
-                    title = "Movimientos (CSV)",
-                    subtitle = "Exporta los movimientos de $periodLabel. Se abre en Excel, Google Sheets y otras hojas de cálculo.",
-                    icon = LucideIcons.FileText,
-                    buttonText = "Exportar CSV",
-                    onClick = { vm.exportTransactionsCsv() },
+                InlineNotice(
+                    text = if (s.isError) "No se pudo exportar. ${s.message}" else s.message,
+                    tone = if (s.isError) NoticeTone.Warning else NoticeTone.Success,
+                    trailing = {
+                        IconButton(onClick = vm::clearStatus, modifier = Modifier.size(40.dp)) {
+                            Icon(LucideIcons.X, contentDescription = "Cerrar aviso", modifier = Modifier.size(20.dp))
+                        }
+                    },
                 )
             }
-            item {
-                ReportCard(
-                    title = "Resumen del período (PDF)",
-                    subtitle = "Balance, categorías, presupuestos e inversiones de $periodLabel.",
-                    icon = LucideIcons.PieChart,
-                    buttonText = "Exportar resumen PDF",
-                    onClick = { vm.exportPeriodSummaryPdf() },
-                )
-            }
+            ReportCard(
+                title = "Movimientos (CSV)",
+                subtitle = "Los movimientos de $periodLabel. Se abre en Excel, Google Sheets y otras hojas de cálculo.",
+                icon = LucideIcons.FileText,
+                buttonText = "Exportar CSV",
+                onClick = vm::exportTransactionsCsv,
+            )
+            ReportCard(
+                title = "Resumen del período (PDF)",
+                subtitle = "Balance, categorías, presupuestos e inversiones de $periodLabel, listo para imprimir o compartir.",
+                icon = LucideIcons.PieChart,
+                buttonText = "Exportar resumen PDF",
+                onClick = vm::exportPeriodSummaryPdf,
+            )
+            Text(
+                "Los archivos se guardan en la carpeta Descargas del dispositivo. Sage no los envía a ningún lado.",
+                style = LocalSageType.current.caption,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -125,34 +124,15 @@ private fun ReportCard(
     onClick: () -> Unit,
 ) {
     FinanceCard(modifier = Modifier.fillMaxWidth()) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(LocalSpacing.current.sm),
-            ) {
-                Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Text(
-                    title,
-                    style = MaterialTheme.typography.titleMedium,
-                )
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                IconAvatar(icon)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(title, style = LocalSageType.current.titleCard)
+                    Text(subtitle, style = LocalSageType.current.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
-            Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Button(onClick = onClick, modifier = Modifier.fillMaxWidth()) { Text(buttonText, fontFamily = displayFontFamily()) }
-        }
-    }
-}
-
-@Composable
-private fun StatusBanner(message: String, isError: Boolean, onDismiss: () -> Unit) {
-    val finance = LocalFinanceColors.current
-    val container = if (isError) finance.expenseContainer else MaterialTheme.colorScheme.primaryContainer
-    val fg = if (isError) finance.expense else MaterialTheme.colorScheme.onPrimaryContainer
-    // liveRegion: el resultado se anuncia aunque el foco del lector esté en el botón de exportar.
-    FinanceCard(modifier = Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite }, color = container, contentPadding = PaddingValues(12.dp)) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(if (isError) "No se pudo exportar" else "Exportado", color = fg, fontWeight = FontWeight.SemiBold)
-            Text(message, style = MaterialTheme.typography.bodySmall, color = fg)
-            TextButton(onClick = onDismiss) { Text("Entendido", color = fg) }
+            SageButton(buttonText, onClick, Modifier.fillMaxWidth(), kind = SageButtonKind.Secondary)
         }
     }
 }

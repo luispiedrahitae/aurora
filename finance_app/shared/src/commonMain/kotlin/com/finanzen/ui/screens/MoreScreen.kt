@@ -1,87 +1,67 @@
 package com.finanzen.ui.screens
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.text.font.FontWeight
-import com.finanzen.ui.components.FinanceCard
+import com.finanzen.ui.components.GroupCard
 import com.finanzen.ui.components.MainTabHeader
-import com.finanzen.ui.components.SectionHeader
+import com.finanzen.ui.components.MenuRow
+import com.finanzen.ui.components.RowDivider
+import com.finanzen.ui.components.ScreenList
+import com.finanzen.ui.components.TitledSection
 import com.finanzen.ui.icons.LucideIcons
-import com.finanzen.ui.theme.LocalSpacing
+import com.finanzen.ui.navigation.Routes
+import com.finanzen.viewmodel.SettingsViewModel
+import org.koin.compose.koinInject
 
-data class MoreItem(val title: String, val icon: Painter, val onClick: () -> Unit)
+private data class MoreItem(val title: String, val icon: Painter, val route: String, val value: String? = null)
 
 @Composable
-fun MoreScreen(onNavigate: (route: String) -> Unit) {
-    // Tres grupos en vez de 12 filas planas: herramientas, ajustes e información se buscan por separado.
+fun MoreScreen(onNavigate: (route: String) -> Unit, settingsVm: SettingsViewModel = koinInject()) {
+    val themeMode by settingsVm.themeMode.collectAsState()
+    val currency by settingsVm.baseCurrency.collectAsState()
+    // Tres grupos: herramientas, ajustes e información se buscan por separado.
     val groups = listOf(
         "Planificación" to listOf(
-            MoreItem("Suscripciones", LucideIcons.Repeat) { onNavigate("subscriptions") },
-            MoreItem("Inversiones", LucideIcons.TrendingUp) { onNavigate("investments") },
-            MoreItem("Calendario", LucideIcons.Calendar) { onNavigate("calendar") },
-            MoreItem("Reportes", LucideIcons.FileText) { onNavigate("reports") },
+            MoreItem("Suscripciones", LucideIcons.Repeat, Routes.SUBSCRIPTIONS),
+            MoreItem("Fondos de inversión", LucideIcons.TrendingUp, Routes.INVESTMENTS),
+            MoreItem("Calendario", LucideIcons.Calendar, Routes.CALENDAR),
+            MoreItem("Reportes", LucideIcons.FileText, Routes.REPORTS),
         ),
         "Ajustes" to listOf(
-            MoreItem("Categorías", LucideIcons.Tag) { onNavigate("categories") },
-            MoreItem("Apariencia", LucideIcons.Palette) { onNavigate("settings") },
-            MoreItem("Moneda", LucideIcons.Banknote) { onNavigate("currency") },
-            MoreItem("Notificaciones", LucideIcons.Bell) { onNavigate("notifications") },
-            MoreItem("Seguridad", LucideIcons.Shield) { onNavigate("security") },
-            MoreItem("Copia de seguridad", LucideIcons.Download) { onNavigate("backup") },
+            MoreItem("Categorías", LucideIcons.Tag, Routes.CATEGORIES),
+            MoreItem("Apariencia", LucideIcons.Palette, Routes.APPEARANCE, themeMode.label),
+            MoreItem("Moneda", LucideIcons.Banknote, Routes.CURRENCY, currency),
+            MoreItem("Notificaciones", LucideIcons.Bell, Routes.NOTIFICATIONS),
+            MoreItem("Seguridad", LucideIcons.Shield, Routes.SECURITY),
+            MoreItem("Copia de seguridad", LucideIcons.Download, Routes.BACKUP),
         ),
         "Información" to listOf(
-            MoreItem("Acerca de Sage", LucideIcons.Info) { onNavigate("about") },
-            // Pencil ("escríbenos"), no Info: compartía icono con "Acerca de Sage" y se confundían.
-            MoreItem("Sugerencias", LucideIcons.Pencil) { onNavigate("suggestions") },
+            MoreItem("Acerca de Sage", LucideIcons.Info, Routes.ABOUT),
+            // Lápiz ("escríbenos"), no Info: compartía icono con "Acerca de Sage" y se confundían.
+            MoreItem("Sugerencias", LucideIcons.Pencil, Routes.SUGGESTIONS),
         ),
     )
 
-    val spacing = LocalSpacing.current
     Column(Modifier.fillMaxSize()) {
         MainTabHeader(title = "Más")
-        LazyColumn(
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(start = spacing.lg, end = spacing.lg, top = spacing.sm, bottom = spacing.lg),
-            verticalArrangement = Arrangement.spacedBy(spacing.sm),
-        ) {
-            groups.forEach { (title, groupItems) ->
-                item(key = "header-$title") { SectionHeader(title, Modifier.padding(top = spacing.sm)) }
-                items(groupItems, key = { it.title }) { item -> MoreRow(item) }
+        ScreenList {
+            groups.forEach { (title, items) ->
+                item(key = title) {
+                    TitledSection(title) {
+                        GroupCard {
+                            items.forEachIndexed { index, item ->
+                                if (index > 0) RowDivider()
+                                MenuRow(item.title, onClick = { onNavigate(item.route) }, icon = item.icon, value = item.value)
+                            }
+                        }
+                    }
+                }
             }
-        }
-    }
-}
-
-@Composable
-private fun MoreRow(item: MoreItem) {
-    FinanceCard(modifier = Modifier.fillMaxWidth(), onClick = item.onClick) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(item.icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-            Column(modifier = Modifier.padding(start = LocalSpacing.current.md).weight(1f)) {
-                Text(item.title, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
-            }
-            Icon(
-                LucideIcons.ChevronRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }

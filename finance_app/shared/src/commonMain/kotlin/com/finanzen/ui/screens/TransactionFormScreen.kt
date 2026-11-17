@@ -287,7 +287,6 @@ fun TransactionFormScreen(
                 onAmountChange = { amountMinor = it },
                 currencyCode = selectedAccount?.currency ?: "",
                 label = "Monto",
-                plainLabel = true,
                 modifier = Modifier.fillMaxWidth(),
             )
             if (error == AMOUNT_ERROR) FieldError(AMOUNT_ERROR)
@@ -301,7 +300,6 @@ fun TransactionFormScreen(
                 onSelect = { accountId = it.id },
                 placeholder = "Selecciona cuenta",
                 emptyHint = "Crea una cuenta primero (pestaña Cuentas).",
-                plainLabel = true,
             )
 
             if (isTransfer) {
@@ -314,7 +312,6 @@ fun TransactionFormScreen(
                     onSelect = { toAccountId = it.id },
                     placeholder = "Selecciona destino",
                     emptyHint = "Necesitas al menos dos cuentas para transferir.",
-                    plainLabel = true,
                 )
             } else if (!isRecurringType) {
                 PickerField(
@@ -329,7 +326,6 @@ fun TransactionFormScreen(
                     placeholder = "Selecciona categoría",
                     emptyHint = "No hay categorías de ${if (kind == "EXPENSE") "gasto" else "ingreso"}.",
                     leadingContent = { cat -> CategoryAvatar(cat.name) },
-                    plainLabel = true,
                 )
                 if (error == CATEGORY_ERROR) FieldError(CATEGORY_ERROR)
             }
@@ -355,7 +351,6 @@ fun TransactionFormScreen(
                             placeholder = "Selecciona subcategoría",
                             emptyHint = selectedCategory?.let { "Aún no hay subcategorías en ${it.name}." }
                                 ?: "Primero selecciona una categoría.",
-                            plainLabel = true,
                             modifier = Modifier.weight(1f),
                         )
                         if (!showAddSubcategory) {

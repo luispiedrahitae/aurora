@@ -1,31 +1,21 @@
 package com.finanzen.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -35,91 +25,82 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.finanzen.ui.components.FinanceCard
-import com.finanzen.ui.components.InfoTooltip
-import com.finanzen.ui.components.SectionHeader
+import com.finanzen.ui.components.GroupCard
+import com.finanzen.ui.components.ScreenColumn
+import com.finanzen.ui.components.SegmentedControl
 import com.finanzen.ui.components.SubScreenHeader
-import com.finanzen.ui.components.sageSwitchColors
+import com.finanzen.ui.components.SwitchRow
+import com.finanzen.ui.components.TitledSection
 import com.finanzen.ui.icons.LucideIcons
 import com.finanzen.ui.theme.AccentPreset
-import com.finanzen.ui.theme.LocalSpacing
-import com.finanzen.ui.theme.motionTween
+import com.finanzen.ui.theme.LocalSageType
+import com.finanzen.ui.theme.ThemeMode
 import com.finanzen.viewmodel.SettingsViewModel
 import org.koin.compose.koinInject
 
-@OptIn(ExperimentalLayoutApi::class)
+/** Colores por fila del selector de acento. */
+private const val SWATCHES_PER_ROW = 5
+
+/** Apariencia: tema claro/oscuro, color de acento y animaciones. */
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
     vm: SettingsViewModel = koinInject(),
 ) {
     val accent by vm.accent.collectAsState()
+    val themeMode by vm.themeMode.collectAsState()
     val reduceMotion by vm.reduceMotion.collectAsState()
 
     Column(Modifier.fillMaxSize()) {
         SubScreenHeader(title = "Apariencia", onBack = onBack)
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SectionHeader("Color de acento")
-                    FinanceCard(modifier = Modifier.fillMaxWidth()) {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text(
-                                "Color de la app: ${accent.label}.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                            FlowRow(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(LocalSpacing.current.lg),
-                                verticalArrangement = Arrangement.spacedBy(LocalSpacing.current.lg),
-                            ) {
-                                vm.accents.forEach { preset ->
-                                    AccentSwatch(
-                                        preset = preset,
-                                        selected = preset == accent,
-                                        onClick = { vm.setAccent(preset) },
-                                    )
+        ScreenColumn {
+            TitledSection("Tema") {
+                SegmentedControl(
+                    options = ThemeMode.entries.toList(),
+                    selected = themeMode,
+                    onSelect = vm::setThemeMode,
+                    label = { it.label },
+                )
+                Text(
+                    "Automático sigue el modo claro u oscuro del teléfono.",
+                    style = LocalSageType.current.caption,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            TitledSection("Color de acento") {
+                FinanceCard(Modifier.fillMaxWidth()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(
+                            "Botones, selección y barras de progreso. Ahora: ${accent.label}.",
+                            style = LocalSageType.current.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        // Filas de igual alto (nombre a dos renglones) para que el espacio entre colores no cambie.
+                        Column(Modifier.selectableGroup(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            vm.accents.chunked(SWATCHES_PER_ROW).forEach { row ->
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    row.forEach { preset ->
+                                        AccentSwatch(preset, preset == accent, { vm.setAccent(preset) }, Modifier.weight(1f))
+                                    }
+                                    repeat(SWATCHES_PER_ROW - row.size) { Box(Modifier.weight(1f)) }
                                 }
                             }
                         }
                     }
                 }
             }
-
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SectionHeader("Animaciones")
-                    FinanceCard(modifier = Modifier.fillMaxWidth()) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            // Texto + Switch son un solo objetivo táctil; el tooltip queda aparte para no
-                            // alternar el ajuste al pedir la explicación.
-                            Row(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .toggleable(value = reduceMotion, role = Role.Switch, onValueChange = vm::setReduceMotion),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Text("Reducir animaciones", fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                                Switch(checked = reduceMotion, onCheckedChange = null, colors = sageSwitchColors())
-                            }
-                            InfoTooltip(
-                                "Sustituye las animaciones por cambios instantáneos.",
-                                contentDescription = "Qué hace reducir animaciones",
-                            )
-                        }
-                    }
+            TitledSection("Animaciones") {
+                GroupCard {
+                    SwitchRow(
+                        title = "Reducir animaciones",
+                        subtitle = "Sustituye las animaciones por cambios instantáneos.",
+                        checked = reduceMotion,
+                        onCheckedChange = vm::setReduceMotion,
+                    )
                 }
             }
         }
@@ -127,37 +108,39 @@ fun SettingsScreen(
 }
 
 /**
- * Muestra de acento: círculo con el color del preset, halo animado al seleccionar y check encima.
- * El check va en blanco — todos los primarios claros son lo bastante oscuros para 4.5:1 contra blanco.
+ * Muestra de acento: círculo de 44 dp con el color del preset y su nombre debajo (reservando dos
+ * renglones). El elegido lleva check blanco y un anillo en tinta separado por el color de fondo.
  */
 @Composable
-private fun AccentSwatch(
-    preset: AccentPreset,
-    selected: Boolean,
-    onClick: () -> Unit,
-) {
-    val ring by animateDpAsState(if (selected) 2.dp else 0.dp, motionTween(180), label = "accentRing")
-    Box(
-        modifier = Modifier
-            .size(56.dp)
-            .clip(CircleShape)
-            .border(ring, MaterialTheme.colorScheme.onSurface, CircleShape)
+private fun AccentSwatch(preset: AccentPreset, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val scheme = MaterialTheme.colorScheme
+    Column(
+        modifier = modifier
+            .clip(MaterialTheme.shapes.small)
             .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
-            .padding(LocalSpacing.current.sm)
-            .semantics { contentDescription = preset.label },
-        contentAlignment = Alignment.Center,
+            .padding(vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Box(
-            modifier = Modifier.fillMaxSize().clip(CircleShape).background(preset.swatch),
+            Modifier
+                .size(52.dp)
+                .then(if (selected) Modifier.border(2.dp, scheme.onSurface, CircleShape) else Modifier)
+                .padding(4.dp)
+                .clip(CircleShape)
+                .background(preset.swatch),
             contentAlignment = Alignment.Center,
         ) {
-            AnimatedVisibility(
-                visible = selected,
-                enter = fadeIn(motionTween(150)) + scaleIn(motionTween(150), initialScale = 0.6f),
-                exit = fadeOut(motionTween(120)) + scaleOut(motionTween(120), targetScale = 0.6f),
-            ) {
-                Icon(LucideIcons.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
-            }
+            if (selected) Icon(LucideIcons.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
         }
+        Text(
+            preset.label,
+            style = LocalSageType.current.caption.copy(fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium),
+            color = if (selected) scheme.onSurface else scheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            minLines = 2,
+            maxLines = 2,
+            modifier = Modifier.fillMaxWidth().height(32.dp),
+        )
     }
 }

@@ -2,15 +2,10 @@ package com.finanzen.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -18,21 +13,26 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.finanzen.domain.SymbolPosition
 import com.finanzen.ui.components.ConfirmDialog
 import com.finanzen.ui.components.FinanceCard
+import com.finanzen.ui.components.Overline
 import com.finanzen.ui.components.PickerField
-import com.finanzen.ui.components.SectionHeader
+import com.finanzen.ui.components.RadioRow
+import com.finanzen.ui.components.RowDivider
+import com.finanzen.ui.components.ScreenColumn
 import com.finanzen.ui.components.SubScreenHeader
+import com.finanzen.ui.components.TitledSection
+import com.finanzen.ui.theme.LocalSageType
 import com.finanzen.viewmodel.SettingsViewModel
 import org.koin.compose.koinInject
 
-/** Apartado de Moneda (antes dentro de Apariencia). Moneda única de la app; no hay FX. */
+/** Monedas que se muestran directamente; el resto se elige con el buscador. */
+private val FREQUENT_CURRENCIES = listOf("COP", "USD", "EUR", "MXN")
+
+/** Moneda única de la app (sin conversión) y posición del símbolo. */
 @Composable
 fun CurrencyScreen(
     onBack: () -> Unit,
@@ -41,11 +41,12 @@ fun CurrencyScreen(
     val baseCurrency by vm.baseCurrency.collectAsState()
     val symbolPos by vm.symbolPosition.collectAsState()
     var pendingCurrency by remember { mutableStateOf<String?>(null) }
+    val byCode = remember(vm.currencies) { vm.currencies.associateBy { it.code } }
 
     pendingCurrency?.let { code ->
         ConfirmDialog(
             title = "¿Cambiar la moneda a $code?",
-            body = "Tus montos existentes no se convierten: conservan el mismo número y pasan a mostrarse en $code.",
+            body = "Tus montos no se convierten: conservan el mismo número y pasan a mostrarse en $code.",
             confirmLabel = "Cambiar",
             onConfirm = {
                 vm.setBaseCurrency(code)
@@ -56,60 +57,61 @@ fun CurrencyScreen(
             destructive = false,
         )
     }
+    val choose: (String) -> Unit = { code -> if (code != baseCurrency) pendingCurrency = code }
 
     Column(Modifier.fillMaxSize()) {
         SubScreenHeader(title = "Moneda", onBack = onBack)
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SectionHeader("Moneda de la app")
-                    FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(0.dp)) {
-                        Column {
-                            Text(
-                                "Moneda única de la app. Cambiarla re-etiqueta tus montos existentes sin convertirlos.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
-                            )
-                            val frecuentes = setOf("USD", "EUR", "COP", "MXN")
-                            val orderedCurrencies = vm.currencies.sortedWith(
-                                compareBy({ it.code !in frecuentes }, { it.code }),
-                            )
-                            PickerField(
-                                label = "Moneda de la app",
-                                options = orderedCurrencies,
-                                selected = vm.currencies.firstOrNull { it.code == baseCurrency },
-                                optionLabel = { "${it.code} — ${it.name} (${it.symbol})" },
-                                onSelect = { if (it.code != baseCurrency) pendingCurrency = it.code },
-                                modifier = Modifier.padding(16.dp),
-                                searchable = true,
-                                searchPredicate = { c, q -> c.code.contains(q, ignoreCase = true) || c.name.contains(q, ignoreCase = true) },
-                                sectionOf = { if (it.code in frecuentes) "Frecuentes" else "Todas" },
-                            )
+        ScreenColumn {
+            TitledSection("Moneda de la app") {
+                FinanceCard(Modifier.fillMaxWidth()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Overline("Frecuentes")
+                        // La moneda actual siempre aparece aunque no sea frecuente.
+                        val shown = (FREQUENT_CURRENCIES + baseCurrency).distinct().mapNotNull { byCode[it] }
+                        Column(Modifier.selectableGroup()) {
+                            shown.forEachIndexed { index, c ->
+                                if (index > 0) RowDivider()
+                                RadioRow(
+                                    title = "${c.code} · ${c.name}",
+                                    subtitle = "Símbolo ${c.symbol} · ${decimalsLabel(c.decimals)}",
+                                    selected = c.code == baseCurrency,
+                                    onSelect = { choose(c.code) },
+                                )
+                            }
                         }
+                        PickerField(
+                            label = "Otra moneda",
+                            options = vm.currencies.sortedBy { it.code },
+                            selected = null,
+                            optionLabel = { "${it.code} · ${it.name} (${it.symbol})" },
+                            onSelect = { choose(it.code) },
+                            placeholder = "Buscar entre todas las monedas",
+                            searchable = true,
+                            searchPredicate = { c, q -> c.code.contains(q, ignoreCase = true) || c.name.contains(q, ignoreCase = true) },
+                        )
+                        Text(
+                            "Sage usa una sola moneda. Cambiarla re-etiqueta tus montos sin convertirlos.",
+                            style = LocalSageType.current.caption,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }
-
-            item {
-                val sym = vm.currencies.firstOrNull { it.code == baseCurrency }?.symbol ?: "$"
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    SectionHeader("Símbolo")
-                    FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(0.dp)) {
-                        Column {
-                            Text(
-                                "Dónde va el símbolo de moneda en los montos de toda la app.",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
-                            )
-                            SymbolOption("Antes  (${sym}1.000)", SymbolPosition.PREFIX, symbolPos, vm::setSymbolPosition)
-                            SymbolOption("Después  (1.000 $sym)", SymbolPosition.SUFFIX, symbolPos, vm::setSymbolPosition)
-                            SymbolOption("Sin símbolo  (1.000)", SymbolPosition.NONE, symbolPos, vm::setSymbolPosition)
+            TitledSection("Símbolo") {
+                val sym = byCode[baseCurrency]?.symbol ?: "$"
+                FinanceCard(Modifier.fillMaxWidth()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            "Dónde va el símbolo en los montos de toda la app.",
+                            style = LocalSageType.current.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Column(Modifier.selectableGroup()) {
+                            SymbolOption("Antes", "$sym 1.000", SymbolPosition.PREFIX, symbolPos, vm::setSymbolPosition)
+                            RowDivider()
+                            SymbolOption("Después", "1.000 $sym", SymbolPosition.SUFFIX, symbolPos, vm::setSymbolPosition)
+                            RowDivider()
+                            SymbolOption("Sin símbolo", "1.000", SymbolPosition.NONE, symbolPos, vm::setSymbolPosition)
                         }
                     }
                 }
@@ -118,24 +120,19 @@ fun CurrencyScreen(
     }
 }
 
+private fun decimalsLabel(decimals: Long): String = when (decimals) {
+    0L -> "sin decimales"
+    1L -> "1 decimal"
+    else -> "$decimals decimales"
+}
+
 @Composable
 private fun SymbolOption(
     label: String,
+    example: String,
     value: SymbolPosition,
     selected: SymbolPosition,
     onSelect: (SymbolPosition) -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            // La fila es el único objetivo táctil/semántico; el RadioButton es solo visual
-            // (onClick = null) para que TalkBack no enfoque dos veces la misma opción.
-            .selectable(selected = selected == value, role = Role.RadioButton, onClick = { onSelect(value) })
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        RadioButton(selected = selected == value, onClick = null)
-        Text(label, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-    }
+    RadioRow(title = label, selected = selected == value, onSelect = { onSelect(value) }, trailing = example)
 }

@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -15,10 +14,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.finanzen.domain.Money
+import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
+import com.finanzen.ui.theme.LocalSageType
 
 /**
  * Campo de monto que mantiene `amountMinor` como fuente de verdad y formatea en vivo mientras se
@@ -34,10 +36,6 @@ fun MoneyField(
     currencyCode: String,
     label: String,
     modifier: Modifier = Modifier,
-    // Look "Sage" del handoff (etiqueta aparte arriba, sin label flotante, campo más redondeado):
-    // ver KDoc de [PickerField] para el mismo flag. Por ahora solo lo usa TransactionFormScreen —
-    // el resto de pantallas siguen con el default (label flotante de Material) sin cambios.
-    plainLabel: Boolean = false,
 ) {
     val row = LocalMoneyFormat.current.currencies[currencyCode]
     val decimals = row?.decimals?.toInt() ?: 2
@@ -50,22 +48,8 @@ fun MoneyField(
     }
     val fieldValue = remember(displayText) { TextFieldValue(displayText, TextRange(displayText.length)) }
 
-    if (!plainLabel) {
-        OutlinedTextField(
-            value = fieldValue,
-            onValueChange = { new -> onAmountChange(digitsToMinor(new.text)) },
-            label = { Text(label) },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            prefix = row?.symbol?.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
-            textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Start),
-            modifier = modifier,
-        )
-        return
-    }
-
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        FieldLabel(label)
         OutlinedTextField(
             value = fieldValue,
             onValueChange = { new -> onAmountChange(digitsToMinor(new.text)) },
@@ -73,24 +57,76 @@ fun MoneyField(
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             prefix = row?.symbol?.takeIf { it.isNotEmpty() }?.let { { Text(it) } },
-            textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Start),
-            shape = MaterialTheme.shapes.medium,
+            textStyle = LocalSageType.current.amountMd.copy(textAlign = TextAlign.End),
+            shape = MaterialTheme.shapes.small,
             colors = sageFieldColors(),
             modifier = Modifier.fillMaxWidth(),
         )
     }
 }
 
-/** Colores planos "Sage" para campos en modo [MoneyField.plainLabel] y variantes equivalentes en
- * [PickerField]/[DateField]: relleno `surfaceContainer`, borde `outlineVariant` en reposo y
- * `primary` en foco — igual a "Forms & Inputs" en DESIGN.md. */
+/** Colores de campo Sage: relleno hundido, borde fuerte en reposo y el azul de foco al escribir. */
 @Composable
 internal fun sageFieldColors() = OutlinedTextFieldDefaults.colors(
-    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-    focusedBorderColor = MaterialTheme.colorScheme.primary,
+    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+    disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+    focusedBorderColor = LocalFinanceColors.current.focus,
+    errorBorderColor = MaterialTheme.colorScheme.error,
+    errorContainerColor = MaterialTheme.colorScheme.surfaceVariant,
 )
+
+/** Etiqueta de campo: 14 medio, en tinta, encima del campo (nunca flotante). */
+@Composable
+fun FieldLabel(text: String, modifier: Modifier = Modifier) {
+    Text(text, modifier = modifier, style = LocalSageType.current.label, color = MaterialTheme.colorScheme.onSurface)
+}
+
+/**
+ * Campo de texto Sage: etiqueta arriba, campo de 48 dp con fondo hundido y radio 10, ayuda o error
+ * debajo. El error lleva icono además del color.
+ */
+@Composable
+fun SageTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    placeholder: String? = null,
+    help: String? = null,
+    error: String? = null,
+    singleLine: Boolean = true,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
+    visualTransformation: VisualTransformation = VisualTransformation.None,
+    trailingIcon: (@Composable () -> Unit)? = null,
+    suffix: String? = null,
+    enabled: Boolean = true,
+) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        FieldLabel(label)
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            placeholder = placeholder?.let { { Text(it) } },
+            singleLine = singleLine,
+            isError = error != null,
+            enabled = enabled,
+            keyboardOptions = keyboardOptions,
+            visualTransformation = visualTransformation,
+            trailingIcon = trailingIcon,
+            suffix = suffix?.let { { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) } },
+            textStyle = LocalSageType.current.body,
+            shape = MaterialTheme.shapes.small,
+            colors = sageFieldColors(),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        when {
+            error != null -> FieldError(error)
+            help != null -> Text(help, style = LocalSageType.current.caption, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
 
 /**
  * Extrae solo dígitos y los interpreta como `amountMinor` directo (sin separadores). Se recortan a

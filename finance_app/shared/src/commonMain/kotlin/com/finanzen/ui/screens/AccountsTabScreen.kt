@@ -816,7 +816,6 @@ private fun AccountFormDialog(
                     optionLabel = { accountTypeLabel(it) },
                     onSelect = {},
                     enabled = false,
-                    plainLabel = true,
                 )
             } else {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -832,7 +831,7 @@ private fun AccountFormDialog(
             }
             AccountNameField(name, { name = it }, nameTaken)
             if (isCredit) {
-                MoneyField(limitMinor, { limitMinor = it }, currencyCode = baseCurrency, label = "Cupo", plainLabel = true)
+                MoneyField(limitMinor, { limitMinor = it }, currencyCode = baseCurrency, label = "Cupo")
                 NumberField(cutoff, "Fecha de corte", "Día del mes (1–31)", maxLen = 2, error = DAY_ERROR.takeIf { cutoffInvalid }) { cutoff = it }
                 NumberField(due, "Fecha de pago", "Día del mes (1–31)", maxLen = 2, error = DAY_ERROR.takeIf { dueInvalid }) { due = it }
                 DecimalField(
@@ -842,7 +841,7 @@ private fun AccountFormDialog(
                     error = "Escribe un número, por ejemplo 2,5".takeIf { interestInvalid },
                 ) { interest = it }
             } else {
-                MoneyField(amountMinor, { amountMinor = it }, currencyCode = baseCurrency, label = "Monto inicial", plainLabel = true)
+                MoneyField(amountMinor, { amountMinor = it }, currencyCode = baseCurrency, label = "Monto inicial")
             }
             Button(
                 onClick = {

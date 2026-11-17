@@ -1,7 +1,9 @@
 package com.finanzen.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,7 +20,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -37,6 +38,7 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.finanzen.ui.icons.LucideIcons
+import com.finanzen.ui.theme.LocalSageType
 import com.finanzen.ui.theme.LocalSpacing
 
 /**
@@ -60,11 +62,6 @@ fun <T> PickerField(
     searchable: Boolean = false,
     searchPredicate: ((T, String) -> Boolean)? = null,
     sectionOf: ((T) -> String?)? = null,
-    // Look "Sage" del handoff: etiqueta aparte arriba (no flotante), sin flecha (el handoff oculta
-    // el caret nativo a propósito) y campo más redondeado/plano — ver `sageFieldColors()` en
-    // MoneyField.kt. Por ahora solo lo usa TransactionFormScreen; el resto de pantallas siguen con
-    // el default sin cambios.
-    plainLabel: Boolean = false,
     // false: campo de solo-lectura visual (sin abrir el sheet) — p. ej. el tipo de cuenta bloqueado
     // al editar en AccountFormDialog, que se muestra como PickerField pero no es modificable.
     enabled: Boolean = true,
@@ -74,28 +71,18 @@ fun <T> PickerField(
     val sheetState = rememberModalBottomSheetState()
 
     Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        if (plainLabel) {
-            Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth()) {
+        FieldLabel(label)
+        Box(Modifier.fillMaxWidth()) {
             OutlinedTextField(
                 value = selected?.let(optionLabel) ?: "",
                 onValueChange = {},
                 readOnly = true,
                 enabled = enabled,
-                label = if (plainLabel) {
-                    null
-                } else {
-                    { Text(label) }
-                },
                 placeholder = { Text(placeholder) },
-                trailingIcon = if (plainLabel) {
-                    null
-                } else {
-                    { Icon(LucideIcons.ChevronsUpDown, contentDescription = null) }
-                },
-                shape = if (plainLabel) MaterialTheme.shapes.medium else OutlinedTextFieldDefaults.shape,
-                colors = if (plainLabel) sageFieldColors() else OutlinedTextFieldDefaults.colors(),
+                trailingIcon = { Icon(LucideIcons.ChevronDown, contentDescription = null) },
+                textStyle = LocalSageType.current.body,
+                shape = MaterialTheme.shapes.small,
+                colors = sageFieldColors(),
                 modifier = Modifier.fillMaxWidth(),
             )
             // Overlay transparente: el OutlinedTextField readOnly no expone onClick, así que capturamos
@@ -104,10 +91,10 @@ fun <T> PickerField(
             // para lectores de pantalla en todo el flujo de captura. Si enabled=false (p. ej. tipo de
             // cuenta bloqueado), no se agrega ni el clickable ni la semántica de botón.
             if (enabled) {
-                androidx.compose.foundation.layout.Box(
+                Box(
                     Modifier
                         .matchParentSize()
-                        .clip(MaterialTheme.shapes.extraSmall)
+                        .clip(MaterialTheme.shapes.small)
                         .clickable(onClickLabel = "Abrir opciones") { open = true }
                         .clearAndSetSemantics {
                             role = Role.Button
@@ -129,7 +116,7 @@ fun <T> PickerField(
             ) {
                 Text(
                     label,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = LocalSageType.current.titleSection,
                     modifier = Modifier.padding(horizontal = spacing.lg, vertical = spacing.sm),
                 )
                 if (searchable) {
@@ -141,6 +128,7 @@ fun <T> PickerField(
                         leadingIcon = { Icon(LucideIcons.Search, contentDescription = null) },
                         singleLine = true,
                         shape = MaterialTheme.shapes.small,
+                        colors = sageFieldColors(),
                     )
                 }
                 val filtered = if (searchable && query.isNotBlank() && searchPredicate != null) {
@@ -159,8 +147,9 @@ fun <T> PickerField(
                     // Lista dentro de un recuadro redondeado con separadores, como una tarjeta de opciones.
                     Surface(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = spacing.lg),
-                        shape = MaterialTheme.shapes.medium,
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        shape = MaterialTheme.shapes.large,
+                        color = MaterialTheme.colorScheme.surface,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
                     ) {
                         LazyColumn(modifier = Modifier.heightIn(max = 420.dp)) {
                             itemsIndexed(filtered) { index, option ->
@@ -169,9 +158,8 @@ fun <T> PickerField(
                                     if (section != previousSection) {
                                         Text(
                                             section,
-                                            style = MaterialTheme.typography.labelMedium,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = MaterialTheme.colorScheme.primary,
+                                            style = LocalSageType.current.overline,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.padding(horizontal = spacing.lg, vertical = spacing.sm),
                                         )
                                     }
@@ -179,7 +167,7 @@ fun <T> PickerField(
                                 if (index > 0) {
                                     HorizontalDivider(
                                         modifier = Modifier.padding(start = spacing.lg),
-                                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                                        color = MaterialTheme.colorScheme.outlineVariant,
                                     )
                                 }
                                 val isSelected = option == selected
@@ -202,7 +190,7 @@ fun <T> PickerField(
                                         style = MaterialTheme.typography.bodyLarge,
                                         fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                                         color = if (isSelected) {
-                                            MaterialTheme.colorScheme.primary
+                                            MaterialTheme.colorScheme.onPrimaryContainer
                                         } else {
                                             MaterialTheme.colorScheme.onSurface
                                         },
