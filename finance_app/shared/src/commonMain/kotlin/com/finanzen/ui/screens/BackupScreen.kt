@@ -2,47 +2,40 @@ package com.finanzen.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.finanzen.platform.rememberBackupPicker
 import com.finanzen.ui.components.ConfirmDialog
-import com.finanzen.ui.components.FieldError
 import com.finanzen.ui.components.FinanceCard
+import com.finanzen.ui.components.InlineNotice
+import com.finanzen.ui.components.NoticeTone
+import com.finanzen.ui.components.SageButton
+import com.finanzen.ui.components.SageButtonKind
+import com.finanzen.ui.components.SageTextField
+import com.finanzen.ui.components.ScreenColumn
 import com.finanzen.ui.components.SubScreenHeader
-import com.finanzen.ui.components.sageSwitchColors
+import com.finanzen.ui.components.SwitchRow
+import com.finanzen.ui.components.TitledSection
 import com.finanzen.ui.icons.LucideIcons
-import com.finanzen.ui.theme.LocalFinanceColors
-import com.finanzen.ui.theme.displayFontFamily
+import com.finanzen.ui.theme.LocalSageType
 import com.finanzen.viewmodel.BackupViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -82,58 +75,39 @@ fun BackupScreen(
 
     Column(Modifier.fillMaxSize()) {
         SubScreenHeader(title = "Copia de seguridad", onBack = onBack)
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
+        ScreenColumn {
             status?.let { s ->
-                item {
-                    val finance = LocalFinanceColors.current
-                    val container = if (s.isError) finance.expenseContainer else MaterialTheme.colorScheme.primaryContainer
-                    val fg = if (s.isError) finance.expense else MaterialTheme.colorScheme.onPrimaryContainer
-                    // liveRegion: el resultado se anuncia aunque el foco esté en el botón que lo disparó.
-                    FinanceCard(
-                        modifier = Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Polite },
-                        color = container,
-                        contentPadding = PaddingValues(12.dp),
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(if (s.isError) "No se pudo completar" else "Listo", color = fg, fontWeight = FontWeight.SemiBold)
-                            Text(s.message, style = MaterialTheme.typography.bodySmall, color = fg)
-                            TextButton(onClick = { vm.clearStatus() }) { Text("Entendido", color = fg) }
+                InlineNotice(
+                    text = if (s.isError) "No se pudo completar. ${s.message}" else s.message,
+                    tone = if (s.isError) NoticeTone.Warning else NoticeTone.Success,
+                    trailing = {
+                        IconButton(onClick = vm::clearStatus, modifier = Modifier.size(40.dp)) {
+                            Icon(LucideIcons.X, contentDescription = "Cerrar aviso", modifier = Modifier.size(20.dp))
                         }
-                    }
-                }
+                    },
+                )
             }
-            item {
-                FinanceCard(modifier = Modifier.fillMaxWidth()) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Exportar", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            if (encrypt) {
-                                "Protege la copia de tu base de datos con una contraseña. Sin ella nadie podrá abrirla, ni tú: " +
-                                    "guárdala bien. Mínimo 8 caracteres."
+            TitledSection("Exportar") {
+                FinanceCard(Modifier.fillMaxWidth()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        SwitchRow(
+                            title = "Cifrar con contraseña",
+                            subtitle = if (encrypt) {
+                                "Sin la contraseña nadie podrá abrir la copia, ni tú: guárdala en un lugar seguro."
                             } else {
-                                "Guarda tu base de datos sin contraseña. Cualquiera que tenga el archivo podrá ver tus datos."
+                                "Sin contraseña, cualquiera que tenga el archivo podrá ver tus datos."
                             },
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            checked = encrypt,
+                            onCheckedChange = { encrypt = it },
                         )
-                        Row(
-                            modifier = Modifier.toggleable(value = encrypt, role = Role.Switch, onValueChange = { encrypt = it }),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        ) {
-                            Text("Cifrar con contraseña", modifier = Modifier.weight(1f))
-                            Switch(checked = encrypt, onCheckedChange = null, colors = sageSwitchColors())
-                        }
                         if (encrypt) {
                             val transformation = if (showPass) VisualTransformation.None else PasswordVisualTransformation()
-                            OutlinedTextField(
+                            SageTextField(
                                 value = exportPass,
                                 onValueChange = { exportPass = it },
-                                label = { Text("Contraseña") },
+                                label = "Contraseña",
+                                help = "Mínimo $MIN_PASS caracteres.",
+                                error = if (exportPass.isNotEmpty() && passTooShort) "Usa al menos $MIN_PASS caracteres." else null,
                                 visualTransformation = transformation,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                                 trailingIcon = {
@@ -144,57 +118,51 @@ fun BackupScreen(
                                         )
                                     }
                                 },
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth(),
                             )
-                            OutlinedTextField(
+                            SageTextField(
                                 value = confirmPass,
                                 onValueChange = { confirmPass = it },
-                                label = { Text("Repetir contraseña") },
+                                label = "Repetir contraseña",
+                                error = if (confirmPass.isNotEmpty() && passMismatch) "Las contraseñas no coinciden." else null,
                                 visualTransformation = transformation,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                                isError = confirmPass.isNotEmpty() && passMismatch,
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth(),
                             )
-                            when {
-                                exportPass.isNotEmpty() && passTooShort -> FieldError("Usa al menos $MIN_PASS caracteres.")
-                                confirmPass.isNotEmpty() && passMismatch -> FieldError("Las contraseñas no coinciden.")
-                            }
                         }
-                        Button(
+                        SageButton(
+                            text = "Crear copia",
                             onClick = { vm.export(encrypt, exportPass) },
-                            enabled = !passTooShort && !passMismatch,
                             modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text("Crear copia", fontFamily = displayFontFamily())
-                        }
+                            icon = LucideIcons.Download,
+                            enabled = !passTooShort && !passMismatch,
+                        )
+                        Text(
+                            "Se guarda en Descargas con extensión .finzbkp.",
+                            style = LocalSageType.current.caption,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                 }
             }
-
-            item {
-                FinanceCard(modifier = Modifier.fillMaxWidth()) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Importar", style = MaterialTheme.typography.titleMedium)
-                        Text(
-                            "Recupera tu base de datos desde un archivo .finzbkp (las copias se guardan en Descargas). " +
-                                "Si tiene contraseña, escríbela. Esto reemplaza todos tus datos actuales.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            TitledSection("Importar") {
+                FinanceCard(Modifier.fillMaxWidth()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        InlineNotice(
+                            "Restaurar reemplaza todos tus datos actuales por los del archivo. Si quieres conservarlos, crea una copia antes.",
+                            tone = NoticeTone.Warning,
                         )
-                        OutlinedTextField(
+                        SageTextField(
                             value = importPass,
                             onValueChange = { importPass = it },
-                            label = { Text("Contraseña (si la tiene)") },
+                            label = "Contraseña (si la tiene)",
                             visualTransformation = PasswordVisualTransformation(),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
                         )
-                        Button(onClick = openPicker, modifier = Modifier.fillMaxWidth()) {
-                            Text("Elegir archivo y restaurar", fontFamily = displayFontFamily())
-                        }
+                        SageButton(
+                            text = "Elegir archivo y restaurar",
+                            onClick = openPicker,
+                            modifier = Modifier.fillMaxWidth(),
+                            kind = SageButtonKind.Secondary,
+                        )
                     }
                 }
             }

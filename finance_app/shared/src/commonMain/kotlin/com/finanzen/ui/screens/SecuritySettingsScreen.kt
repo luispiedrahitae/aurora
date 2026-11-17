@@ -2,19 +2,11 @@ package com.finanzen.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -22,20 +14,22 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.finanzen.platform.PlatformBackHandler
 import com.finanzen.ui.components.ConfirmDialog
-import com.finanzen.ui.components.FieldError
 import com.finanzen.ui.components.FinanceCard
+import com.finanzen.ui.components.SageButton
+import com.finanzen.ui.components.SageButtonKind
+import com.finanzen.ui.components.SageTextField
+import com.finanzen.ui.components.ScreenColumn
 import com.finanzen.ui.components.SubScreenHeader
-import com.finanzen.ui.components.sageSwitchColors
-import com.finanzen.ui.theme.displayFontFamily
+import com.finanzen.ui.components.SwitchRow
+import com.finanzen.ui.components.TitledSection
+import com.finanzen.ui.icons.LucideIcons
+import com.finanzen.ui.theme.LocalSageType
 import com.finanzen.viewmodel.SecurityViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -75,77 +69,52 @@ fun SecuritySettingsScreen(
 
     Column(Modifier.fillMaxSize()) {
         SubScreenHeader(title = "Seguridad", onBack = onBack)
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            item {
-                FinanceCard(modifier = Modifier.fillMaxWidth()) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        // Toda la fila es el interruptor (como en Notificaciones), no solo el Switch.
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .toggleable(
-                                    value = lockOn.value,
-                                    role = Role.Switch,
-                                    onValueChange = { on -> if (on) showSetup = true else confirmDisable = true },
-                                ),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("Bloqueo con PIN", fontWeight = FontWeight.SemiBold)
-                                Text(
-                                    when {
-                                        lockOn.value -> "Activo. Te pediremos el PIN al abrir la app."
-                                        showSetup -> "Define tu PIN abajo para activarlo."
-                                        else -> "Desactivado. La app abre sin pedir PIN."
-                                    },
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+        ScreenColumn {
+            TitledSection("Bloqueo con PIN") {
+                FinanceCard(Modifier.fillMaxWidth()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        SwitchRow(
+                            title = "Pedir PIN al abrir Sage",
+                            subtitle = when {
+                                lockOn.value -> "Activo. Te pediremos el PIN al abrir la app."
+                                showSetup -> "Define tu PIN abajo para activarlo."
+                                else -> "Desactivado. La app abre sin pedir PIN."
+                            },
+                            checked = lockOn.value,
+                            onCheckedChange = { on -> if (on) showSetup = true else confirmDisable = true },
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (lockOn.value) {
+                                SageButton("Cambiar PIN", { showSetup = true }, Modifier.weight(1f), kind = SageButtonKind.Secondary)
                             }
-                            Switch(checked = lockOn.value, onCheckedChange = null, colors = sageSwitchColors())
+                            SageButton("Ver el bloqueo", { showPreview = true }, Modifier.weight(1f), kind = SageButtonKind.Secondary)
                         }
-                        if (lockOn.value) {
-                            TextButton(onClick = { showSetup = true }) { Text("Cambiar PIN") }
-                        }
-                        TextButton(onClick = { showPreview = true }) { Text("Vista previa del bloqueo") }
                     }
                 }
             }
 
             if (showSetup) {
-                item {
-                    PinSetupCard(
-                        // Cambiar un PIN existente exige conocer el actual.
-                        requireCurrent = lockOn.value,
-                        onVerifyCurrent = vm::verifyCurrentPin,
-                        onCancel = { showSetup = false },
-                        onSave = { pin, onResult -> vm.setupPin(pin, onResult) },
-                        onSaved = {
-                            lockOn.value = true
-                            showSetup = false
-                        },
-                        isBusy = vm.isBusy.collectAsState().value,
-                    )
-                }
+                PinSetupCard(
+                    // Cambiar un PIN existente exige conocer el actual.
+                    requireCurrent = lockOn.value,
+                    onVerifyCurrent = vm::verifyCurrentPin,
+                    onCancel = { showSetup = false },
+                    onSave = { pin, onResult -> vm.setupPin(pin, onResult) },
+                    onSaved = {
+                        lockOn.value = true
+                        showSetup = false
+                    },
+                    isBusy = vm.isBusy.collectAsState().value,
+                )
             }
 
-            item {
-                FinanceCard(modifier = Modifier.fillMaxWidth()) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Biometría", fontWeight = FontWeight.SemiBold)
-                        Text(
-                            "Si activas el bloqueo con PIN y tu dispositivo tiene huella o rostro configurados, " +
-                                "podrás desbloquear con biometría desde la pantalla de bloqueo. (No disponible en la versión de escritorio.)",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
+            TitledSection("Biometría") {
+                InfoCard(
+                    icon = LucideIcons.Lock,
+                    title = "Huella o rostro",
+                    body = "Con el bloqueo con PIN activo, si el teléfono tiene huella o rostro configurados podrás " +
+                        "desbloquear con ellos. El PIN sigue sirviendo de respaldo. (No disponible en la versión de escritorio.)",
+                )
             }
         }
     }
@@ -165,66 +134,60 @@ private fun PinSetupCard(
     var confirm by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    val digitsOnly: (String) -> String? = { it.takeIf { v -> v.length <= MAX_PIN && v.all(Char::isDigit) } }
+    val pinKeyboard = KeyboardOptions(keyboardType = KeyboardType.NumberPassword)
 
     FinanceCard(modifier = Modifier.fillMaxWidth()) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(if (requireCurrent) "Cambiar PIN" else "Define tu PIN", fontWeight = FontWeight.SemiBold)
-            Text(
-                "4 a 8 dígitos. Necesario para volver a abrir la app.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Text(if (requireCurrent) "Cambiar PIN" else "Define tu PIN", style = LocalSageType.current.titleCard)
             if (requireCurrent) {
-                OutlinedTextField(
+                SageTextField(
                     value = current,
-                    onValueChange = {
-                        if (it.length <= 8 && it.all(Char::isDigit)) current = it
+                    onValueChange = { v ->
+                        digitsOnly(v)?.let { current = it }
                         error = null
                     },
-                    label = { Text("PIN actual") },
-                    singleLine = true,
+                    label = "PIN actual",
+                    error = error.takeIf { it != SHORT_PIN && it != PIN_MISMATCH },
                     visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                    keyboardOptions = pinKeyboard,
                 )
             }
-            OutlinedTextField(
+            SageTextField(
                 value = pin,
-                onValueChange = {
-                    if (it.length <= 8 && it.all(Char::isDigit)) pin = it
+                onValueChange = { v ->
+                    digitsOnly(v)?.let { pin = it }
                     error = null
                 },
-                isError = error == SHORT_PIN,
-                label = { Text(if (requireCurrent) "PIN nuevo" else "PIN") },
-                singleLine = true,
+                label = if (requireCurrent) "PIN nuevo" else "PIN",
+                help = "De 4 a 8 dígitos. Lo necesitarás para abrir la app.",
+                error = error.takeIf { it == SHORT_PIN },
                 visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                keyboardOptions = pinKeyboard,
             )
-            OutlinedTextField(
+            SageTextField(
                 value = confirm,
-                onValueChange = {
-                    if (it.length <= 8 && it.all(Char::isDigit)) confirm = it
+                onValueChange = { v ->
+                    digitsOnly(v)?.let { confirm = it }
                     error = null
                 },
-                isError = error == PIN_MISMATCH,
-                label = { Text("Confirmar PIN") },
-                singleLine = true,
+                label = "Confirmar PIN",
+                error = error.takeIf { it == PIN_MISMATCH },
                 visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                keyboardOptions = pinKeyboard,
             )
-            error?.let { FieldError(it) }
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                TextButton(onClick = onCancel, enabled = !isBusy) { Text("Cancelar") }
-                Button(
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                SageButton("Cancelar", onCancel, Modifier.weight(1f), kind = SageButtonKind.Secondary, enabled = !isBusy)
+                SageButton(
+                    text = if (isBusy) "Guardando…" else "Guardar",
+                    modifier = Modifier.weight(1f),
                     enabled = !isBusy,
                     onClick = {
                         val save = {
                             onSave(pin) { success ->
                                 if (success) {
                                     scope.launch {
-                                        delay(150)
+                                        delay(SAVED_FEEDBACK_MS)
                                         onSaved()
                                     }
                                 } else {
@@ -233,7 +196,7 @@ private fun PinSetupCard(
                             }
                         }
                         when {
-                            pin.length < 4 -> error = SHORT_PIN
+                            pin.length < MIN_PIN -> error = SHORT_PIN
 
                             pin != confirm -> error = PIN_MISMATCH
 
@@ -244,11 +207,14 @@ private fun PinSetupCard(
                             else -> save()
                         }
                     },
-                ) { Text(if (isBusy) "Guardando…" else "Guardar", fontFamily = displayFontFamily()) }
+                )
             }
         }
     }
 }
 
-private const val SHORT_PIN = "El PIN debe tener al menos 4 dígitos"
-private const val PIN_MISMATCH = "Los PIN no coinciden"
+private const val MIN_PIN = 4
+private const val MAX_PIN = 8
+private const val SAVED_FEEDBACK_MS = 150L
+private const val SHORT_PIN = "El PIN debe tener al menos 4 dígitos."
+private const val PIN_MISMATCH = "Los PIN no coinciden."
