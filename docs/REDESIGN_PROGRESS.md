@@ -58,8 +58,10 @@ Movido a otras fases, donde ese código se reescribe de todos modos:
       TopBar, EmptyState, LoadingState, ErrorState).
 - [x] 9 pantallas: Resumen (claro y oscuro), Movimientos, Presupuesto vs. gasto real, Tendencias
       de gasto, Fondos de inversión, Simular fondo, Proyección y Comparar fondos.
+- [x] 5 pantallas más (2026-11-17): Cuentas y tarjetas, Nuevo movimiento, Suscripciones,
+      Calendario y Más. La barra inferior de todas apunta ya a Cuentas y Más.
 - [ ] ⛔ Aprobación del usuario.
-- [ ] Tokens y componentes en Compose; fuentes Bricolage Grotesque, IBM Plex Sans e IBM Plex Mono.
+- [ ] Tokens y componentes en Compose; fuentes Caprasimo, IBM Plex Sans e IBM Plex Mono.
 - [ ] Migrar las pantallas y reescribir `DESIGN.md`.
 
 Dirección del diseño: libro contable plano (bordes finos, sin sombras en cards) con la identidad de
@@ -68,8 +70,10 @@ terracota oscuro para gastos, y títulos en Caprasimo. Texto y cifras en IBM Ple
 numerales tabulares; una cifra principal por pantalla.
 
 - 2026-11-17: primera versión (verde/azul petróleo/naranja, títulos Bricolage) cambiada a pedido
-  del usuario por la paleta y la letra de títulos de la app actual. Esperando su revisión; después
-  indicará qué plantillas faltantes organizar.
+  del usuario por la paleta y la letra de títulos de la app actual.
+- 2026-11-17: diseñadas las 5 plantillas que faltaban. Sin diseñar todavía (usarán los mismos
+  componentes): Categorías, Reportes, Apariencia, Moneda, Notificaciones, Seguridad, Copia de
+  seguridad, Bloqueo con PIN, Acerca de y Sugerencias.
 
 ## Decisiones
 
