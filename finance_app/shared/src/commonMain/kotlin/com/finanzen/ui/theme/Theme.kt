@@ -1,38 +1,57 @@
 package com.finanzen.ui.theme
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
+
+/** Tema elegido en Apariencia. [System] sigue el modo claro u oscuro del teléfono. */
+enum class ThemeMode(val label: String) {
+    System("Automático"),
+    Light("Claro"),
+    Dark("Oscuro"),
+    ;
+
+    companion object {
+        fun fromKey(key: String?): ThemeMode = entries.firstOrNull { it.name == key } ?: System
+    }
+}
+
+/** `true` cuando se está pintando el tema oscuro (para los pocos dibujos que lo necesitan). */
+val LocalIsDarkTheme = staticCompositionLocalOf { false }
 
 /**
- * Tema raíz. Si [useDynamic] y la plataforma lo soporta (Android 12+), aplica color dinámico
- * Material You; si no, usa el [accent] elegido por el usuario. Los [FinanceColors] semánticos y la
- * [Spacing] se proveen vía CompositionLocal encima del scheme — independientes del acento.
+ * Tema raíz. El acento elegido reescribe solo la tríada de acento; fondos, superficies, colores
+ * financieros y tipografía son fijos (ver Color.kt y Type.kt).
  */
 @Composable
 fun FinanZenTheme(
-    darkTheme: Boolean = false,
+    themeMode: ThemeMode = ThemeMode.System,
     accent: AccentPreset = AccentPreset.Terracotta,
-    useDynamic: Boolean = true,
     reduceMotion: Boolean = false,
     content: @Composable () -> Unit,
 ) {
-    val dynamicScheme = if (useDynamic) platformColorScheme(darkTheme) else null
-    val colorScheme = dynamicScheme ?: if (darkTheme) accent.dark else accent.light
-    val financeColors = if (darkTheme) DarkFinanceColors else LightFinanceColors
-    val categoryColors = if (darkTheme) DarkCategoryColors else LightCategoryColors
-    val accentColor = (if (useDynamic) platformColorScheme(false) else null)?.primary ?: accent.light.primary
+    val darkTheme = when (themeMode) {
+        ThemeMode.System -> isSystemInDarkTheme()
+        ThemeMode.Light -> false
+        ThemeMode.Dark -> true
+    }
+    val colorScheme = if (darkTheme) accent.dark else accent.light
+    val sageType = sageTextStyles()
 
     CompositionLocalProvider(
-        LocalFinanceColors provides financeColors,
-        LocalCategoryColors provides categoryColors,
+        LocalFinanceColors provides if (darkTheme) DarkFinanceColors else LightFinanceColors,
+        LocalCategoryColors provides if (darkTheme) DarkCategoryColors else LightCategoryColors,
         LocalSpacing provides Spacing(),
-        LocalAccentColor provides accentColor,
+        LocalAccentColor provides accent.light.primary,
         LocalReduceMotion provides reduceMotion,
+        LocalSageType provides sageType,
+        LocalIsDarkTheme provides darkTheme,
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = finanZenTypography(),
+            typography = sageType.toMaterialTypography(),
             shapes = FinanZenShapes,
             content = content,
         )

@@ -4,18 +4,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Shapes
 import androidx.compose.ui.unit.dp
 
-/**
- * Escala ajustada para precisión "Swiss Modernism 2.0" (vs. los 20–36dp anteriores, demasiado suaves
- * para una cuadrícula precisa). Tiles bento pequeños usan `small`/`medium`, el tile hero de vidrio
- * usa `large`/`extraLarge`. Ver DESIGN.md sección "Bento Tiles".
- */
+/** Radios Sage: 6 (insignias), 10 (botones, campos, chips), 16 (tarjetas, tablas, hojas). */
+object SageRadius {
+    val sm = 6.dp
+    val md = 10.dp
+    val lg = 16.dp
+}
+
 val FinanZenShapes = Shapes(
-    extraSmall = RoundedCornerShape(8.dp),
-    small = RoundedCornerShape(12.dp),
-    medium = RoundedCornerShape(16.dp),
-    large = RoundedCornerShape(20.dp),
-    extraLarge = RoundedCornerShape(24.dp),
+    extraSmall = RoundedCornerShape(SageRadius.sm),
+    small = RoundedCornerShape(SageRadius.md),
+    medium = RoundedCornerShape(SageRadius.md),
+    large = RoundedCornerShape(SageRadius.lg),
+    extraLarge = RoundedCornerShape(SageRadius.lg),
 )
 
-/** Forma pill para chips y botones de acción. */
+/** Forma pill: solo para el FAB, las pistas de progreso y los interruptores. */
 val PillShape = RoundedCornerShape(percent = 50)

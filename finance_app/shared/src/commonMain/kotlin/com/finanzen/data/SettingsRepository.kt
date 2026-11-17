@@ -10,6 +10,11 @@ class SettingsRepository(private val db: FinanzenDb) {
 
     fun setAccent(key: String) = db.settingQueries.put(KEY_ACCENT, key)
 
+    /** Tema claro/oscuro (nombre del enum ThemeMode). Sin valor guardado sigue al sistema. */
+    fun themeMode(): String? = db.settingQueries.get(KEY_THEME_MODE).executeAsOneOrNull()
+
+    fun setThemeMode(key: String) = db.settingQueries.put(KEY_THEME_MODE, key)
+
     /** Recordatorios de corte/pago de tarjetas de crédito. Apagado por defecto. */
     fun cardNotificationsEnabled(): Boolean = db.settingQueries.get(KEY_NOTIFY_CARDS).executeAsOneOrNull()?.toBooleanStrictOrNull() ?: false
 
@@ -88,6 +93,7 @@ class SettingsRepository(private val db: FinanzenDb) {
         const val DEFAULT_CURRENCY = "USD"
         const val KEY_ACCENT = "app.accent"
         const val DEFAULT_ACCENT = "Terracotta"
+        const val KEY_THEME_MODE = "app.themeMode"
         const val KEY_NOTIFY_CARDS = "notif.cards"
         const val KEY_NOTIFY_BUDGET = "notif.budget"
         const val KEY_NOTIFY_REMIND_DAYS = "notif.remind_days"

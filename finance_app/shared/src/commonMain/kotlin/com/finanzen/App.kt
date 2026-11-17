@@ -33,8 +33,8 @@ fun App() {
     val dateLocale = remember(baseCurrency) {
         CURRENCY_LOCALE_INFO[baseCurrency] ?: DEFAULT_LOCALE_INFO
     }
-    // La app siempre usa el tema claro (Sage crema) — no hay Oscuro ni Dinámico que elegir.
-    FinanZenTheme(darkTheme = false, accent = accent, useDynamic = false, reduceMotion = reduceMotion) {
+    val themeMode by settingsVm.themeMode.collectAsState()
+    FinanZenTheme(themeMode = themeMode, accent = accent, reduceMotion = reduceMotion) {
         CompositionLocalProvider(LocalMoneyFormat provides moneyFormat, LocalDateLocale provides dateLocale) {
             val securityVm: SecurityViewModel = koinInject()
             val lockState by securityVm.state.collectAsState()

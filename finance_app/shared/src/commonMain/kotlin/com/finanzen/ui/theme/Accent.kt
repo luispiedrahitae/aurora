@@ -80,21 +80,21 @@ enum class AccentPreset(
     ),
 
     DarkOlive(
-        "Oliva oscuro",
+        "Oliva Oscuro",
         Color(0xFF5E6B34),
         FinanZenLightScheme.withAccent(Color(0xFF5E6B34), Color.White, Color(0xFFEAEEDD), Color(0xFF54602F)),
         FinanZenDarkScheme.withAccent(Color(0xFFA4B684), Color(0xFF242A19), Color(0xFF374026), Color(0xFFBDCAA5)),
     ),
 
     DustyRose(
-        "Rosa polvo",
+        "Rosa Polvo",
         Color(0xFF8A5A5A),
         FinanZenLightScheme.withAccent(Color(0xFF8A5A5A), Color.White, Color(0xFFEBE0E0), Color(0xFF563838)),
         FinanZenDarkScheme.withAccent(Color(0xFFD0A5AA), Color(0xFF2C1719), Color(0xFF432327), Color(0xFFCEA1A6)),
     ),
 
     LightTerracotta(
-        "Terracota clara",
+        "Terracota Clara",
         Color(0xFF966D4F),
         FinanZenLightScheme.withAccent(Color(0xFF966D4F), Color.White, Color(0xFFEDE4DE), Color(0xFF5D4431)),
         FinanZenDarkScheme.withAccent(Color(0xFFE9C1A6), Color(0xFF351D0D), Color(0xFF522D14), Color(0xFFE3AF8D)),
@@ -151,21 +151,21 @@ enum class AccentPreset(
     ),
 
     Steel(
-        "Azul acero",
+        "Azul Acero",
         Color(0xFF3F6783),
         FinanZenLightScheme.withAccent(Color(0xFF3F6783), Color.White, Color(0xFFDDE7EE), Color(0xFF2E4C60)),
         FinanZenDarkScheme.withAccent(Color(0xFF97B1C4), Color(0xFF16232D), Color(0xFF213645), Color(0xFFA1BBCE)),
     ),
 
     Slate(
-        "Azul pizarra",
+        "Azul Pizarra",
         Color(0xFF476185),
         FinanZenLightScheme.withAccent(Color(0xFF476185), Color.White, Color(0xFFDEE4ED), Color(0xFF32445D)),
         FinanZenDarkScheme.withAccent(Color(0xFF9AAAC1), Color(0xFF171F2B), Color(0xFF243042), Color(0xFFA4B4CB)),
     ),
 
     Navy(
-        "Azul marino",
+        "Azul Marino",
         Color(0xFF314772),
         FinanZenLightScheme.withAccent(Color(0xFF314772), Color.White, Color(0xFFDBE2F0), Color(0xFF2B3E64)),
         FinanZenDarkScheme.withAccent(Color(0xFF93A5C8), Color(0xFF141D2E), Color(0xFF1F2C47), Color(0xFF9EAFD1)),

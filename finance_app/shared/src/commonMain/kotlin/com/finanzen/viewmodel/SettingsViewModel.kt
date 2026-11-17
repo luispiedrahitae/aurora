@@ -7,6 +7,7 @@ import com.finanzen.db.Currency
 import com.finanzen.domain.SymbolPosition
 import com.finanzen.ui.theme.AccentPreset
 import com.finanzen.ui.theme.MoneyFormat
+import com.finanzen.ui.theme.ThemeMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,6 +30,9 @@ class SettingsViewModel(
 
     private val mutableAccent = MutableStateFlow(AccentPreset.fromKey(repo.accent()))
     val accent: StateFlow<AccentPreset> = mutableAccent.asStateFlow()
+
+    private val mutableThemeMode = MutableStateFlow(ThemeMode.fromKey(repo.themeMode()))
+    val themeMode: StateFlow<ThemeMode> = mutableThemeMode.asStateFlow()
 
     private val mutableCardNotif = MutableStateFlow(repo.cardNotificationsEnabled())
     val cardNotifications: StateFlow<Boolean> = mutableCardNotif.asStateFlow()
@@ -54,6 +58,11 @@ class SettingsViewModel(
     fun setAccent(preset: AccentPreset) {
         repo.setAccent(preset.name)
         mutableAccent.value = preset
+    }
+
+    fun setThemeMode(mode: ThemeMode) {
+        repo.setThemeMode(mode.name)
+        mutableThemeMode.value = mode
     }
 
     fun setCardNotifications(enabled: Boolean) {
