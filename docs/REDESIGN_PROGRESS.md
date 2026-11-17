@@ -62,9 +62,14 @@ Movido a otras fases, donde ese código se reescribe de todos modos:
 - [ ] Tokens y componentes en Compose; fuentes Bricolage Grotesque, IBM Plex Sans e IBM Plex Mono.
 - [ ] Migrar las pantallas y reescribir `DESIGN.md`.
 
-Dirección del diseño: libro contable plano (bordes finos, sin sombras en cards), verde salvia como
-color de acción, ingresos en azul petróleo y gastos en naranja (se distinguen con daltonismo
-rojo-verde), cifras tabulares y una cifra principal por pantalla.
+Dirección del diseño: libro contable plano (bordes finos, sin sombras en cards) con la identidad de
+la app Sage actual: fondo crema, terracota como color de acción, verde salvia para ingresos y
+terracota oscuro para gastos, y títulos en Caprasimo. Texto y cifras en IBM Plex Sans con
+numerales tabulares; una cifra principal por pantalla.
+
+- 2026-11-17: primera versión (verde/azul petróleo/naranja, títulos Bricolage) cambiada a pedido
+  del usuario por la paleta y la letra de títulos de la app actual. Esperando su revisión; después
+  indicará qué plantillas faltantes organizar.
 
 ## Decisiones
 
@@ -78,6 +83,7 @@ rojo-verde), cifras tabulares y una cifra principal por pantalla.
 | 2026-11-16 | App solo en español; los textos se quedan en el código | Usuario |
 | 2026-11-16 | Android Gradle Plugin se queda en 8.13 (la 9 exige otra migración del módulo compartido). Por eso Compose queda en 1.11 y navigation en 2.9: las siguientes exigen AGP 9 | Claude |
 | 2026-11-16 | Detekt deja el formato a Spotless y usa línea base para la deuda previa | Claude |
+| 2026-11-17 | El diseño nuevo conserva los colores y la letra de títulos (Caprasimo) de la app Sage actual | Usuario |
 | 2026-11-16 | Se elimina el target `iosX64` (simulador Intel): Compose 1.12 ya no lo publica | Claude |
 
 ## Versiones
