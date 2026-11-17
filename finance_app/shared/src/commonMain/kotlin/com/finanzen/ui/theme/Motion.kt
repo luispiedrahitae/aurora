@@ -15,6 +15,14 @@ import androidx.compose.runtime.staticCompositionLocalOf
  */
 val LocalReduceMotion = staticCompositionLocalOf { false }
 
+/** Duraciones de animación Sage (ms): rápida para desvanecer, media para abrir/cerrar, lenta para barras. */
+object SageMotion {
+    const val FAST = 150
+    const val SHORT = 200
+    const val MEDIUM = 250
+    const val SLOW = 400
+}
+
 /** `tween(ms)` normal, o [snap] si el usuario pidió reducir animaciones. */
 @Composable
 fun <T> motionTween(ms: Int, delayMs: Int = 0): FiniteAnimationSpec<T> = if (LocalReduceMotion.current) snap() else tween(ms, delayMillis = delayMs)
