@@ -19,6 +19,19 @@ class CategoriesViewModel(private val repo: CategoryRepository) : ViewModel() {
         repo.add(name = name.trim(), kind = kind, parentId = parentId, icon = icon, color = color)
     }
 
+    /** Cambia solo el nombre; tipo, padre, icono y color se conservan. Ignora nombres vacíos. */
+    fun rename(category: Category, newName: String) {
+        if (newName.isBlank()) return
+        repo.update(
+            id = category.id,
+            name = newName.trim(),
+            kind = category.kind,
+            parentId = category.parentId,
+            icon = category.icon,
+            color = category.color,
+        )
+    }
+
     /** Borra la categoría (y sus subcategorías si es de nivel superior) junto con todo lo que la
      * referencia — movimientos, presupuestos, suscripciones, inversiones y planes de cuotas. Ver
      * [CategoryRepository.deleteCascade]. */
