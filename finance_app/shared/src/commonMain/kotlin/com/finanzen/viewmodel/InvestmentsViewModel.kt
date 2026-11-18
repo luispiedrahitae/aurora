@@ -10,6 +10,10 @@ import com.finanzen.data.TransactionRepository
 import com.finanzen.db.Account
 import com.finanzen.db.Investment
 import com.finanzen.db.TransactionRow
+import com.finanzen.domain.FundLedger
+import com.finanzen.domain.FundMovement
+import com.finanzen.domain.FundTotals
+import com.finanzen.domain.MovementKind
 import com.finanzen.domain.RecurrenceSchedule
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -172,7 +176,7 @@ class InvestmentsViewModel(
     fun closeInvestment(id: Long, finalWithdrawalMinor: Long, closedDate: Long = todayEpochDay()) {
         if (finalWithdrawalMinor > 0) withdraw(id, finalWithdrawalMinor)
         val totals = fundTotals(txRepo.contributionsForInvestment(id))
-        investRepo.close(id, totals.withdrawnMinor, closedDate, yieldMinor(totals.withdrawnMinor, totals.contributedMinor))
+        investRepo.close(id, totals.withdrawnMinor, closedDate, FundLedger.yieldMinor(totals.withdrawnMinor, totals.contributedMinor))
     }
 
     /** Reabre una cerrada. Si es periódica, el próximo aporte queda en la siguiente fecha posterior a
@@ -233,22 +237,12 @@ class InvestmentsViewModel(
 
     private fun todayEpochDay(): Long = Clock.System.todayIn(TimeZone.currentSystemDefault()).toEpochDays()
 
-    /** [initialMinor] = aporte más antiguo; [contributedMinor] = total aportado (incluye el inicial). */
-    data class FundTotals(val initialMinor: Long, val contributedMinor: Long, val withdrawnMinor: Long)
-
     companion object {
         /** Agrupación pura y testeable (mismo criterio que AccountsViewModel.groupByAccount). */
         fun groupByInvestment(txs: List<TransactionRow>): Map<Long, List<TransactionRow>> = txs.filter { it.investmentId != null }
             .groupBy { it.investmentId!! }
 
-        /** Movimientos de una inversión → aportado (EXPENSE) y retirado acumulado (INCOME). */
-        fun fundTotals(txs: List<TransactionRow>): FundTotals = FundTotals(
-            initialMinor = txs.filter { it.kind == "EXPENSE" }.minWithOrNull(compareBy({ it.date }, { it.id }))?.amountMinor ?: 0L,
-            contributedMinor = txs.filter { it.kind == "EXPENSE" }.sumOf { it.amountMinor },
-            withdrawnMinor = txs.filter { it.kind == "INCOME" }.sumOf { it.amountMinor },
-        )
-
-        /** Rendimiento total: retirado − aportado. Puede ser negativo (pérdida). */
-        fun yieldMinor(withdrawnAmountMinor: Long, contributedAmountMinor: Long): Long = withdrawnAmountMinor - contributedAmountMinor
+        /** Movimientos de una inversión → totales; el cálculo vive en [FundLedger]. */
+        fun fundTotals(txs: List<TransactionRow>): FundTotals = FundLedger.totals(txs.map { FundMovement(it.date, it.id, it.amountMinor, MovementKind.fromDb(it.kind)) })
     }
 }

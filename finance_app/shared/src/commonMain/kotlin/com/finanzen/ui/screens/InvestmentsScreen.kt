@@ -54,6 +54,8 @@ import androidx.compose.ui.unit.dp
 import com.finanzen.db.Account
 import com.finanzen.db.Investment
 import com.finanzen.db.TransactionRow
+import com.finanzen.domain.FundLedger
+import com.finanzen.domain.FundTotals
 import com.finanzen.ui.components.AddFab
 import com.finanzen.ui.components.ArchivedSwipeRow
 import com.finanzen.ui.components.BentoTileSize
@@ -626,12 +628,12 @@ internal fun CardAction(label: String, trailing: Painter? = null, onClick: () ->
 
 /** Aportado y retirado del fondo y, al cerrar, el rendimiento que quedaría con el retiro final. */
 @Composable
-private fun FundTotalsRows(totals: InvestmentsViewModel.FundTotals, finalWithdrawalMinor: Long, currency: String, showYield: Boolean) {
+private fun FundTotalsRows(totals: FundTotals, finalWithdrawalMinor: Long, currency: String, showYield: Boolean) {
     val finance = LocalFinanceColors.current
     AmountRow("Aportado", totals.contributedMinor, currency)
     AmountRow("Retirado", totals.withdrawnMinor, currency)
     if (showYield) {
-        val yieldMinor = InvestmentsViewModel.yieldMinor(totals.withdrawnMinor + finalWithdrawalMinor, totals.contributedMinor)
+        val yieldMinor = FundLedger.yieldMinor(totals.withdrawnMinor + finalWithdrawalMinor, totals.contributedMinor)
         AmountRow(
             "Rendimiento",
             yieldMinor,
