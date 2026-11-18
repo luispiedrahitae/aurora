@@ -5,10 +5,10 @@ Rama de trabajo: `redesign` · Respaldo intocable: `backup/pre-redesign` (2da1f2
 
 ## Estado actual
 
-**Fase 3 — implementación en curso.** Checkpoint 2 aprobado el 2026-11-17 ("continua ya lo
-revise"). Hecho: tema (tokens, fuentes, modo oscuro), componentes base, navegación y 10 pantallas
-de ajustes. Siguiente: Categorías, Suscripciones, Calendario, Movimientos, formulario de
-movimiento, Cuentas, Presupuesto, Resumen y Fondos; luego `DESIGN.md` y `allWarningsAsErrors`.
+**Fase 3 — implementada (2026-11-17).** Todas las pantallas usan el design system Sage;
+`checkQuality` y `:androidApp:assembleDebug` en verde con `allWarningsAsErrors`. Pendiente: revisión
+visual en dispositivo por el usuario. **Siguiente: ⛔ Checkpoint 3** — presentar el modelo de datos y
+las fórmulas de las simulaciones (Fase 4) antes de implementarlas.
 
 - Design system: https://claude.ai/artifact/QdRX1cFzN6aWpb9gnEXy5s
 - Pantallas: https://claude.ai/artifact/D5SE4kr7NDM584HCZmj2th
@@ -21,7 +21,7 @@ movimiento, Cuentas, Presupuesto, Resumen y Fondos; luego `DESIGN.md` y `allWarn
 | 1 — Auditoría | ✅ Hecha (2026-11-16) | Informe entregado en el chat |
 | ⛔ Checkpoint 1 | ✅ Aprobado (2026-11-16) | Decisiones en la tabla de abajo |
 | 2 — Estándares | ✅ Hecha (2026-11-16) | Ver "Fase 2 paso a paso" |
-| 3 — Design system (Claude Design) | 🔄 Diseño aprobado (2026-11-17), implementación en curso | ⛔ Checkpoint 2: ✅ aprobado |
+| 3 — Design system (Claude Design) | ✅ Hecha (2026-11-17) | ⛔ Checkpoint 2: ✅ aprobado. Falta revisión en dispositivo |
 | 4 — Simulaciones | ⏳ Pendiente | ⛔ Checkpoint 3 (modelo + fórmulas) antes de implementar |
 | 5 — Verificación y entrega | ⏳ Pendiente | |
 
@@ -72,9 +72,16 @@ Movido a otras fases, donde ese código se reescribe de todos modos:
 - [x] Navegación: barra inferior y rail Sage, cabeceras, rutas en `Routes`.
 - [x] Pantallas: Más, Acerca de, Sugerencias, Reportes, Notificaciones, Moneda, Apariencia,
       Seguridad, Copia de seguridad, Bloqueo con PIN.
-- [ ] Pantallas: Categorías, Suscripciones, Calendario, Movimientos, formulario, Cuentas,
-      Presupuesto, Resumen, Fondos.
-- [ ] Reescribir `DESIGN.md`, quitar las 4 APIs obsoletas y activar `allWarningsAsErrors`.
+- [x] Pantallas: Categorías (ahora se pueden renombrar), Suscripciones, Calendario, Movimientos
+      (filtro Todos/Ingresos/Gastos y búsqueda desde la barra), formulario de movimiento, Cuentas
+      (cupo de tarjeta en barra con corte y pago a la vista), Presupuesto (gasto por día disponible),
+      Resumen, Fondos de inversión.
+- [x] Funciones largas o complejas divididas (Detekt sin nuevas entradas en la baseline).
+- [x] `DESIGN.md` reescrito; las 4 APIs obsoletas reemplazadas; `allWarningsAsErrors` activo.
+- [x] Spotless limitado a `src/` (fallaba en Windows al recorrer `build/`). Nota: ese cambio quedó
+      dentro del commit `551d084` (refactor) por un error al crear su propio commit.
+- [ ] Revisión visual en dispositivo (usuario). La vista previa de escritorio abre bien (captura de
+      Movimientos y Más revisadas); no se recorrieron las demás pantallas con datos.
 
 Dirección del diseño: libro contable plano (bordes finos, sin sombras en cards) con la identidad de
 la app Sage actual: fondo crema, terracota como color de acción, verde salvia para ingresos y
@@ -100,6 +107,10 @@ numerales tabulares; una cifra principal por pantalla.
   "Entrar" porque el PIN mide de 4 a 8 dígitos y no puede enviarse solo. Las fuentes Figtree y
   `PlatformColorScheme.kt` (color dinámico) quedan sin uso: candidatos a borrar, pendiente de
   aprobación.
+- 2026-11-17, cambios de comportamiento introducidos por el diseño (para revisar en dispositivo):
+  Movimientos muestra todos los días abiertos (antes solo hoy, el resto plegado); el bloqueo pide
+  tocar "Entrar"; la tarjeta de crédito ya no tiene diálogo "Detalle" (todo a la vista); el FAB
+  muestra solo "+" (la etiqueta queda como descripción accesible).
 
 ## Decisiones
 
