@@ -1,56 +1,70 @@
 package com.finanzen.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
+import com.finanzen.domain.daysInMonth
 import com.finanzen.ui.components.AddFab
-import com.finanzen.ui.components.BudgetProgressCard
+import com.finanzen.ui.components.BentoTileSize
+import com.finanzen.ui.components.BudgetProgressItem
 import com.finanzen.ui.components.CategoryAvatar
 import com.finanzen.ui.components.ConfirmDialog
 import com.finanzen.ui.components.EmptyState
+import com.finanzen.ui.components.FabClearance
 import com.finanzen.ui.components.FinanceCard
+import com.finanzen.ui.components.InlineNotice
+import com.finanzen.ui.components.LoadingState
 import com.finanzen.ui.components.MainTabHeader
 import com.finanzen.ui.components.MoneyField
+import com.finanzen.ui.components.MoneyText
 import com.finanzen.ui.components.MonthSelector
+import com.finanzen.ui.components.Overline
 import com.finanzen.ui.components.PickerField
+import com.finanzen.ui.components.ProgressBar
+import com.finanzen.ui.components.ProgressTone
+import com.finanzen.ui.components.SageButton
+import com.finanzen.ui.components.SageButtonKind
+import com.finanzen.ui.components.ScreenList
 import com.finanzen.ui.components.SheetHeader
+import com.finanzen.ui.components.TitledSection
+import com.finanzen.ui.components.progressColor
 import com.finanzen.ui.format.formatMesAnio
 import com.finanzen.ui.icons.LucideIcons
 import com.finanzen.ui.theme.LocalDateLocale
 import com.finanzen.ui.theme.LocalFinanceColors
+import com.finanzen.ui.theme.LocalMoneyFormat
+import com.finanzen.ui.theme.LocalSageType
 import com.finanzen.ui.theme.LocalSpacing
-import com.finanzen.ui.theme.displayFontFamily
 import com.finanzen.viewmodel.BudgetRow
 import com.finanzen.viewmodel.BudgetsViewModel
 import kotlinx.datetime.DatePeriod
@@ -102,97 +116,166 @@ fun BudgetsScreen(
         )
     }
 
-    Scaffold(
-        // El tope lo aporta MainTabHeader; el Scaffold se queda solo por el FAB.
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        floatingActionButton = {
-            if (unbudgeted.isNotEmpty()) {
-                AddFab(label = "Presupuesto", onClick = { showAdd = true })
-            }
-        },
-    ) { inner ->
-        Column(Modifier.fillMaxSize().padding(inner)) {
+    val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
             MainTabHeader(
                 title = "Presupuesto",
                 action = {
-                    // IconButton (área táctil de 48dp): MainTabHeader ya tiene heightIn(min = 48.dp),
-                    // así que no infla el header frente a Movimientos/Cuentas.
                     IconButton(onClick = { showInfo = !showInfo }) {
                         Icon(
                             LucideIcons.Info,
                             contentDescription = "Cómo funcionan los presupuestos mensuales",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp),
                         )
                     }
                 },
             )
-            if (showInfo) {
-                FinanceCard(
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = spacing.lg, vertical = spacing.sm),
-                ) {
-                    Text(
-                        "Cada categoría mantiene el mismo límite mes a mes. Editarlo solo afecta desde ese mes en adelante.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
+            ScreenList(bottomPadding = FabClearance) {
+                item(key = "month") {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (showInfo) {
+                            InlineNotice("Cada categoría mantiene el mismo límite mes a mes. Editarlo solo afecta desde ese mes en adelante.")
+                        }
+                        MonthSelector(
+                            label = formatMesAnio(month, dateLocale),
+                            onPrev = { vm.setMonth(month.plus(DatePeriod(months = -1))) },
+                            onNext = { vm.setMonth(month.plus(DatePeriod(months = 1))) },
+                            onLabelClick = { vm.setMonth(LocalDate(today.year, today.month, 1)) },
+                        )
+                    }
                 }
-            }
-            MonthSelector(
-                label = formatMesAnio(month, dateLocale),
-                onPrev = { vm.setMonth(month.plus(DatePeriod(months = -1))) },
-                onNext = { vm.setMonth(month.plus(DatePeriod(months = 1))) },
-                modifier = Modifier.padding(horizontal = spacing.lg),
-                onLabelClick = {
-                    val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
-                    vm.setMonth(LocalDate(today.year, today.month, 1))
-                },
-            )
-            when {
-                !data.loaded -> Box(Modifier.fillMaxSize())
+                when {
+                    !data.loaded -> item(key = "loading") { LoadingState() }
 
-                data.rows.isEmpty() ->
-                    // Sin categorías de gasto no hay FAB: el botón lleva al único sitio donde se resuelve.
-                    EmptyMessage("Sin presupuestos", "Crea categorías de gasto para asignarles presupuesto.", "Ir a Categorías", onOpenCategories)
+                    data.rows.isEmpty() -> item(key = "empty") {
+                        // Sin categorías de gasto no hay FAB: el botón lleva al único sitio donde se resuelve.
+                        EmptyState(
+                            icon = LucideIcons.PieChart,
+                            title = "Sin presupuestos",
+                            subtitle = "Crea categorías de gasto para asignarles presupuesto.",
+                            actionLabel = "Ir a Categorías",
+                            onAction = onOpenCategories,
+                        )
+                    }
 
-                budgeted.isEmpty() ->
-                    EmptyMessage("Sin presupuestos", "Usa el botón + para asignar uno a una categoría.")
+                    budgeted.isEmpty() -> item(key = "empty") {
+                        EmptyState(
+                            icon = LucideIcons.PieChart,
+                            title = "Sin presupuestos",
+                            subtitle = "Asigna un límite mensual a una categoría para ver cuánto te queda.",
+                            actionLabel = "Asignar presupuesto",
+                            onAction = { showAdd = true },
+                        )
+                    }
 
-                else ->
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = spacing.lg, end = spacing.lg, top = spacing.sm, bottom = 96.dp),
-                        verticalArrangement = Arrangement.spacedBy(spacing.md),
-                    ) {
-                        items(budgeted, key = { it.categoryId }) { row ->
-                            BudgetProgressCard(row, data.currency, onClick = { editing = row })
+                    else -> {
+                        item(key = "summary") { BudgetSummary(budgeted, data.currency, month, today) }
+                        item(key = "rows") {
+                            TitledSection("Por categoría") {
+                                FinanceCard(Modifier.fillMaxWidth()) {
+                                    Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+                                        // Primero lo que necesita atención: excedidos y más cerca del límite.
+                                        budgeted.sortedByDescending { it.spentMinor.toDouble() / it.limitMinor }.forEach { row ->
+                                            BudgetProgressItem(
+                                                row,
+                                                data.currency,
+                                                Modifier
+                                                    .clip(MaterialTheme.shapes.small)
+                                                    .clickable(onClickLabel = "Editar presupuesto", role = Role.Button) { editing = row },
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if (unbudgeted.isNotEmpty()) {
+                            item(key = "unbudgeted") {
+                                FinanceCard(Modifier.fillMaxWidth()) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                        Column(Modifier.weight(1f)) {
+                                            Text(
+                                                if (unbudgeted.size == 1) "1 categoría sin presupuesto" else "${unbudgeted.size} categorías sin presupuesto",
+                                                style = LocalSageType.current.titleCard,
+                                            )
+                                            Text(
+                                                unbudgeted.take(3).joinToString(", ") { it.categoryName } + if (unbudgeted.size > 3) "…" else "",
+                                                style = LocalSageType.current.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                maxLines = 1,
+                                            )
+                                        }
+                                        SageButton("Asignar", { showAdd = true }, kind = SageButtonKind.Secondary, small = true)
+                                    }
+                                }
+                            }
                         }
                     }
+                }
             }
         }
-    }
-}
-
-@Composable
-private fun EmptyMessage(title: String, subtitle: String, actionLabel: String? = null, onAction: () -> Unit = {}) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            EmptyState(
-                icon = LucideIcons.PieChart,
-                title = title,
-                subtitle = subtitle,
-                modifier = Modifier.padding(LocalSpacing.current.xxl),
+        if (unbudgeted.isNotEmpty()) {
+            AddFab(
+                label = "Nuevo presupuesto",
+                onClick = { showAdd = true },
+                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
             )
-            if (actionLabel != null) OutlinedButton(onClick = onAction) { Text(actionLabel) }
         }
     }
 }
 
 /**
+ * Resumen del mes: gastado frente a lo presupuestado, lo que queda y, en el mes en curso, cuánto se
+ * puede gastar por día para no pasarse.
+ */
+@Composable
+private fun BudgetSummary(budgeted: List<BudgetRow>, currency: String, month: LocalDate, today: LocalDate) {
+    val spent = budgeted.sumOf { it.spentMinor }
+    val limit = budgeted.sumOf { it.limitMinor }
+    val left = limit - spent
+    val isCurrentMonth = month.year == today.year && month.month == today.month
+    val daysLeft = if (isCurrentMonth) month.daysInMonth() - today.day + 1 else null
+    val fmt = LocalMoneyFormat.current
+    FinanceCard(Modifier.fillMaxWidth(), size = BentoTileSize.Hero) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Overline("Gastado este mes")
+            MoneyText(spent, currency, style = LocalSageType.current.amountHero)
+            Text("de ${fmt.format(limit, currency)} presupuestados", style = LocalSageType.current.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            val tone = when {
+                spent > limit -> ProgressTone.Over
+                limit > 0 && spent * 100 >= limit * BUDGET_WARNING_PCT -> ProgressTone.Warning
+                else -> ProgressTone.Normal
+            }
+            ProgressBar(if (limit > 0) spent.toFloat() / limit else 0f, Modifier.padding(top = 4.dp), color = progressColor(tone))
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(if (left >= 0) "Te quedan" else "Te pasaste por", style = LocalSageType.current.caption, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    MoneyText(
+                        if (left >= 0) left else -left,
+                        currency,
+                        style = LocalSageType.current.amountMd,
+                        colorOverride = if (left < 0) LocalFinanceColors.current.expense else null,
+                    )
+                }
+                if (daysLeft != null && left > 0) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            if (daysLeft == 1) "Hoy, último día" else "Por día, $daysLeft días",
+                            style = LocalSageType.current.caption,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        MoneyText(left / daysLeft, currency, style = LocalSageType.current.amountMd)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private const val BUDGET_WARNING_PCT = 85
+
+/**
  * Asigna/edita el presupuesto de una categoría de gasto. Límite 0 = quitar el presupuesto.
- * ModalBottomSheet plano, mismo patrón que `AccountFormDialog` (AccountsTabScreen.kt) y
- * `TransactionFormScreen`.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -205,7 +288,6 @@ private fun BudgetFormDialog(
 ) {
     var selected by remember { mutableStateOf(preselected ?: categories.first()) }
     var limitMinor by remember { mutableStateOf(preselected?.limitMinor ?: 0L) }
-    val finance = LocalFinanceColors.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var confirmRemove by remember { mutableStateOf(false) }
     if (confirmRemove && preselected != null) {
@@ -220,9 +302,14 @@ private fun BudgetFormDialog(
             onDismiss = { confirmRemove = false },
         )
     }
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, dragHandle = null) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        dragHandle = null,
+        containerColor = MaterialTheme.colorScheme.background,
+    ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(24.dp).verticalScroll(rememberScrollState()),
+            modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             SheetHeader(
@@ -237,8 +324,7 @@ private fun BudgetFormDialog(
                 onSelect = { selected = it },
                 leadingContent = { row -> CategoryAvatar(row.categoryName, size = 32.dp) },
                 sectionOf = { row -> row.parentName ?: "Categorías" },
-                // Al editar, la categoría queda fija (como el tipo de cuenta): cambiarla escribía el
-                // límite sobre otra categoría y dejaba el presupuesto original intacto.
+                // Al editar, la categoría queda fija: cambiarla escribía el límite sobre otra categoría.
                 enabled = preselected == null,
             )
             MoneyField(
@@ -248,17 +334,14 @@ private fun BudgetFormDialog(
                 label = "Límite del mes",
                 modifier = Modifier.fillMaxWidth(),
             )
-            Button(
+            SageButton(
+                "Guardar presupuesto",
                 onClick = { onConfirm(selected.categoryId, limitMinor) },
                 enabled = limitMinor > 0,
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text("Guardar presupuesto", fontFamily = displayFontFamily()) }
+            )
             if (preselected != null) {
-                TextButton(
-                    onClick = { confirmRemove = true },
-                    colors = ButtonDefaults.textButtonColors(contentColor = finance.expense),
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text("Quitar presupuesto") }
+                SageButton("Quitar presupuesto", { confirmRemove = true }, Modifier.fillMaxWidth(), kind = SageButtonKind.Danger)
             }
         }
     }
