@@ -1,55 +1,59 @@
 package com.finanzen.ui.components
 
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.finanzen.ui.theme.LocalSpacing
-import com.finanzen.ui.theme.PillShape
+import com.finanzen.ui.theme.LocalSageType
 
 /**
- * Pastilla de selección del handoff: botones independientes con espacio entre ellos (no un
- * `SegmentedButtonRow` unido) — la activa con relleno sólido de acento y texto claro en negrita,
- * las inactivas en un tono neutro pálido. Estándar compartido entre pantallas: Gasto/Ingreso/
- * Transferencia en [com.finanzen.ui.screens.TransactionFormScreen] y Efectivo/Débito/Ahorros/
- * Crédito en la pantalla de cuentas — [contentPadding] es el único eje que varía entre ellas.
+ * Opción de selección suelta (tipos de cuenta, sí/no): misma piel que [SageChip] elegido o no, pero
+ * pensada para repartirse el ancho con `Modifier.weight`. Para opciones excluyentes de una barra
+ * preferir [SegmentedControl].
  */
 @Composable
 fun SelectorPill(
     text: String,
     selected: Boolean,
     modifier: Modifier = Modifier,
-    contentPadding: PaddingValues = PaddingValues(vertical = LocalSpacing.current.md, horizontal = LocalSpacing.current.sm),
+    contentPadding: PaddingValues = PaddingValues(vertical = 8.dp, horizontal = 8.dp),
     onClick: () -> Unit,
 ) {
-    Button(
+    val scheme = MaterialTheme.colorScheme
+    Surface(
         onClick = onClick,
-        modifier = modifier,
-        shape = PillShape,
-        colors = if (selected) {
-            ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-            )
-        } else {
-            ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        },
-        elevation = ButtonDefaults.buttonElevation(0.dp, 0.dp, 0.dp, 0.dp, 0.dp),
-        contentPadding = contentPadding,
+        modifier = modifier
+            .defaultMinSize(minHeight = 44.dp)
+            .semantics {
+                role = Role.RadioButton
+                this.selected = selected
+            },
+        shape = MaterialTheme.shapes.small,
+        color = if (selected) scheme.primaryContainer else scheme.surface,
+        border = BorderStroke(1.dp, if (selected) scheme.primary else scheme.outline),
     ) {
-        Text(
-            text,
-            maxLines = 1,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-        )
+        Box(Modifier.padding(contentPadding), contentAlignment = Alignment.Center) {
+            Text(
+                text,
+                maxLines = 1,
+                textAlign = TextAlign.Center,
+                style = LocalSageType.current.label.copy(fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium),
+                color = scheme.onSurface,
+            )
+        }
     }
 }

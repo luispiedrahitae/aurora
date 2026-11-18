@@ -1,6 +1,7 @@
 package com.finanzen.ui.screens
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -9,11 +10,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -27,16 +28,14 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -44,11 +43,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.finanzen.db.Account
@@ -58,20 +58,29 @@ import com.finanzen.db.TransactionRow
 import com.finanzen.ui.components.AccountTypeAvatar
 import com.finanzen.ui.components.AddFab
 import com.finanzen.ui.components.ArchivedSwipeRow
+import com.finanzen.ui.components.BentoTileSize
 import com.finanzen.ui.components.BottomSnackbarHost
 import com.finanzen.ui.components.ConfirmDialog
 import com.finanzen.ui.components.DiscardChangesDialog
 import com.finanzen.ui.components.EmptyState
 import com.finanzen.ui.components.ExpandableSection
+import com.finanzen.ui.components.FabClearance
 import com.finanzen.ui.components.FadeSection
-import com.finanzen.ui.components.FieldError
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.KindAvatar
+import com.finanzen.ui.components.LoadingState
 import com.finanzen.ui.components.MainTabHeader
 import com.finanzen.ui.components.MoneyField
 import com.finanzen.ui.components.MoneyText
 import com.finanzen.ui.components.MonthSelector
+import com.finanzen.ui.components.Overline
 import com.finanzen.ui.components.PickerField
+import com.finanzen.ui.components.ProgressBar
+import com.finanzen.ui.components.ProgressTone
+import com.finanzen.ui.components.SageButton
+import com.finanzen.ui.components.SageButtonKind
+import com.finanzen.ui.components.SageTextField
+import com.finanzen.ui.components.ScreenList
 import com.finanzen.ui.components.SectionHeader
 import com.finanzen.ui.components.SelectorPill
 import com.finanzen.ui.components.SheetHeader
@@ -79,8 +88,8 @@ import com.finanzen.ui.components.SwipeToArchive
 import com.finanzen.ui.components.accountTypeLabel
 import com.finanzen.ui.components.balanceColor
 import com.finanzen.ui.components.kindLabel
+import com.finanzen.ui.components.progressColor
 import com.finanzen.ui.components.rememberGuardedSheetState
-import com.finanzen.ui.components.sageFieldColors
 import com.finanzen.ui.components.signedAmountAndColor
 import com.finanzen.ui.format.formatDiaMes
 import com.finanzen.ui.format.formatMesAnio
@@ -90,8 +99,8 @@ import com.finanzen.ui.icons.LucideIcons
 import com.finanzen.ui.theme.LocalDateLocale
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
+import com.finanzen.ui.theme.LocalSageType
 import com.finanzen.ui.theme.LocalSpacing
-import com.finanzen.ui.theme.displayFontFamily
 import com.finanzen.viewmodel.AccountsViewModel
 import com.finanzen.viewmodel.CategoriesViewModel
 import kotlinx.coroutines.launch
@@ -223,137 +232,91 @@ fun AccountsTabScreen(
         )
     }
 
-    Scaffold(
-        // El tope lo aporta MainTabHeader (única fuente del inset superior); el Scaffold se queda solo
-        // por el FAB, así que neutralizamos sus insets de contenido.
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        floatingActionButton = {
-            AddFab(label = "Cuenta", onClick = { showForm = true })
-        },
-    ) { inner ->
-        Column(Modifier.fillMaxSize().padding(inner)) {
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
             MainTabHeader(title = "Cuentas")
-            MonthSelector(
-                label = formatMesAnio(month, LocalDateLocale.current),
-                onPrev = { month = month.plus(DatePeriod(months = -1)) },
-                onNext = { month = month.plus(DatePeriod(months = 1)) },
-                modifier = Modifier.padding(horizontal = spacing.lg),
-                onLabelClick = {
-                    val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
-                    month = LocalDate(today.year, today.month, 1)
-                },
-            )
             if (!loaded) {
-                Box(Modifier.fillMaxSize())
+                LoadingState(Modifier.padding(horizontal = spacing.lg))
             } else if (accounts.isEmpty() && archivedAccounts.isEmpty()) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    EmptyState(
-                        icon = LucideIcons.Wallet,
-                        title = "Sin cuentas",
-                        subtitle = "Usa el botón + para crear tu primera cuenta.",
-                        modifier = Modifier.padding(32.dp),
-                    )
-                }
+                EmptyState(
+                    icon = LucideIcons.Wallet,
+                    title = "Sin cuentas",
+                    subtitle = "Crea tu primera cuenta para empezar a registrar movimientos.",
+                    actionLabel = "Crear cuenta",
+                    onAction = { showForm = true },
+                )
             } else {
                 val (nonCreditAccounts, creditAccounts) = remember(accounts) { accounts.partition { it.type != "CREDIT" } }
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = spacing.lg, end = spacing.lg, top = spacing.sm, bottom = 96.dp),
-                    verticalArrangement = Arrangement.spacedBy(spacing.md),
-                ) {
-                    items(nonCreditAccounts, key = { it.id }) { account ->
-                        AccountRow(
-                            account = account,
-                            balanceMinor = balances[account.id] ?: account.openingBalanceMinor,
-                            card = null,
-                            plans = emptyList(),
-                            unbilledMinor = 0L,
-                            movements = transactionsByAccount[account.id].orEmpty(),
-                            categoryLabels = categoryLabels,
-                            expanded = expandedAccountIds[account.id] == true,
-                            onToggleExpand = { expandedAccountIds[account.id] = expandedAccountIds[account.id] != true },
-                            month = month,
-                            onArchive = { archiveWithUndo(account) },
-                            onEdit = { editingAccount = account },
-                            onPayOff = { payingOffAccount = account },
-                        )
+                val accountRow: @Composable (Account) -> Unit = { account ->
+                    val isCredit = account.type == "CREDIT"
+                    AccountRow(
+                        account = account,
+                        balanceMinor = balances[account.id] ?: account.openingBalanceMinor,
+                        card = if (isCredit) cards[account.id] else null,
+                        plans = if (isCredit) plansByAccount[account.id].orEmpty() else emptyList(),
+                        unbilledMinor = if (isCredit) unbilledByAccount[account.id] ?: 0L else 0L,
+                        movements = transactionsByAccount[account.id].orEmpty(),
+                        categoryLabels = categoryLabels,
+                        expanded = expandedAccountIds[account.id] == true,
+                        onToggleExpand = { expandedAccountIds[account.id] = expandedAccountIds[account.id] != true },
+                        month = month,
+                        onArchive = { archiveWithUndo(account) },
+                        onEdit = { editingAccount = account },
+                        onPayOff = { payingOffAccount = account },
+                    )
+                }
+                ScreenList(gap = spacing.xl, bottomPadding = FabClearance) {
+                    item(key = "summary") {
+                        val cash = nonCreditAccounts.sumOf { balances[it.id] ?: it.openingBalanceMinor }
+                        val debt = creditAccounts.sumOf { balances[it.id] ?: it.openingBalanceMinor }
+                        AccountsSummary(cash, debt, vm.baseCurrency)
                     }
-
-                    if (creditAccounts.isNotEmpty()) {
-                        item(key = "credit_header") {
-                            Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
-                                HorizontalDivider(modifier = Modifier.padding(vertical = spacing.xs))
-                                SectionHeader("Tarjetas de crédito")
-                                val first = creditAccounts.first()
-                                AccountRow(
-                                    account = first,
-                                    balanceMinor = balances[first.id] ?: first.openingBalanceMinor,
-                                    card = cards[first.id],
-                                    plans = plansByAccount[first.id].orEmpty(),
-                                    unbilledMinor = unbilledByAccount[first.id] ?: 0L,
-                                    movements = transactionsByAccount[first.id].orEmpty(),
-                                    categoryLabels = categoryLabels,
-                                    expanded = expandedAccountIds[first.id] == true,
-                                    onToggleExpand = { expandedAccountIds[first.id] = expandedAccountIds[first.id] != true },
-                                    month = month,
-                                    onArchive = { archiveWithUndo(first) },
-                                    onEdit = { editingAccount = first },
-                                    onPayOff = { payingOffAccount = first },
-                                )
-                            }
-                        }
-                        items(creditAccounts.drop(1), key = { it.id }) { account ->
-                            AccountRow(
-                                account = account,
-                                balanceMinor = balances[account.id] ?: account.openingBalanceMinor,
-                                card = cards[account.id],
-                                plans = plansByAccount[account.id].orEmpty(),
-                                unbilledMinor = unbilledByAccount[account.id] ?: 0L,
-                                movements = transactionsByAccount[account.id].orEmpty(),
-                                categoryLabels = categoryLabels,
-                                expanded = expandedAccountIds[account.id] == true,
-                                onToggleExpand = { expandedAccountIds[account.id] = expandedAccountIds[account.id] != true },
-                                month = month,
-                                onArchive = { archiveWithUndo(account) },
-                                onEdit = { editingAccount = account },
-                                onPayOff = { payingOffAccount = account },
+                    item(key = "month") {
+                        Column {
+                            MonthSelector(
+                                label = formatMesAnio(month, LocalDateLocale.current),
+                                onPrev = { month = month.plus(DatePeriod(months = -1)) },
+                                onNext = { month = month.plus(DatePeriod(months = 1)) },
+                                onLabelClick = { month = LocalDate(today.year, today.month, 1) },
+                            )
+                            Text(
+                                "Abre una cuenta para ver sus movimientos de este mes. Mantén pulsado para editarla; desliza para archivarla.",
+                                style = LocalSageType.current.caption,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
-
+                    if (nonCreditAccounts.isNotEmpty()) {
+                        item(key = "accounts_header") { SectionHeader("Cuentas") }
+                        items(nonCreditAccounts, key = { it.id }) { accountRow(it) }
+                    }
+                    if (creditAccounts.isNotEmpty()) {
+                        item(key = "credit_header") { SectionHeader("Tarjetas de crédito") }
+                        items(creditAccounts, key = { it.id }) { accountRow(it) }
+                    }
                     if (archivedAccounts.isNotEmpty()) {
-                        item {
-                            Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable(role = Role.Button, onClickLabel = if (archivedExpanded) "Contraer" else "Expandir") {
-                                            archivedExpanded = !archivedExpanded
-                                        }
-                                        .padding(vertical = spacing.sm),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(spacing.sm),
-                                ) {
-                                    Icon(
-                                        if (archivedExpanded) LucideIcons.ChevronUp else LucideIcons.ChevronDown,
-                                        contentDescription = if (archivedExpanded) "Contraer" else "Expandir",
-                                        tint = MaterialTheme.colorScheme.primary,
-                                    )
-                                    SectionHeader("Archivadas (${archivedAccounts.size})")
-                                }
-                                if (archivedExpanded) {
-                                    val first = archivedAccounts.first()
-                                    ArchivedAccountRow(
-                                        account = first,
-                                        balanceMinor = balances[first.id] ?: first.openingBalanceMinor,
-                                        onUnarchive = { restore(first) },
-                                        onHardDelete = { accountPendingHardDelete = first },
-                                    )
-                                }
+                        item(key = "archived_header") {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(MaterialTheme.shapes.small)
+                                    .clickable(role = Role.Button, onClickLabel = if (archivedExpanded) "Contraer" else "Expandir") {
+                                        archivedExpanded = !archivedExpanded
+                                    }
+                                    .padding(vertical = spacing.sm),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(spacing.sm),
+                            ) {
+                                SectionHeader("Archivadas (${archivedAccounts.size})", Modifier.weight(1f))
+                                Icon(
+                                    if (archivedExpanded) LucideIcons.ChevronUp else LucideIcons.ChevronDown,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
                         }
                         if (archivedExpanded) {
-                            items(archivedAccounts.drop(1), key = { it.id }) { account ->
+                            items(archivedAccounts, key = { it.id }) { account ->
                                 ArchivedAccountRow(
                                     account = account,
                                     balanceMinor = balances[account.id] ?: account.openingBalanceMinor,
@@ -366,7 +329,33 @@ fun AccountsTabScreen(
                 }
             }
         }
+        AddFab(
+            label = "Nueva cuenta",
+            onClick = { showForm = true },
+            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+        )
         BottomSnackbarHost(snackbarHostState, aboveFab = true)
+    }
+}
+
+/** Tarjeta resumen: saldo en cuentas (sin tarjetas), deuda en tarjetas y lo que queda neto. */
+@Composable
+private fun AccountsSummary(cashMinor: Long, debtMinor: Long, currency: String) {
+    FinanceCard(Modifier.fillMaxWidth(), size = BentoTileSize.Hero) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Overline("Saldo en cuentas")
+            MoneyText(cashMinor, currency, style = LocalSageType.current.amountHero)
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("Deuda en tarjetas", style = LocalSageType.current.caption, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    MoneyText(debtMinor, currency, style = LocalSageType.current.amountMd, signed = true, colorOverride = if (debtMinor < 0) LocalFinanceColors.current.expense else null)
+                }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("Te queda neto", style = LocalSageType.current.caption, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    MoneyText(cashMinor + debtMinor, currency, style = LocalSageType.current.amountMd)
+                }
+            }
+        }
     }
 }
 
@@ -415,10 +404,10 @@ private fun AccountRow(
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(spacing.md)) {
                         AccountTypeAvatar(account.type)
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(account.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                            Text(account.name, style = LocalSageType.current.titleCard)
                             Text(
                                 accountTypeLabel(account.type),
-                                style = MaterialTheme.typography.labelSmall,
+                                style = LocalSageType.current.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
@@ -427,13 +416,12 @@ private fun AccountRow(
                             Column(horizontalAlignment = Alignment.End) {
                                 Text(
                                     fmt.format(balanceMinor, account.currency),
-                                    fontWeight = FontWeight.SemiBold,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    color = balanceColor(balanceMinor),
+                                    style = LocalSageType.current.amountMd,
+                                    color = if (balanceMinor < 0) LocalFinanceColors.current.expense else MaterialTheme.colorScheme.onSurface,
                                 )
                                 Text(
                                     if (isCredit) "Deuda" else "Saldo",
-                                    style = MaterialTheme.typography.labelSmall,
+                                    style = LocalSageType.current.caption,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -441,15 +429,14 @@ private fun AccountRow(
                         Icon(
                             if (expanded) LucideIcons.ChevronUp else LucideIcons.ChevronDown,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
 
                 // CreditActions no pinta nada sin cupo ni fechas: sin esto quedaría un divider suelto.
                 if (isCredit && card != null && ((card.creditLimitMinor ?: 0L) > 0 || card.cutoffDay != null || card.dueDay != null)) {
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 16.dp)) {
                         CreditActions(card, balanceMinor, unbilledMinor, account.currency, onPayOff)
                     }
                 }
@@ -553,14 +540,14 @@ internal fun MovementSummaryRow(
     pct: Double? = null,
 ) {
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(LocalSpacing.current.xs), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+        Text(label, style = LocalSageType.current.titleCard, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
         if (pct != null) {
             Text("(${if (pct >= 0) "+" else ""}${pct.toInt()}%)", style = MaterialTheme.typography.bodySmall, color = colorOverride)
         }
         MoneyText(
             amountMinor = amountMinor,
             currency = currency,
-            style = MaterialTheme.typography.bodyLarge,
+            style = LocalSageType.current.amountMd,
             signed = signed,
             colorOverride = colorOverride,
         )
@@ -593,20 +580,20 @@ internal fun AccountMovementRow(
             KindAvatar(kind = row.kind, size = 32.dp)
         }
         Column(Modifier.weight(1f)) {
-            Text(title ?: row.note.ifBlank { kindLabel(row.kind) }, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, maxLines = 1)
-            Text(dateLine, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(title ?: row.note.ifBlank { kindLabel(row.kind) }, style = LocalSageType.current.titleCard, maxLines = 1)
+            Text(dateLine, style = LocalSageType.current.caption, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         // [amountCaption] (categoría en Cuentas, cuenta de origen en aportes) bajo el monto, como "Saldo" bajo el saldo.
         Column(horizontalAlignment = Alignment.End) {
             MoneyText(
                 amountMinor = signedAmount,
                 currency = row.currency,
-                style = MaterialTheme.typography.bodyLarge,
+                style = LocalSageType.current.amountMd,
                 signed = true,
                 colorOverride = amountColor,
             )
             if (amountCaption != null) {
-                Text(amountCaption, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                Text(amountCaption, style = LocalSageType.current.caption, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
             }
         }
     }
@@ -631,10 +618,10 @@ private fun ArchivedAccountRow(
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(spacing.md)) {
                 AccountTypeAvatar(account.type)
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(account.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                    Text(account.name, style = LocalSageType.current.titleCard)
                     Text(
                         accountTypeLabel(account.type),
-                        style = MaterialTheme.typography.labelSmall,
+                        style = LocalSageType.current.caption,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -648,7 +635,7 @@ private fun ArchivedAccountRow(
                     )
                     Text(
                         if (account.type == "CREDIT") "Deuda" else "Saldo",
-                        style = MaterialTheme.typography.labelSmall,
+                        style = LocalSageType.current.caption,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -657,43 +644,49 @@ private fun ArchivedAccountRow(
     }
 }
 
-/** Acciones de crédito en la fila inferior de la tarjeta ("Pagar tarjeta", "Detalle"); el detalle
- * (cupo/disponible/corte/pago) vive en un diálogo. Emite sus hijos directo en el Row que la llama. */
+/**
+ * Detalle de la tarjeta de crédito dentro de su fila: cupo usado en barra (aviso al pasar del 85 %),
+ * fechas de corte y pago, y el botón para pagarla cuando hay deuda.
+ */
 @Composable
 private fun CreditActions(card: Card, balanceMinor: Long, unbilledMinor: Long, currency: String, onPayOff: () -> Unit) {
     val fmt = LocalMoneyFormat.current
-    val spacing = LocalSpacing.current
     val limit = card.creditLimitMinor
     val hasLimit = limit != null && limit > 0
-    val available = if (hasLimit) limit + balanceMinor - unbilledMinor else 0L // = cupo − deuda facturada − compromiso sin facturar
-    val showPayButton = hasLimit && available < limit
-    val hasInfo = hasLimit || card.cutoffDay != null || card.dueDay != null
-    var showInfo by remember { mutableStateOf(false) }
-
-    if (showInfo) {
-        AlertDialog(
-            onDismissRequest = { showInfo = false },
-            title = { Text("Detalle de tu tarjeta") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    if (hasLimit) {
-                        Text("Cupo ${fmt.format(limit, currency)}")
-                        Text("Disponible ${fmt.format(available, currency)}")
-                    }
-                    card.cutoffDay?.let { Text("Corte $it") }
-                    card.dueDay?.let { Text("Pago $it") }
-                }
-            },
-            confirmButton = { TextButton(onClick = { showInfo = false }) { Text("Entendido") } },
-        )
+    // Usado = deuda facturada + compromiso sin facturar (cuotas futuras de compras a plazos).
+    val used = (-balanceMinor).coerceAtLeast(0L) + unbilledMinor
+    val dates = listOfNotNull(card.cutoffDay?.let { "Corte el día $it" }, card.dueDay?.let { "pago el día $it" }).joinToString(" · ")
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (hasLimit) {
+            val fraction = (used.toFloat() / limit.toFloat()).coerceIn(0f, 1f)
+            val tone = when {
+                fraction >= 1f -> ProgressTone.Over
+                fraction >= CREDIT_WARNING_FRACTION -> ProgressTone.Warning
+                else -> ProgressTone.Normal
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Cupo usado", style = LocalSageType.current.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "${fmt.format(used, currency)} de ${fmt.format(limit, currency)}",
+                    style = LocalSageType.current.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            ProgressBar(fraction, color = progressColor(tone))
+        }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(
+                dates.ifEmpty { "Sin fechas de corte ni pago" },
+                style = LocalSageType.current.caption,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f),
+            )
+            if (balanceMinor < 0) SageButton("Pagar", onPayOff, kind = SageButtonKind.Secondary, small = true)
+        }
     }
-
-    if (showPayButton) {
-        CardAction("Pagar tarjeta", onClick = onPayOff)
-        if (hasInfo) Spacer(Modifier.width(spacing.xl))
-    }
-    if (hasInfo) CardAction("Detalle") { showInfo = true }
 }
+
+private const val CREDIT_WARNING_FRACTION = 0.85f
 
 /** Hoja para pagar la tarjeta: transfiere el saldo adeudado desde otra cuenta y libera el cupo. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -712,7 +705,7 @@ private fun PayOffCardSheet(
 
     // Mismo chrome que el resto de hojas (AccountFormDialog, BudgetFormDialog, TransactionFormScreen):
     // sin drag handle, SheetHeader con "Cerrar" y padding de 24dp.
-    ModalBottomSheet(onDismissRequest = onDismiss, dragHandle = null) {
+    ModalBottomSheet(onDismissRequest = onDismiss, dragHandle = null, containerColor = MaterialTheme.colorScheme.background) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(spacing.xl),
             verticalArrangement = Arrangement.spacedBy(spacing.lg),
@@ -735,11 +728,12 @@ private fun PayOffCardSheet(
                 placeholder = "Selecciona cuenta",
                 emptyHint = "Necesitas otra cuenta para pagar la tarjeta.",
             )
-            Button(
+            SageButton(
+                "Confirmar pago",
                 onClick = { selectedSource?.let { onConfirm(it.id, debtMinor) } },
                 enabled = selectedSource != null && debtMinor > 0,
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text("Confirmar pago", fontFamily = displayFontFamily()) }
+            )
         }
     }
 }
@@ -796,7 +790,12 @@ private fun AccountFormDialog(
     val requestDismiss = { if (dirty) confirmDiscard = true else onDismiss() }
     if (confirmDiscard) DiscardChangesDialog(onDiscard = onDismiss, onKeepEditing = { confirmDiscard = false })
     val sheetState = rememberGuardedSheetState(dirty) { confirmDiscard = true }
-    ModalBottomSheet(onDismissRequest = requestDismiss, sheetState = sheetState, dragHandle = null) {
+    ModalBottomSheet(
+        onDismissRequest = requestDismiss,
+        sheetState = sheetState,
+        dragHandle = null,
+        containerColor = MaterialTheme.colorScheme.background,
+    ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(24.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -843,7 +842,8 @@ private fun AccountFormDialog(
             } else {
                 MoneyField(amountMinor, { amountMinor = it }, currencyCode = baseCurrency, label = "Monto inicial")
             }
-            Button(
+            SageButton(
+                text = if (isEditing) "Guardar cambios" else "Crear cuenta",
                 onClick = {
                     onConfirm(
                         type,
@@ -857,65 +857,44 @@ private fun AccountFormDialog(
                 },
                 enabled = name.isNotBlank() && !nameTaken && !creditInvalid,
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text(if (isEditing) "Guardar cambios" else "Crear cuenta", fontFamily = displayFontFamily()) }
+            )
         }
     }
 }
 
 @Composable
 private fun AccountNameField(value: String, onChange: (String) -> Unit, nameTaken: Boolean) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text("Nombre", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        OutlinedTextField(
-            value = value,
-            onValueChange = onChange,
-            placeholder = { Text("ej. Cuenta nómina") },
-            singleLine = true,
-            isError = nameTaken,
-            shape = MaterialTheme.shapes.medium,
-            colors = sageFieldColors(),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        if (nameTaken) FieldError("Ya existe una cuenta con ese nombre")
-    }
+    SageTextField(
+        value = value,
+        onValueChange = onChange,
+        label = "Nombre",
+        placeholder = "Ej.: Cuenta nómina",
+        error = "Ya existe una cuenta con ese nombre.".takeIf { nameTaken },
+    )
 }
 
 @Composable
 private fun DecimalField(value: String, label: String, placeholder: String, error: String? = null, onChange: (String) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        OutlinedTextField(
-            value = value,
-            onValueChange = onChange,
-            placeholder = { Text(placeholder) },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            isError = error != null,
-            shape = MaterialTheme.shapes.medium,
-            colors = sageFieldColors(),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        if (error != null) FieldError(error)
-    }
+    SageTextField(
+        value = value,
+        onValueChange = onChange,
+        label = label,
+        placeholder = placeholder,
+        error = error,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+    )
 }
 
 @Composable
 private fun NumberField(value: String, label: String, placeholder: String, maxLen: Int, error: String? = null, onChange: (String) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        OutlinedTextField(
-            value = value,
-            onValueChange = { onChange(it.filter(Char::isDigit).take(maxLen)) },
-            placeholder = { Text(placeholder) },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            isError = error != null,
-            shape = MaterialTheme.shapes.medium,
-            colors = sageFieldColors(),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        if (error != null) FieldError(error)
-    }
+    SageTextField(
+        value = value,
+        onValueChange = { onChange(it.filter(Char::isDigit).take(maxLen)) },
+        label = label,
+        placeholder = placeholder,
+        error = error,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+    )
 }
 
 private const val DAY_ERROR = "Debe ser un día entre 1 y 31"
