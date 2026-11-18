@@ -1,6 +1,7 @@
 package com.finanzen.ui.screens
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -9,13 +10,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -28,7 +27,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
@@ -38,6 +36,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -50,25 +49,30 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
 import com.finanzen.db.Account
 import com.finanzen.db.Investment
 import com.finanzen.db.TransactionRow
 import com.finanzen.ui.components.AddFab
 import com.finanzen.ui.components.ArchivedSwipeRow
+import com.finanzen.ui.components.BentoTileSize
 import com.finanzen.ui.components.BottomSnackbarHost
 import com.finanzen.ui.components.ConfirmDialog
 import com.finanzen.ui.components.EmptyState
 import com.finanzen.ui.components.ExpandableSection
+import com.finanzen.ui.components.FabClearance
 import com.finanzen.ui.components.FadeSection
 import com.finanzen.ui.components.FinanceCard
 import com.finanzen.ui.components.IconAvatar
 import com.finanzen.ui.components.MoneyField
 import com.finanzen.ui.components.MoneyText
+import com.finanzen.ui.components.Overline
 import com.finanzen.ui.components.PickerField
+import com.finanzen.ui.components.SageButton
+import com.finanzen.ui.components.ScreenList
 import com.finanzen.ui.components.SectionHeader
-import com.finanzen.ui.components.SelectorPill
+import com.finanzen.ui.components.SegmentedControl
 import com.finanzen.ui.components.SheetHeader
 import com.finanzen.ui.components.SubScreenHeader
 import com.finanzen.ui.components.SwipeToArchive
@@ -77,8 +81,8 @@ import com.finanzen.ui.icons.LucideIcons
 import com.finanzen.ui.theme.LocalDateLocale
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
+import com.finanzen.ui.theme.LocalSageType
 import com.finanzen.ui.theme.LocalSpacing
-import com.finanzen.ui.theme.displayFontFamily
 import com.finanzen.viewmodel.InvestmentsViewModel
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
@@ -204,32 +208,48 @@ fun InvestmentsScreen(
         TransactionFormScreen(transactionId = null, investmentId = id, onDismiss = { editingId = null })
     }
 
-    Scaffold(
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-        // Mismo botón que "+ Movimiento": Aportar/Retirar/Cerrar se eligen en la hoja.
-        floatingActionButton = {
-            if (open.isNotEmpty()) AddFab(label = "Aportar, retirar o cerrar", showLabel = false, onClick = { showFundSheet = true })
-        },
-    ) { inner ->
-        Column(Modifier.fillMaxSize().padding(inner)) {
-            SubScreenHeader(title = "Inversiones", onBack = onBack)
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                // Abajo 96dp para que el FAB no tape la última tarjeta (igual que Movimientos).
-                contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                item { SectionHeader("Abiertas") }
-                if (open.isEmpty()) {
-                    item {
-                        Box(Modifier.fillMaxWidth().padding(top = 48.dp), contentAlignment = Alignment.Center) {
-                            EmptyState(
-                                icon = LucideIcons.TrendingUp,
-                                title = "Sin inversiones abiertas",
-                                subtitle = "Créala desde Nuevo movimiento; los aportes se registran en Movimientos.",
-                                modifier = Modifier.padding(32.dp),
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
+            SubScreenHeader(title = "Fondos de inversión", onBack = onBack)
+            ScreenList(bottomPadding = FabClearance) {
+                if (open.isNotEmpty()) {
+                    item(key = "summary") {
+                        val all = open.map { InvestmentsViewModel.fundTotals(contributionsByInvestment[it.id].orEmpty()) }
+                        val net = all.sumOf { it.contributedMinor - it.withdrawnMinor }
+                        val periodic = open.count { it.periodic == 1L }
+                        FinanceCard(Modifier.fillMaxWidth(), size = BentoTileSize.Hero) {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Overline("Aportado en tus fondos")
+                                MoneyText(net, open.first().currency, style = LocalSageType.current.amountHero)
+                                Text(
+                                    "${open.size} ${if (open.size == 1) "fondo abierto" else "fondos abiertos"}" +
+                                        if (periodic > 0) " · $periodic con aporte periódico" else "",
+                                    style = LocalSageType.current.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+                item(key = "open_header") {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        SectionHeader("Abiertos")
+                        if (open.isNotEmpty()) {
+                            Text(
+                                "Toca un fondo para ver sus aportes; mantén pulsado para editarlo. Usa + para aportar, retirar o cerrar.",
+                                style = LocalSageType.current.caption,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
+                    }
+                }
+                if (open.isEmpty()) {
+                    item(key = "empty") {
+                        EmptyState(
+                            icon = LucideIcons.TrendingUp,
+                            title = "Sin fondos abiertos",
+                            subtitle = "Créalo desde Nuevo movimiento › Aporte a fondo; los aportes se registran en Movimientos.",
+                        )
                     }
                 } else {
                     items(open, key = { it.id }) { inv ->
@@ -246,7 +266,7 @@ fun InvestmentsScreen(
                     }
                 }
                 if (closed.isNotEmpty()) {
-                    item { SectionHeader("Cerradas") }
+                    item(key = "closed_header") { SectionHeader("Cerrados") }
                     items(closed, key = { it.id }) { inv ->
                         SwipeToArchive(onArchive = { archiveWithUndo(inv) }, onSwipeRight = { reopenWithUndo(inv) }, swipeRightLabel = "Reabrir") {
                             InvestmentItem(
@@ -262,10 +282,11 @@ fun InvestmentsScreen(
                 }
                 if (archived.isNotEmpty()) {
                     // Plegable, igual que "Archivadas" en Cuentas.
-                    item {
+                    item(key = "archived_header") {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .clip(MaterialTheme.shapes.small)
                                 .clickable(role = Role.Button, onClickLabel = if (archivedExpanded) "Contraer" else "Expandir") {
                                     archivedExpanded = !archivedExpanded
                                 }
@@ -273,12 +294,12 @@ fun InvestmentsScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(spacing.sm),
                         ) {
+                            SectionHeader("Archivados (${archived.size})", Modifier.weight(1f))
                             Icon(
                                 if (archivedExpanded) LucideIcons.ChevronUp else LucideIcons.ChevronDown,
-                                contentDescription = if (archivedExpanded) "Contraer" else "Expandir",
-                                tint = MaterialTheme.colorScheme.primary,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
-                            SectionHeader("Archivadas (${archived.size})")
                         }
                     }
                     if (archivedExpanded) {
@@ -294,6 +315,14 @@ fun InvestmentsScreen(
                     }
                 }
             }
+        }
+        if (open.isNotEmpty()) {
+            // Mismo botón que en Movimientos: Aportar/Retirar/Cerrar se eligen en la hoja.
+            AddFab(
+                label = "Aportar, retirar o cerrar",
+                onClick = { showFundSheet = true },
+                modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+            )
         }
         BottomSnackbarHost(snackbarHostState, aboveFab = true)
     }
@@ -311,13 +340,13 @@ private fun ArchivedInvestmentItem(investment: Investment, accountName: String, 
                 MoneyText(
                     amountMinor = yieldMinor,
                     currency = investment.currency,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = LocalSageType.current.amountMd,
                     signed = true,
                     colorOverride = if (yieldMinor >= 0) finance.income else finance.expense,
                 )
             } else {
                 val totals = InvestmentsViewModel.fundTotals(movements)
-                MoneyText(amountMinor = totals.contributedMinor - totals.withdrawnMinor, currency = investment.currency, style = MaterialTheme.typography.bodyLarge)
+                MoneyText(amountMinor = totals.contributedMinor - totals.withdrawnMinor, currency = investment.currency, style = LocalSageType.current.amountMd)
             }
         }
     }
@@ -359,20 +388,32 @@ private fun FundActionSheet(
     }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState, dragHandle = null) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        dragHandle = null,
+        containerColor = MaterialTheme.colorScheme.background,
+    ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(24.dp).verticalScroll(rememberScrollState()),
+            modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            SheetHeader(title = "Mover fondos", onDismiss = onDismiss)
+            SheetHeader(title = "Mover dinero de un fondo", onDismiss = onDismiss)
             // Mismas pastillas que Gasto/Ingreso/Transferencia en TransactionFormScreen.
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SelectorPill("Aportar", action == FundAction.Contribute, Modifier.weight(1f)) { action = FundAction.Contribute }
-                SelectorPill("Retirar", action == FundAction.Withdraw, Modifier.weight(1f)) { action = FundAction.Withdraw }
-                SelectorPill("Cerrar", action == FundAction.Close, Modifier.weight(1f)) { action = FundAction.Close }
-            }
+            SegmentedControl(
+                options = FundAction.entries.toList(),
+                selected = action,
+                onSelect = { action = it },
+                label = {
+                    when (it) {
+                        FundAction.Contribute -> "Aportar"
+                        FundAction.Withdraw -> "Retirar"
+                        FundAction.Close -> "Cerrar"
+                    }
+                },
+            )
             PickerField(
-                label = "Inversión",
+                label = "Fondo",
                 options = investments,
                 selected = investment,
                 optionLabel = { it.name },
@@ -398,7 +439,7 @@ private fun FundActionSheet(
                 modifier = Modifier.fillMaxWidth(),
             )
             if (action == FundAction.Close) {
-                Text("Pon 0 si ya retiraste todo.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Pon 0 si ya retiraste todo.", style = LocalSageType.current.caption, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             AmountRow("Aportado", totals.contributedMinor, currencyCode)
             AmountRow("Retirado", totals.withdrawnMinor, currencyCode)
@@ -414,11 +455,12 @@ private fun FundActionSheet(
                     pct = if (totals.contributedMinor != 0L) yieldMinor * 100.0 / totals.contributedMinor else null,
                 )
             }
-            Button(
+            SageButton(
+                confirmLabel,
                 onClick = { onConfirm(investment.id, action, amountMinor, sourceAccount?.id ?: investment.accountId) },
                 enabled = action == FundAction.Close || amountMinor > 0,
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text(confirmLabel, fontFamily = displayFontFamily()) }
+            )
         }
     }
 }
@@ -480,13 +522,13 @@ private fun InvestmentItem(
                             MoneyText(
                                 amountMinor = if (closed) yieldMinor else totals.initialMinor,
                                 currency = investment.currency,
-                                style = MaterialTheme.typography.bodyLarge,
+                                style = LocalSageType.current.amountMd,
                                 signed = closed,
                                 colorOverride = if (closed) yieldColor else MaterialTheme.colorScheme.onSurface,
                             )
                             Text(
                                 if (closed) "Rendimiento" else "Inicial",
-                                style = MaterialTheme.typography.labelSmall,
+                                style = LocalSageType.current.caption,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
@@ -494,7 +536,7 @@ private fun InvestmentItem(
                     Icon(
                         if (showHistory) LucideIcons.ChevronUp else LucideIcons.ChevronDown,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -562,8 +604,8 @@ private fun InvestmentHeader(name: String, subtitle: String, trailing: @Composab
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(LocalSpacing.current.md)) {
         IconAvatar(Icons.AutoMirrored.Outlined.TrendingUp)
         Column(modifier = Modifier.weight(1f)) {
-            Text(name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-            Text(subtitle, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(name, style = LocalSageType.current.titleCard)
+            Text(subtitle, style = LocalSageType.current.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         trailing()
     }
@@ -580,9 +622,9 @@ internal fun CardAction(label: String, trailing: Painter? = null, onClick: () ->
             .minimumInteractiveComponentSize(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+        Text(label, style = LocalSageType.current.label, color = MaterialTheme.colorScheme.onPrimaryContainer)
         if (trailing != null) {
-            Icon(trailing, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 4.dp).size(16.dp))
+            Icon(trailing, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.padding(start = 4.dp).size(16.dp))
         }
     }
 }
