@@ -1,81 +1,76 @@
 package com.finanzen.ui.screens
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Autorenew
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.finanzen.data.CurrencyLocaleInfo
 import com.finanzen.db.Account
 import com.finanzen.db.Category
+import com.finanzen.db.Subscription
 import com.finanzen.db.TransactionRow
+import com.finanzen.ui.components.AvatarTone
 import com.finanzen.ui.components.BottomSnackbarHost
 import com.finanzen.ui.components.CategoryAvatar
+import com.finanzen.ui.components.ConfirmDialog
 import com.finanzen.ui.components.EmptyState
-import com.finanzen.ui.components.ExpandableSection
-import com.finanzen.ui.components.FadeSection
+import com.finanzen.ui.components.FabClearance
+import com.finanzen.ui.components.GroupCard
 import com.finanzen.ui.components.KindAvatar
+import com.finanzen.ui.components.ListRow
+import com.finanzen.ui.components.LoadingState
 import com.finanzen.ui.components.MainTabHeader
 import com.finanzen.ui.components.MoneyText
 import com.finanzen.ui.components.MonthSelector
+import com.finanzen.ui.components.Overline
+import com.finanzen.ui.components.RowDivider
+import com.finanzen.ui.components.SageTextField
+import com.finanzen.ui.components.ScreenList
+import com.finanzen.ui.components.SegmentedControl
 import com.finanzen.ui.components.SwipeToDeleteRow
 import com.finanzen.ui.components.kindLabel
 import com.finanzen.ui.components.signedAmountAndColor
 import com.finanzen.ui.format.diaSemana
+import com.finanzen.ui.format.formatDiaMes
 import com.finanzen.ui.format.formatMesAnio
 import com.finanzen.ui.format.monthPeriod
 import com.finanzen.ui.format.periodOfEpochDay
 import com.finanzen.ui.icons.LucideIcons
-import com.finanzen.ui.theme.FinanZenShapes
-import com.finanzen.ui.theme.LocalAccentColor
 import com.finanzen.ui.theme.LocalDateLocale
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
+import com.finanzen.ui.theme.LocalSageType
 import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.viewmodel.TransactionsViewModel
 import kotlinx.coroutines.launch
@@ -90,15 +85,6 @@ import kotlin.time.Clock
 private fun dayIncome(rows: List<TransactionRow>): Long = rows.filter { it.kind == "INCOME" }.sumOf { it.amountMinor }
 
 private fun dayExpense(rows: List<TransactionRow>): Long = rows.filter { it.kind == "EXPENSE" }.sumOf { it.amountMinor }
-
-// Tarjeta de día armada con 3 piezas (cabecera, filas, resumen) que comparten un único fondo,
-// sombra y recorte a nivel del contenedor del día, para verse como una sola FinanceCard.
-private val DayCardShape = FinanZenShapes.medium
-private val DayCardElevation = 3.dp // mismo shadowElevation que FinanceCard(size = Medium)
-
-// Columna izquierda de la tarjeta de día: el número (headlineSmall 24sp) y el avatar de cada fila
-// comparten este ancho para quedar del mismo tamaño y alineados.
-private val DayLeadSize = 32.dp
 
 @Composable
 fun TransactionsScreen(
@@ -115,9 +101,8 @@ fun TransactionsScreen(
     val today = remember { Clock.System.todayIn(TimeZone.currentSystemDefault()) }
     val todayEpochDay = remember(today) { today.toEpochDays() }
     var month by remember { mutableStateOf(LocalDate(today.year, today.month, 1)) }
-    // Días expandidos (acordeón). Por defecto solo el día de hoy abre; el resto queda
-    // colapsado. Ausente en el mapa = usa el default; una vez tocado, el valor explícito manda.
-    val expandedDays = remember { mutableStateMapOf<Long, Boolean>() }
+    var searchOpen by remember { mutableStateOf(false) }
+    var filter by remember { mutableStateOf(TxFilter.All) }
     var pendingDeleteIds by remember { mutableStateOf<Set<Long>>(emptySet()) }
     var blockedDelete by remember { mutableStateOf<TransactionsViewModel.DeleteBlock?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -128,10 +113,17 @@ fun TransactionsScreen(
     val accountsById = remember(accounts) { accounts.associateBy { it.id } }
     val period = monthPeriod(month)
 
-    val groups = remember(rows, query, period, pendingDeleteIds) {
+    val groups = remember(rows, query, period, pendingDeleteIds, filter) {
         rows.asSequence()
             .filter { it.id !in pendingDeleteIds }
             .filter { periodOfEpochDay(it.date) == period }
+            .filter {
+                when (filter) {
+                    TxFilter.All -> true
+                    TxFilter.Income -> it.kind == "INCOME"
+                    TxFilter.Expense -> it.kind == "EXPENSE"
+                }
+            }
             .filter { query.isBlank() || it.note.contains(query, ignoreCase = true) }
             .groupBy { it.date }
             .entries.sortedByDescending { it.key }
@@ -158,111 +150,90 @@ fun TransactionsScreen(
         }
     }
 
-    Scaffold(
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-    ) { inner ->
-        Column(Modifier.fillMaxSize().padding(inner)) {
-            MainTabHeader(title = "Movimientos")
-            Column(Modifier.fillMaxSize().padding(horizontal = spacing.lg)) {
-                MonthSelector(
-                    label = formatMesAnio(month, dateLocale),
-                    onPrev = { month = month.plus(DatePeriod(months = -1)) },
-                    onNext = { month = month.plus(DatePeriod(months = 1)) },
-                    onLabelClick = { month = LocalDate(today.year, today.month, 1) },
-                )
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    // top = spacing.sm iguala el hueco bajo MonthSelector (16dp) al de
-                    // Resumen/Cuentas/Presupuesto, que lo obtienen del contentPadding de su LazyColumn.
-                    modifier = Modifier.fillMaxWidth().padding(top = spacing.sm, bottom = spacing.sm),
-                    placeholder = { Text("Buscar por categoría") },
-                    leadingIcon = { Icon(LucideIcons.Search, contentDescription = null) },
-                    singleLine = true,
-                    // ponytail: alineado al shape.small (12dp) del resto de inputs; una unificación
-                    // vía wrapper FinanZenTextField queda pendiente si aparecen más outliers.
-                    shape = MaterialTheme.shapes.small,
-                    // Sage.dc.html (.input): campo relleno sin borde marcado, no el outline
-                    // transparente por defecto de M3 que aquí se fundía con el fondo de página.
-                    colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-                        unfocusedBorderColor = Color.Transparent,
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                    ),
-                )
-
-                if (!loaded) {
-                    Box(Modifier.fillMaxSize())
-                } else if (groups.isEmpty()) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        EmptyState(
-                            icon = LucideIcons.Receipt,
-                            title = if (searching) "Sin resultados" else "Sin movimientos",
-                            subtitle = if (searching) "Prueba con otra búsqueda o cambia de mes." else "Usa el botón + para registrar tu primer movimiento.",
-                            modifier = Modifier.padding(32.dp),
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
+            MainTabHeader(
+                title = "Movimientos",
+                action = {
+                    IconButton(onClick = {
+                        searchOpen = !searchOpen
+                        if (!searchOpen) query = ""
+                    }) {
+                        Icon(if (searchOpen) LucideIcons.X else LucideIcons.Search, contentDescription = if (searchOpen) "Cerrar búsqueda" else "Buscar")
+                    }
+                },
+            )
+            ScreenList(gap = spacing.lg, bottomPadding = FabClearance) {
+                item(key = "filters") {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        if (searchOpen) {
+                            SageTextField(
+                                value = query,
+                                onValueChange = { query = it },
+                                label = "Buscar",
+                                placeholder = "Descripción del movimiento",
+                                modifier = Modifier.padding(bottom = 8.dp),
+                            )
+                        }
+                        SegmentedControl(
+                            options = TxFilter.entries.toList(),
+                            selected = filter,
+                            onSelect = { filter = it },
+                            label = { it.label },
+                        )
+                        MonthSelector(
+                            label = formatMesAnio(month, dateLocale),
+                            onPrev = { month = month.plus(DatePeriod(months = -1)) },
+                            onNext = { month = month.plus(DatePeriod(months = 1)) },
+                            onLabelClick = { month = LocalDate(today.year, today.month, 1) },
                         )
                     }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = 96.dp, top = spacing.xs),
-                    ) {
-                        groups.forEach { (day, dayRows) ->
-                            // Con búsqueda activa se muestran expandidos para ver los resultados.
-                            val expanded = searching || (expandedDays[day] ?: (day == todayEpochDay))
-                            val d = LocalDate.fromEpochDays(day.toInt())
-                            item(key = "day_$day") {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .shadow(elevation = DayCardElevation, shape = DayCardShape)
-                                        .clip(DayCardShape)
-                                        .background(MaterialTheme.colorScheme.surfaceContainer)
-                                        .animateItem(),
-                                ) {
-                                    DayHeader(
-                                        dayNumber = d.day.toString().padStart(2, '0'),
-                                        weekday = diaSemana(day),
-                                        count = dayRows.size,
-                                        incomeMinor = dayIncome(dayRows),
-                                        expenseMinor = dayExpense(dayRows),
-                                        currency = dayRows.first().currency,
-                                        expanded = expanded,
-                                        onToggle = { expandedDays[day] = !(expandedDays[day] ?: (day == todayEpochDay)) },
-                                    )
-                                    ExpandableSection(expanded) {
-                                        dayRows.forEach { row ->
-                                            key(row.id) {
-                                                val subcategory = categoriesById[row.categoryId]
-                                                TransactionItem(
-                                                    row = row,
-                                                    category = subcategory,
-                                                    parentCategory = subcategory?.parentId?.let { categoriesById[it] },
-                                                    account = accountsById[row.accountId],
-                                                    onClick = { onEdit(row.id) },
-                                                    onSwipeToDelete = {
-                                                        val block = vm.deleteBlockReason(row.id)
-                                                        if (block != null) {
-                                                            blockedDelete = block
-                                                            false
-                                                        } else {
-                                                            requestDelete(row.id)
-                                                            true
-                                                        }
-                                                    },
-                                                )
-                                            }
+                }
+                when {
+                    !loaded -> item(key = "loading") { LoadingState(rows = 5) }
+
+                    groups.isEmpty() -> item(key = "empty") {
+                        EmptyState(
+                            icon = LucideIcons.Receipt,
+                            title = if (searching || filter != TxFilter.All) "Sin resultados" else "Sin movimientos",
+                            subtitle = if (searching || filter != TxFilter.All) {
+                                "Prueba con otra búsqueda, otro filtro o cambia de mes."
+                            } else {
+                                "Usa el botón + para registrar tu primer movimiento."
+                            },
+                        )
+                    }
+
+                    else -> groups.forEach { (day, dayRows) ->
+                        item(key = "day_$day") {
+                            Column(Modifier.fillMaxWidth().animateItem(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                DayHeader(day, todayEpochDay, dayRows, dateLocale)
+                                GroupCard {
+                                    dayRows.forEachIndexed { index, row ->
+                                        key(row.id) {
+                                            if (index > 0) RowDivider()
+                                            val subcategory = categoriesById[row.categoryId]
+                                            TransactionItem(
+                                                row = row,
+                                                category = subcategory,
+                                                parentCategory = subcategory?.parentId?.let { categoriesById[it] },
+                                                account = accountsById[row.accountId],
+                                                onClick = { onEdit(row.id) },
+                                                onSwipeToDelete = {
+                                                    val block = vm.deleteBlockReason(row.id)
+                                                    if (block != null) {
+                                                        blockedDelete = block
+                                                        false
+                                                    } else {
+                                                        requestDelete(row.id)
+                                                        true
+                                                    }
+                                                },
+                                            )
                                         }
-                                        DaySummaryFooter(
-                                            incomeMinor = dayIncome(dayRows),
-                                            expenseMinor = dayExpense(dayRows),
-                                            currency = dayRows.first().currency,
-                                        )
                                     }
                                 }
                             }
-                            item(key = "sp_$day") { Spacer(Modifier.height(spacing.sm)) }
                         }
                     }
                 }
@@ -272,137 +243,57 @@ fun TransactionsScreen(
     }
 
     blockedDelete?.let { block ->
-        AlertDialog(
-            onDismissRequest = { blockedDelete = null },
-            title = { Text("No se puede eliminar") },
-            text = {
-                Text(
-                    when (block) {
-                        is TransactionsViewModel.DeleteBlock.Subscription ->
-                            "\"${block.name}\" es una suscripción periódica. Elimínala desde la pantalla de Suscripciones — una vez eliminada, podrás borrar este movimiento aquí."
+        ConfirmDialog(
+            title = "No se puede eliminar",
+            body = when (block) {
+                is TransactionsViewModel.DeleteBlock.Subscription ->
+                    "\"${block.name}\" es una suscripción periódica. Elimínala desde Suscripciones; después podrás borrar este movimiento aquí."
 
-                        is TransactionsViewModel.DeleteBlock.Investment ->
-                            "\"${block.name}\" es una inversión periódica. Gestiónala desde la pantalla de Inversiones."
-                    },
-                )
+                is TransactionsViewModel.DeleteBlock.Investment ->
+                    "\"${block.name}\" es un aporte periódico a un fondo. Gestiónalo desde Fondos de inversión."
             },
-            confirmButton = { TextButton(onClick = { blockedDelete = null }) { Text("Entendido") } },
+            confirmLabel = "Entendido",
+            onConfirm = { blockedDelete = null },
+            onDismiss = { blockedDelete = null },
+            destructive = false,
         )
     }
 }
 
-/** Cabecera de la tarjeta de día: número de día + nombre del día + cantidad de movimientos. */
-@Composable
-private fun DayHeader(
-    dayNumber: String,
-    weekday: String,
-    count: Int,
-    incomeMinor: Long,
-    expenseMinor: Long,
-    currency: String,
-    expanded: Boolean,
-    onToggle: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val spacing = LocalSpacing.current
-    val finance = LocalFinanceColors.current
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(role = Role.Button, onClick = onToggle)
-            .padding(horizontal = spacing.lg, vertical = spacing.md),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(spacing.md),
-    ) {
-        Box(Modifier.width(DayLeadSize), contentAlignment = Alignment.Center) {
-            Text(
-                dayNumber,
-                style = MaterialTheme.typography.headlineSmall,
-                color = LocalAccentColor.current,
-            )
-        }
-        Column(Modifier.weight(1f)) {
-            Text(
-                weekday.replaceFirstChar { it.uppercase() },
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                if (count == 1) "1 movimiento" else "$count movimientos",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        FadeSection(!expanded) {
-            Column(horizontalAlignment = Alignment.End) {
-                MoneyText(
-                    amountMinor = incomeMinor,
-                    currency = currency,
-                    style = MaterialTheme.typography.bodyLarge,
-                    signed = true,
-                    colorOverride = finance.income,
-                )
-                MoneyText(
-                    amountMinor = -expenseMinor,
-                    currency = currency,
-                    style = MaterialTheme.typography.bodyLarge,
-                    signed = true,
-                    colorOverride = finance.expense,
-                )
-            }
-        }
-        Icon(
-            if (expanded) LucideIcons.ChevronUp else LucideIcons.ChevronDown,
-            contentDescription = if (expanded) "Contraer" else "Expandir",
-            tint = MaterialTheme.colorScheme.primary,
-        )
-    }
+/** Filtro por tipo de movimiento. */
+private enum class TxFilter(val label: String) {
+    All("Todos"),
+    Income("Ingresos"),
+    Expense("Gastos"),
 }
 
-/** Resumen del día (Ingreso/Gasto), visible solo cuando la tarjeta está expandida. */
+/** Cabecera de un día: "HOY · 16 NOV" (o "SÁBADO · 14 NOV") y el neto del día a la derecha. */
 @Composable
-private fun DaySummaryFooter(
-    incomeMinor: Long,
-    expenseMinor: Long,
-    currency: String,
-    modifier: Modifier = Modifier,
-) {
-    val spacing = LocalSpacing.current
-    val finance = LocalFinanceColors.current
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = spacing.lg, vertical = spacing.md),
-    ) {
-        // Sangría de la columna número/avatar: línea y etiquetas arrancan donde los textos de las filas.
-        val indent = Modifier.padding(start = DayLeadSize + spacing.md)
-        HorizontalDivider(modifier = indent, color = MaterialTheme.colorScheme.outlineVariant)
-        Spacer(Modifier.height(spacing.sm))
-        SummaryRow("Ingreso", incomeMinor, currency, colorOverride = finance.income, modifier = indent)
-        SummaryRow("Gasto", -expenseMinor, currency, colorOverride = finance.expense, modifier = indent)
+private fun DayHeader(day: Long, todayEpochDay: Long, dayRows: List<TransactionRow>, dateLocale: CurrencyLocaleInfo) {
+    val label = when (day) {
+        todayEpochDay -> "Hoy"
+        todayEpochDay - 1 -> "Ayer"
+        else -> diaSemana(day)
     }
-}
-
-@Composable
-private fun SummaryRow(label: String, amountMinor: Long, currency: String, colorOverride: Color, modifier: Modifier = Modifier) {
+    val net = dayIncome(dayRows) - dayExpense(dayRows)
     Row(
-        modifier = modifier.fillMaxWidth(),
+        Modifier.fillMaxWidth().padding(horizontal = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
-        MoneyText(
-            amountMinor = amountMinor,
-            currency = currency,
-            style = MaterialTheme.typography.bodyLarge,
-            signed = true,
-            colorOverride = colorOverride,
-        )
+        Overline("$label · ${formatDiaMes(day, dateLocale)}", modifier = Modifier.semantics { heading() })
+        if (net != 0L) {
+            MoneyText(
+                amountMinor = net,
+                currency = dayRows.first().currency,
+                style = LocalSageType.current.amountSm,
+                signed = true,
+                colorOverride = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun TransactionItem(
     row: TransactionRow,
@@ -417,102 +308,60 @@ private fun TransactionItem(
     val isSubscription = row.subscriptionId != null
     val isAdjustment = row.kind == "ADJUSTMENT"
     val isInvestment = row.investmentId != null
-    val spacing = LocalSpacing.current
     val finance = LocalFinanceColors.current
     val (signedAmount, amountColor) = signedAmountAndColor(row.kind, row.amountMinor, finance)
+    val tone = when {
+        isTransfer || isAdjustment || isInvestment -> AvatarTone.Accent
+        row.kind == "INCOME" -> AvatarTone.Income
+        else -> AvatarTone.Expense
+    }
+    val subtitle = listOfNotNull(
+        parentCategory?.name ?: category?.name ?: kindLabel(row.kind),
+        account?.name,
+        "Periódico".takeIf { isSubscription },
+    ).joinToString(" · ")
 
-    // RectangleShape: las filas van al ras dentro de la tarjeta del día, sin radio propio.
     SwipeToDeleteRow(onSwipeToDelete = onSwipeToDelete, modifier = modifier, shape = RectangleShape) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surfaceContainer)
-                .clickable(onClickLabel = "Editar", role = Role.Button, onClick = onClick)
-                .padding(horizontal = spacing.lg, vertical = spacing.md),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(spacing.md),
-        ) {
-            when {
-                // La suscripción se distingue aun si tiene categoría (igual que una transferencia
-                // nunca se pierde detrás de su categoría) — de ahí que vaya antes del chequeo de categoría.
-                isSubscription -> KindAvatar(kind = row.kind, size = DayLeadSize, icon = Icons.Outlined.Autorenew)
+        Box(Modifier.background(MaterialTheme.colorScheme.surface)) {
+            ListRow(
+                title = if (isTransfer) row.note.ifBlank { "Transferencia" } else row.note.ifBlank { category?.name ?: kindLabel(row.kind) },
+                subtitle = subtitle,
+                onClick = onClick,
+                leading = {
+                    when {
+                        // La suscripción se distingue aun si tiene categoría.
+                        isSubscription -> KindAvatar(kind = row.kind, icon = Icons.Outlined.Autorenew)
 
-                // Transferencias, ajustes e inversiones usan una categoría auto-asignada por el
-                // sistema (no elegida por el usuario) — su inicial no aporta nada, así que el
-                // avatar usa la inicial de la nota del movimiento en su lugar.
-                isTransfer || isAdjustment || isInvestment ->
-                    CategoryAvatar(name = row.note.ifBlank { kindLabel(row.kind) }, size = DayLeadSize)
+                        // Transferencias, ajustes e inversiones usan una categoría del sistema: su
+                        // inicial no aporta, así que se usa la de la nota.
+                        isTransfer || isAdjustment || isInvestment -> CategoryAvatar(name = row.note.ifBlank { kindLabel(row.kind) }, tone = tone)
 
-                category != null -> CategoryAvatar(name = category.name, size = DayLeadSize)
+                        category != null -> CategoryAvatar(name = category.name, tone = tone)
 
-                else -> KindAvatar(kind = row.kind, size = DayLeadSize)
-            }
-            // Mismo formato que la cabecera del día: título como el nombre del día, subtítulo como "N movimientos".
-            Column(Modifier.weight(1f)) {
-                Text(
-                    if (isTransfer) row.note.ifBlank { "Transferencia" } else row.note.ifBlank { "(sin nota)" },
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                )
-                Text(
-                    parentCategory?.name ?: category?.name ?: kindLabel(row.kind),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                )
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                if (isTransfer) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Icon(
-                            LucideIcons.ArrowLeftRight,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(16.dp),
-                        )
-                        Text(
-                            LocalMoneyFormat.current.format(row.amountMinor, row.currency),
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        else -> KindAvatar(kind = row.kind)
                     }
-                } else if (isSubscription) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Icon(
-                            LucideIcons.Repeat,
-                            contentDescription = null,
-                            tint = finance.expense,
-                            modifier = Modifier.size(16.dp),
-                        )
+                },
+                trailing = {
+                    if (isTransfer) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Icon(LucideIcons.ArrowLeftRight, contentDescription = "Transferencia", tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                            Text(
+                                LocalMoneyFormat.current.format(row.amountMinor, row.currency),
+                                style = LocalSageType.current.amountMd,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    } else {
                         MoneyText(
                             amountMinor = signedAmount,
                             currency = row.currency,
-                            style = MaterialTheme.typography.bodyLarge,
+                            style = LocalSageType.current.amountMd,
                             signed = true,
-                            colorOverride = finance.expense,
+                            colorOverride = amountColor,
                         )
                     }
-                } else {
-                    MoneyText(
-                        amountMinor = signedAmount,
-                        currency = row.currency,
-                        style = MaterialTheme.typography.bodyLarge,
-                        signed = true,
-                        colorOverride = amountColor,
-                    )
-                }
-                if (account != null) {
-                    // Cuenta usada, con el mismo estilo que la descripción del movimiento.
-                    Text(
-                        account.name,
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                    )
-                }
-            }
+                },
+            )
         }
     }
 }
