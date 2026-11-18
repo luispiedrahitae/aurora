@@ -19,10 +19,23 @@ exactas); tabla `FundSimulation` + migración `1.sqm` (esquema v1 guardado en
 `sqldelight/databases/1.db`, verificación de migraciones en verde); escritorio migra BD viejas
 (`user_version` 0 = v1); las simulaciones entran en la copia de seguridad.
 
-Falta: repositorio + ViewModel de simulaciones, pantallas Simular fondo / Proyección / Comparar y
-Tendencias (con gráficos), tarjeta "Simular un fondo" en Fondos, botón "Cargar datos de ejemplo",
-mover `fundTotals`/`yieldMinor`/presupuestos/agregación del Resumen a `domain/`, test de la
-migración de escritorio (`openDesktopDatabase` ya es testeable). Luego Fase 5.
+2026-11-18: repositorio y ViewModel de simulaciones (`ae39275`); gráficos reutilizables (líneas,
+barras, barra apilada, tabla) y pantallas Simular fondo → Proyección → Comparar, con tarjeta
+"Simular un fondo" y lista de simulaciones guardadas en Fondos (`3ff918f`); Tendencias de gasto
+(Más › Planificación) y "Cargar datos de ejemplo" en los estados vacíos de Movimientos y Tendencias
+(`028f546`). `checkQuality` verde con 26 tests nuevos.
+
+Decisiones de esta tanda (para revisar): la simulación vive en una sola ruta con sus pasos
+internos, así el borrador sin guardar no viaja entre pantallas; "Comparar" elige otra simulación
+**guardada** y usa el escenario principal de cada una (moderado o tasa fija); no hay "Guardar
+comparación" porque se recalcula al instante de las dos simulaciones. Tendencias: el promedio
+diario y las barras cuentan solo el gasto puntual (sin suscripciones, aportes periódicos ni
+cuotas), como dice el diseño; el reparto recurrente/puntual y las categorías cuentan todo; solo
+moneda base. Al cargar datos de ejemplo se marca la limpieza de arranque como hecha para que no
+borre la suscripción, el fondo y el plan de cuotas de ejemplo.
+
+Falta: mover `fundTotals`/`yieldMinor`/presupuestos/agregación del Resumen a `domain/`, test de la
+migración de escritorio (`openDesktopDatabase`). Luego Fase 5.
 
 - Design system: https://claude.ai/artifact/QdRX1cFzN6aWpb9gnEXy5s
 - Pantallas: https://claude.ai/artifact/D5SE4kr7NDM584HCZmj2th
@@ -36,7 +49,7 @@ migración de escritorio (`openDesktopDatabase` ya es testeable). Luego Fase 5.
 | ⛔ Checkpoint 1 | ✅ Aprobado (2026-11-16) | Decisiones en la tabla de abajo |
 | 2 — Estándares | ✅ Hecha (2026-11-16) | Ver "Fase 2 paso a paso" |
 | 3 — Design system (Claude Design) | ✅ Hecha (2026-11-17) | ⛔ Checkpoint 2: ✅ aprobado. Falta revisión en dispositivo |
-| 4 — Simulaciones | ⏳ Pendiente | ⛔ Checkpoint 3 presentado (2026-11-17), esperando aprobación |
+| 4 — Simulaciones | 🔄 En curso | ⛔ Checkpoint 3: ✅ aprobado (2026-11-17). Pantallas hechas; falta mover cálculos a `domain/` |
 | 5 — Verificación y entrega | ⏳ Pendiente | |
 
 ## Fase 2 paso a paso
