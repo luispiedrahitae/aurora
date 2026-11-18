@@ -1,0 +1,17 @@
+-- Migración 1 → 2: simulaciones de fondos guardadas (Fase 4 del rediseño).
+CREATE TABLE FundSimulation (
+    id                INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    name              TEXT NOT NULL,
+    currency          TEXT NOT NULL,
+    initialMinor      INTEGER NOT NULL,
+    monthlyMinor      INTEGER NOT NULL,
+    months            INTEGER NOT NULL,
+    rateMode          TEXT NOT NULL,
+    rateConservative  REAL NOT NULL,
+    rateModerate      REAL NOT NULL,
+    rateAggressive    REAL NOT NULL,
+    rateFixed         REAL NOT NULL,
+    adminFee          REAL NOT NULL,
+    contributionFee   REAL NOT NULL,
+    createdAt         INTEGER NOT NULL
+);

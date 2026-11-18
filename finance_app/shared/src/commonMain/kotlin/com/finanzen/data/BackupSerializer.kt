@@ -53,6 +53,12 @@ object BackupSerializer {
         settings = db.settingQueries.selectAll().executeAsList().map {
             SettingDto(it.key, it.value_)
         },
+        fundSimulations = db.fundSimulationQueries.selectAll().executeAsList().map {
+            FundSimulationDto(
+                it.id, it.name, it.currency, it.initialMinor, it.monthlyMinor, it.months, it.rateMode,
+                it.rateConservative, it.rateModerate, it.rateAggressive, it.rateFixed, it.adminFee, it.contributionFee, it.createdAt,
+            )
+        },
     )
 
     fun toJson(snapshot: BackupSnapshot): String = json.encodeToString(BackupSnapshot.serializer(), snapshot)
@@ -79,6 +85,7 @@ object BackupSerializer {
             db.accountQueries.selectAllAny().executeAsList().forEach { db.accountQueries.delete(it.id) }
             db.currencyQueries.selectAll().executeAsList().forEach { db.currencyQueries.delete(it.code) }
             db.settingQueries.selectAll().executeAsList().forEach { db.settingQueries.delete(it.key) }
+            db.fundSimulationQueries.selectAll().executeAsList().forEach { db.fundSimulationQueries.delete(it.id) }
 
             // Insertar en orden directo, capturando el id nuevo de cada padre para traducir las FKs
             // de sus hijos. Currency.code es clave natural (no autoincrement): no necesita remapeo.
@@ -186,6 +193,12 @@ object BackupSerializer {
             }
             snap.budgets.forEach { db.budgetQueries.upsert(categoryIdMap.getValue(it.categoryId), it.periodMonth, it.limitMinor) }
             snap.settings.forEach { db.settingQueries.put(it.key, it.value) }
+            snap.fundSimulations.forEach {
+                db.fundSimulationQueries.insert(
+                    it.name, it.currency, it.initialMinor, it.monthlyMinor, it.months, it.rateMode,
+                    it.rateConservative, it.rateModerate, it.rateAggressive, it.rateFixed, it.adminFee, it.contributionFee, it.createdAt,
+                )
+            }
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.finanzen.platform
 
+import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.finanzen.db.FinanzenDb
@@ -12,18 +13,35 @@ actual val platformName: String =
 actual class DriverFactory {
     actual fun create(): SqlDriver {
         val dir = File(System.getProperty("user.home"), ".finanzen").apply { mkdirs() }
-        val dbFile = File(dir, "finanzen.db")
-        val freshInstall = !dbFile.exists()
-        val driver = JdbcSqliteDriver(
-            url = "jdbc:sqlite:${dbFile.absolutePath}",
-            properties = Properties(),
-        )
-        if (freshInstall) {
-            FinanzenDb.Schema.create(driver)
-        }
-        return driver
+        return openDesktopDatabase(File(dir, "finanzen.db"))
     }
 }
+
+/**
+ * Abre (o crea) la BD de escritorio y la lleva a la versión actual del esquema. A diferencia de
+ * Android/iOS, el driver JDBC no versiona solo: se hace aquí con `PRAGMA user_version`.
+ */
+internal fun openDesktopDatabase(dbFile: File): SqlDriver {
+    val freshInstall = !dbFile.exists()
+    val driver = JdbcSqliteDriver(url = "jdbc:sqlite:${dbFile.absolutePath}", properties = Properties())
+    val target = FinanzenDb.Schema.version
+    if (freshInstall) {
+        FinanzenDb.Schema.create(driver)
+    } else {
+        // Las BD creadas antes de la primera migración quedaron con user_version = 0: son la versión 1.
+        val current = driver.userVersion().takeIf { it > 0 } ?: 1L
+        if (current < target) FinanzenDb.Schema.migrate(driver, current, target)
+    }
+    driver.execute(null, "PRAGMA user_version = $target", 0)
+    return driver
+}
+
+private fun SqlDriver.userVersion(): Long = executeQuery(
+    identifier = null,
+    sql = "PRAGMA user_version",
+    mapper = { cursor -> QueryResult.Value(if (cursor.next().value) cursor.getLong(0) ?: 0L else 0L) },
+    parameters = 0,
+).value
 
 // Desktop es preview de desarrollo — no se distribuye, así que el scheduler solo loguea.
 actual class NotificationScheduler {

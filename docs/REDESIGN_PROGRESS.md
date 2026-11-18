@@ -9,10 +9,20 @@ Rama de trabajo: `redesign` · Respaldo intocable: `backup/pre-redesign` (2da1f2
 `checkQuality` y `:androidApp:assembleDebug` en verde con `allWarningsAsErrors`. Pendiente: revisión
 visual en dispositivo por el usuario.
 
-**⛔ Checkpoint 3 — presentado el 2026-11-17, esperando aprobación.** Modelo de datos y fórmulas de
-las simulaciones (fondos y gastos diarios) entregados en el chat, con 4 decisiones abiertas:
-guardar simulaciones (tabla nueva + primera migración), cómo cargar datos de ejemplo, cobro de la
-comisión de administración y definición de "semana". No se implementa nada hasta la aprobación.
+**Fase 4 — en curso.** Checkpoint 3 aprobado el 2026-11-17: guardar simulaciones (sí), botón
+"Cargar datos de ejemplo" (sí), comisión de administración mensual sobre el saldo (sí, el usuario
+la revisará), Tendencias por semanas de lunes a domingo (interpretado de "hazlo por semanas";
+fácil de cambiar a bloques de 7 días).
+
+Hecho: `domain/FundProjection.kt` y `domain/SpendingAnalytics.kt` con 18 tests (cifras del diseño
+exactas); tabla `FundSimulation` + migración `1.sqm` (esquema v1 guardado en
+`sqldelight/databases/1.db`, verificación de migraciones en verde); escritorio migra BD viejas
+(`user_version` 0 = v1); las simulaciones entran en la copia de seguridad.
+
+Falta: repositorio + ViewModel de simulaciones, pantallas Simular fondo / Proyección / Comparar y
+Tendencias (con gráficos), tarjeta "Simular un fondo" en Fondos, botón "Cargar datos de ejemplo",
+mover `fundTotals`/`yieldMinor`/presupuestos/agregación del Resumen a `domain/`, test de la
+migración de escritorio (`openDesktopDatabase` ya es testeable). Luego Fase 5.
 
 - Design system: https://claude.ai/artifact/QdRX1cFzN6aWpb9gnEXy5s
 - Pantallas: https://claude.ai/artifact/D5SE4kr7NDM584HCZmj2th

@@ -17,6 +17,8 @@ data class BackupSnapshot(
     val investments: List<InvestmentDto> = emptyList(),
     val budgets: List<BudgetDto>,
     val settings: List<SettingDto>,
+    // Desde la versión 2 de la BD; las copias anteriores no lo traen y se restauran con la lista vacía.
+    val fundSimulations: List<FundSimulationDto> = emptyList(),
 )
 
 @Serializable data class CurrencyDto(
@@ -121,6 +123,23 @@ data class BackupSnapshot(
 @Serializable data class BudgetDto(val id: Long, val categoryId: Long, val periodMonth: Long, val limitMinor: Long)
 
 @Serializable data class SettingDto(val key: String, val value: String)
+
+@Serializable data class FundSimulationDto(
+    val id: Long,
+    val name: String,
+    val currency: String,
+    val initialMinor: Long,
+    val monthlyMinor: Long,
+    val months: Long,
+    val rateMode: String,
+    val rateConservative: Double,
+    val rateModerate: Double,
+    val rateAggressive: Double,
+    val rateFixed: Double,
+    val adminFee: Double,
+    val contributionFee: Double,
+    val createdAt: Long,
+)
 
 /** Envelope cifrado escrito al disco. Self-describing; cualquier actual de BackupCrypto puede leerlo. */
 @Serializable

@@ -1,0 +1,39 @@
+-- Simulación de un fondo guardada por el usuario (Fase 4). Solo guarda las entradas; la proyección
+-- se recalcula con domain/FundProjection.kt cada vez que se abre, así que nunca queda desfasada.
+-- Las tasas van como fracción (0.09 = 9 %), efectivas anuales.
+CREATE TABLE FundSimulation (
+    id                INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    name              TEXT NOT NULL,
+    currency          TEXT NOT NULL,
+    initialMinor      INTEGER NOT NULL,
+    monthlyMinor      INTEGER NOT NULL,
+    months            INTEGER NOT NULL,
+    rateMode          TEXT NOT NULL,          -- SCENARIOS | FIXED
+    rateConservative  REAL NOT NULL,
+    rateModerate      REAL NOT NULL,
+    rateAggressive    REAL NOT NULL,
+    rateFixed         REAL NOT NULL,
+    adminFee          REAL NOT NULL,          -- comisión de administración anual sobre el saldo
+    contributionFee   REAL NOT NULL,          -- comisión sobre cada aporte
+    createdAt         INTEGER NOT NULL        -- epoch day
+);
+
+selectAll:
+SELECT * FROM FundSimulation ORDER BY createdAt DESC, id DESC;
+
+selectById:
+SELECT * FROM FundSimulation WHERE id = ?;
+
+insert:
+INSERT INTO FundSimulation(name, currency, initialMinor, monthlyMinor, months, rateMode, rateConservative, rateModerate, rateAggressive, rateFixed, adminFee, contributionFee, createdAt)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+update:
+UPDATE FundSimulation SET name = ?, initialMinor = ?, monthlyMinor = ?, months = ?, rateMode = ?, rateConservative = ?, rateModerate = ?, rateAggressive = ?, rateFixed = ?, adminFee = ?, contributionFee = ?
+WHERE id = ?;
+
+delete:
+DELETE FROM FundSimulation WHERE id = ?;
+
+lastInsertRowId:
+SELECT last_insert_rowid();
