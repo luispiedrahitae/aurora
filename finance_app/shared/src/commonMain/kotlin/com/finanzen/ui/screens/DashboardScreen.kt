@@ -160,7 +160,6 @@ fun DashboardScreen(
                         "Gastos",
                         if (hideAmounts) MASK else fmt.format(-data.periodExpenseMinor, data.currency, signed = true),
                         finance.expense,
-                        flipTrendIcon = true,
                         modifier = Modifier.weight(1f).fillMaxHeight(),
                         masked = hideAmounts,
                         delta = kpiDelta(data.periodExpenseMinor, data.prevPeriodExpenseMinor, prevLabel, upIsGood = false),
@@ -242,7 +241,6 @@ private fun BalanceHeroCard(
     onToggleHidden: () -> Unit,
 ) {
     val spacing = LocalSpacing.current
-    val onSurfaceVar = MaterialTheme.colorScheme.onSurfaceVariant
 
     // El balance general es histórico (saldos iniciales + ingresos − gastos de todo el
     // histórico), con el mismo formato global (símbolo + separadores) que el resto de montos de
@@ -298,9 +296,6 @@ private fun KpiTile(
     valueText: String,
     accent: Color,
     modifier: Modifier = Modifier,
-    // No hay un ícono "trending-down" en el set Lucide del proyecto; se reutiliza TrendingUp
-    // rotado 180° para Gastos en vez de sumar un recurso nuevo.
-    flipTrendIcon: Boolean = false,
     masked: Boolean = false,
     delta: KpiDelta? = null,
     caption: String? = null,

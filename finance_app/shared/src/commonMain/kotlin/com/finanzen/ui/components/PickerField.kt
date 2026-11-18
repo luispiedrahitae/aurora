@@ -66,9 +66,7 @@ fun <T> PickerField(
     // al editar en AccountFormDialog, que se muestra como PickerField pero no es modificable.
     enabled: Boolean = true,
 ) {
-    val spacing = LocalSpacing.current
     var open by remember { mutableStateOf(false) }
-    val sheetState = rememberModalBottomSheetState()
 
     Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         FieldLabel(label)
@@ -106,108 +104,157 @@ fun <T> PickerField(
     }
 
     if (open) {
-        var query by remember { mutableStateOf("") }
-        ModalBottomSheet(onDismissRequest = { open = false }, sheetState = sheetState) {
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(bottom = spacing.xl),
-            ) {
+        PickerSheet(
+            label = label,
+            options = options,
+            selected = selected,
+            optionLabel = optionLabel,
+            onSelect = onSelect,
+            onDismiss = { open = false },
+            emptyHint = emptyHint,
+            leadingContent = leadingContent,
+            trailingLabel = trailingLabel,
+            searchable = searchable,
+            searchPredicate = searchPredicate,
+            sectionOf = sectionOf,
+        )
+    }
+}
+
+/** Hoja de opciones de [PickerField]: título, buscador opcional y la lista agrupada por sección. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun <T> PickerSheet(
+    label: String,
+    options: List<T>,
+    selected: T?,
+    optionLabel: (T) -> String,
+    onSelect: (T) -> Unit,
+    onDismiss: () -> Unit,
+    emptyHint: String,
+    leadingContent: (@Composable (T) -> Unit)?,
+    trailingLabel: ((T) -> String?)?,
+    searchable: Boolean,
+    searchPredicate: ((T, String) -> Boolean)?,
+    sectionOf: ((T) -> String?)?,
+) {
+    val spacing = LocalSpacing.current
+    val sheetState = rememberModalBottomSheetState()
+    var query by remember { mutableStateOf("") }
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(bottom = spacing.xl),
+        ) {
+            Text(
+                label,
+                style = LocalSageType.current.titleSection,
+                modifier = Modifier.padding(horizontal = spacing.lg, vertical = spacing.sm),
+            )
+            if (searchable) PickerSearchField(query) { query = it }
+            val filtered = if (searchable && query.isNotBlank() && searchPredicate != null) {
+                options.filter { searchPredicate(it, query) }
+            } else {
+                options
+            }
+            if (filtered.isEmpty()) {
                 Text(
-                    label,
-                    style = LocalSageType.current.titleSection,
-                    modifier = Modifier.padding(horizontal = spacing.lg, vertical = spacing.sm),
+                    emptyHint,
+                    style = LocalSageType.current.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = spacing.lg, vertical = spacing.md),
                 )
-                if (searchable) {
-                    OutlinedTextField(
-                        value = query,
-                        onValueChange = { query = it },
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = spacing.lg, vertical = spacing.sm),
-                        placeholder = { Text("Buscar…") },
-                        leadingIcon = { Icon(LucideIcons.Search, contentDescription = null) },
-                        singleLine = true,
-                        shape = MaterialTheme.shapes.small,
-                        colors = sageFieldColors(),
-                    )
-                }
-                val filtered = if (searchable && query.isNotBlank() && searchPredicate != null) {
-                    options.filter { searchPredicate(it, query) }
-                } else {
-                    options
-                }
-                if (filtered.isEmpty()) {
-                    Text(
-                        emptyHint,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = spacing.lg, vertical = spacing.md),
-                    )
-                } else {
-                    // Lista dentro de un recuadro redondeado con separadores, como una tarjeta de opciones.
-                    Surface(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = spacing.lg),
-                        shape = MaterialTheme.shapes.large,
-                        color = MaterialTheme.colorScheme.surface,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-                    ) {
-                        LazyColumn(modifier = Modifier.heightIn(max = 420.dp)) {
-                            itemsIndexed(filtered) { index, option ->
-                                sectionOf?.invoke(option)?.let { section ->
-                                    val previousSection = filtered.getOrNull(index - 1)?.let(sectionOf)
-                                    if (section != previousSection) {
-                                        Text(
-                                            section,
-                                            style = LocalSageType.current.overline,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.padding(horizontal = spacing.lg, vertical = spacing.sm),
-                                        )
-                                    }
-                                }
-                                if (index > 0) {
-                                    HorizontalDivider(
-                                        modifier = Modifier.padding(start = spacing.lg),
-                                        color = MaterialTheme.colorScheme.outlineVariant,
-                                    )
-                                }
-                                val isSelected = option == selected
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        // selectable: TalkBack anuncia cuál opción está elegida, no solo el color.
-                                        .selectable(selected = isSelected, role = Role.RadioButton) {
-                                            onSelect(option)
-                                            open = false
-                                        }
-                                        .padding(horizontal = spacing.lg, vertical = spacing.md),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(spacing.md),
-                                ) {
-                                    leadingContent?.invoke(option)
+            } else {
+                // Lista dentro de un recuadro redondeado con separadores, como una tarjeta de opciones.
+                Surface(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = spacing.lg),
+                    shape = MaterialTheme.shapes.large,
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                ) {
+                    LazyColumn(modifier = Modifier.heightIn(max = 420.dp)) {
+                        itemsIndexed(filtered) { index, option ->
+                            sectionOf?.invoke(option)?.let { section ->
+                                val previousSection = filtered.getOrNull(index - 1)?.let(sectionOf)
+                                if (section != previousSection) {
                                     Text(
-                                        optionLabel(option),
-                                        modifier = Modifier.weight(1f),
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                        color = if (isSelected) {
-                                            MaterialTheme.colorScheme.onPrimaryContainer
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurface
-                                        },
+                                        section,
+                                        style = LocalSageType.current.overline,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(horizontal = spacing.lg, vertical = spacing.sm),
                                     )
-                                    trailingLabel?.invoke(option)?.let { label ->
-                                        Text(
-                                            label,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
                                 }
                             }
+                            if (index > 0) {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(start = spacing.lg),
+                                    color = MaterialTheme.colorScheme.outlineVariant,
+                                )
+                            }
+                            PickerOptionRow(
+                                text = optionLabel(option),
+                                selected = option == selected,
+                                onClick = {
+                                    onSelect(option)
+                                    onDismiss()
+                                },
+                                leading = leadingContent?.let { lc -> { lc(option) } },
+                                trailing = trailingLabel?.invoke(option),
+                            )
                         }
                     }
                 }
             }
         }
     }
+}
+
+/** Fila de una opción: selección anunciada a TalkBack, no solo por color. */
+@Composable
+private fun PickerOptionRow(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    leading: (@Composable () -> Unit)?,
+    trailing: String?,
+) {
+    val spacing = LocalSpacing.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+            .padding(horizontal = spacing.lg, vertical = spacing.md),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(spacing.md),
+    ) {
+        leading?.invoke()
+        Text(
+            text,
+            modifier = Modifier.weight(1f),
+            style = LocalSageType.current.body,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+        )
+        if (trailing != null) {
+            Text(trailing, style = LocalSageType.current.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+/** Buscador de la hoja de opciones. */
+@Composable
+private fun PickerSearchField(query: String, onChange: (String) -> Unit) {
+    val spacing = LocalSpacing.current
+    OutlinedTextField(
+        value = query,
+        onValueChange = onChange,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = spacing.lg, vertical = spacing.sm),
+        placeholder = { Text("Buscar…") },
+        leadingIcon = { Icon(LucideIcons.Search, contentDescription = null) },
+        singleLine = true,
+        shape = MaterialTheme.shapes.small,
+        colors = sageFieldColors(),
+    )
 }

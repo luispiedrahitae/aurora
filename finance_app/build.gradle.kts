@@ -28,8 +28,10 @@ allprojects {
 
     extensions.configure<com.diffplug.gradle.spotless.SpotlessExtension> {
         kotlin {
-            target("src/**/*.kt")
-            targetExclude("**/build/**", "**/generated/**")
+            // Árbol de archivos con raíz en src/: con target("src/**/*.kt") Spotless recorre todo el
+            // proyecto (build/ incluido) y en Windows falla si otra tarea escribe ahí a la vez.
+            target(fileTree("src") { include("**/*.kt") })
+            targetExclude("**/generated/**")
             ktlint(
                 rootProject.libs.versions.ktlint
                     .get(),

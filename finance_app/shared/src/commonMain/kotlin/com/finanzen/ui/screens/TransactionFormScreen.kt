@@ -14,6 +14,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.automirrored.outlined.TrendingUp
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -38,7 +39,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.finanzen.data.RESERVED_CATEGORY_NAMES
-import com.finanzen.db.Subscription
+import com.finanzen.db.Card
 import com.finanzen.db.TransactionRow
 import com.finanzen.domain.InstallmentMath
 import com.finanzen.ui.components.CategoryAvatar
@@ -59,7 +60,6 @@ import com.finanzen.ui.components.accountTypeLabel
 import com.finanzen.ui.components.kindLabel
 import com.finanzen.ui.components.rememberGuardedSheetState
 import com.finanzen.ui.icons.LucideIcons
-import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.ui.theme.LocalSageType
 import com.finanzen.viewmodel.InvestmentsViewModel
@@ -163,7 +163,6 @@ fun TransactionFormScreen(
     val selectedCategory = categoryOptions.firstOrNull { it.id == categoryId }
     val subcategoryOptions = selectedCategory?.let { cat -> categories.filter { it.parentId == cat.id } } ?: emptyList()
     val selectedSubcategory = subcategoryOptions.firstOrNull { it.id == subcategoryId }
-    val finance = LocalFinanceColors.current
     val haptic = LocalHapticFeedback.current
 
     // Un error viejo no debe quedarse después de que el usuario corrige el campo.
@@ -673,22 +672,7 @@ fun TransactionFormScreen(
         )
     }
 
-    blockedDelete?.let { block ->
-        ConfirmDialog(
-            title = "No se puede eliminar",
-            body = when (block) {
-                is TransactionsViewModel.DeleteBlock.Subscription ->
-                    "\"${block.name}\" es una suscripción periódica. Elimínala desde Suscripciones; después podrás borrar este movimiento aquí."
-
-                is TransactionsViewModel.DeleteBlock.Investment ->
-                    "\"${block.name}\" es un aporte periódico a un fondo. Gestiónalo desde Fondos de inversión."
-            },
-            confirmLabel = "Entendido",
-            onConfirm = { blockedDelete = null },
-            onDismiss = { blockedDelete = null },
-            destructive = false,
-        )
-    }
+    blockedDelete?.let { block -> BlockedDeleteDialog(block) { blockedDelete = null } }
 }
 
 private const val MAX_INSTALLMENTS = 360L

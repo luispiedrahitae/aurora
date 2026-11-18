@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import com.finanzen.data.CurrencyLocaleInfo
 import com.finanzen.db.Account
 import com.finanzen.db.Category
+import com.finanzen.db.Investment
 import com.finanzen.db.Subscription
 import com.finanzen.db.TransactionRow
 import com.finanzen.ui.components.AvatarTone
@@ -117,13 +118,7 @@ fun TransactionsScreen(
         rows.asSequence()
             .filter { it.id !in pendingDeleteIds }
             .filter { periodOfEpochDay(it.date) == period }
-            .filter {
-                when (filter) {
-                    TxFilter.All -> true
-                    TxFilter.Income -> it.kind == "INCOME"
-                    TxFilter.Expense -> it.kind == "EXPENSE"
-                }
-            }
+            .filter { filter.matches(it.kind) }
             .filter { query.isBlank() || it.note.contains(query, ignoreCase = true) }
             .groupBy { it.date }
             .entries.sortedByDescending { it.key }
@@ -192,17 +187,7 @@ fun TransactionsScreen(
                 when {
                     !loaded -> item(key = "loading") { LoadingState(rows = 5) }
 
-                    groups.isEmpty() -> item(key = "empty") {
-                        EmptyState(
-                            icon = LucideIcons.Receipt,
-                            title = if (searching || filter != TxFilter.All) "Sin resultados" else "Sin movimientos",
-                            subtitle = if (searching || filter != TxFilter.All) {
-                                "Prueba con otra búsqueda, otro filtro o cambia de mes."
-                            } else {
-                                "Usa el botón + para registrar tu primer movimiento."
-                            },
-                        )
-                    }
+                    groups.isEmpty() -> item(key = "empty") { TransactionsEmpty(filtered = searching || filter != TxFilter.All) }
 
                     else -> groups.forEach { (day, dayRows) ->
                         item(key = "day_$day") {
@@ -242,29 +227,46 @@ fun TransactionsScreen(
         BottomSnackbarHost(snackbarHostState, aboveFab = true)
     }
 
-    blockedDelete?.let { block ->
-        ConfirmDialog(
-            title = "No se puede eliminar",
-            body = when (block) {
-                is TransactionsViewModel.DeleteBlock.Subscription ->
-                    "\"${block.name}\" es una suscripción periódica. Elimínala desde Suscripciones; después podrás borrar este movimiento aquí."
+    blockedDelete?.let { block -> BlockedDeleteDialog(block) { blockedDelete = null } }
+}
 
-                is TransactionsViewModel.DeleteBlock.Investment ->
-                    "\"${block.name}\" es un aporte periódico a un fondo. Gestiónalo desde Fondos de inversión."
-            },
-            confirmLabel = "Entendido",
-            onConfirm = { blockedDelete = null },
-            onDismiss = { blockedDelete = null },
-            destructive = false,
-        )
-    }
+/** Explica por qué un movimiento vinculado no se borra desde aquí. */
+@Composable
+internal fun BlockedDeleteDialog(block: TransactionsViewModel.DeleteBlock, onDismiss: () -> Unit) {
+    ConfirmDialog(
+        title = "No se puede eliminar",
+        body = when (block) {
+            is TransactionsViewModel.DeleteBlock.Subscription ->
+                "\"${block.name}\" es una suscripción periódica. Elimínala desde Suscripciones; después podrás borrar este movimiento aquí."
+
+            is TransactionsViewModel.DeleteBlock.Investment ->
+                "\"${block.name}\" es un aporte periódico a un fondo. Gestiónalo desde Fondos de inversión."
+        },
+        confirmLabel = "Entendido",
+        onConfirm = onDismiss,
+        onDismiss = onDismiss,
+        destructive = false,
+    )
+}
+
+/** Estado vacío: distingue "no hay nada" de "nada coincide con la búsqueda o el filtro". */
+@Composable
+private fun TransactionsEmpty(filtered: Boolean) {
+    EmptyState(
+        icon = LucideIcons.Receipt,
+        title = if (filtered) "Sin resultados" else "Sin movimientos",
+        subtitle = if (filtered) "Prueba con otra búsqueda, otro filtro o cambia de mes." else "Usa el botón + para registrar tu primer movimiento.",
+    )
 }
 
 /** Filtro por tipo de movimiento. */
-private enum class TxFilter(val label: String) {
-    All("Todos"),
-    Income("Ingresos"),
-    Expense("Gastos"),
+private enum class TxFilter(val label: String, private val kind: String?) {
+    All("Todos", null),
+    Income("Ingresos", "INCOME"),
+    Expense("Gastos", "EXPENSE"),
+    ;
+
+    fun matches(rowKind: String): Boolean = kind == null || rowKind == kind
 }
 
 /** Cabecera de un día: "HOY · 16 NOV" (o "SÁBADO · 14 NOV") y el neto del día a la derecha. */

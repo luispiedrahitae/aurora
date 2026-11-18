@@ -90,7 +90,6 @@ fun BudgetsScreen(
     val data by vm.data.collectAsState()
     val month by vm.month.collectAsState()
     val dateLocale = LocalDateLocale.current
-    val spacing = LocalSpacing.current
     val budgeted = data.rows.filter { it.limitMinor > 0 }
     val unbudgeted = data.rows.filter { it.limitMinor <= 0 }
     var editing by remember { mutableStateOf<BudgetRow?>(null) }
@@ -199,7 +198,7 @@ fun BudgetsScreen(
                                                 style = LocalSageType.current.titleCard,
                                             )
                                             Text(
-                                                unbudgeted.take(3).joinToString(", ") { it.categoryName } + if (unbudgeted.size > 3) "…" else "",
+                                                unbudgeted.take(UNBUDGETED_PREVIEW).joinToString(", ") { it.categoryName } + if (unbudgeted.size > UNBUDGETED_PREVIEW) "…" else "",
                                                 style = LocalSageType.current.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 maxLines = 1,
@@ -273,6 +272,9 @@ private fun BudgetSummary(budgeted: List<BudgetRow>, currency: String, month: Lo
 }
 
 private const val BUDGET_WARNING_PCT = 85
+
+/** Cuántas categorías sin presupuesto se nombran antes de cortar con "…". */
+private const val UNBUDGETED_PREVIEW = 3
 
 /**
  * Asigna/edita el presupuesto de una categoría de gasto. Límite 0 = quitar el presupuesto.

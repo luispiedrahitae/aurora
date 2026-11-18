@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -228,9 +229,6 @@ private fun MonthGrid(
     kindsByDay: Map<Long, Set<String>>,
     onSelect: (LocalDate) -> Unit,
 ) {
-    val finance = LocalFinanceColors.current
-    val scheme = MaterialTheme.colorScheme
-    val dateLocale = LocalDateLocale.current
     val leadingBlanks = month.dayOfWeek.isoDayNumber - 1 // lunes = 0
     val total = daysInMonth(month)
     // Lista de celdas: nulls iniciales para alinear el primer día a su columna.
@@ -245,59 +243,76 @@ private fun MonthGrid(
                         Box(Modifier.weight(1f).height(48.dp))
                     } else {
                         val date = LocalDate(month.year, month.month, day)
-                        val isSelected = date == selected
-                        val isToday = date == today
-                        val kinds = kindsByDay[date.epochDay()].orEmpty()
-                        val hasIncome = "INCOME" in kinds
-                        val hasExpense = "EXPENSE" in kinds
-                        // Los puntos no son la única codificación: la celda anuncia qué tuvo el día.
-                        val dayState = when {
-                            hasIncome && hasExpense -> "con ingresos y gastos"
-                            hasIncome -> "con ingresos"
-                            hasExpense -> "con gastos"
-                            kinds.isNotEmpty() -> "con movimientos"
-                            else -> null
-                        }
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(48.dp)
-                                .clip(MaterialTheme.shapes.small)
-                                .then(
-                                    when {
-                                        isSelected -> Modifier.background(scheme.primary)
-                                        isToday -> Modifier.border(1.dp, scheme.primary, MaterialTheme.shapes.small)
-                                        else -> Modifier
-                                    },
-                                )
-                                .selectable(selected = isSelected, role = Role.Button) { onSelect(date) }
-                                .semantics(mergeDescendants = true) {
-                                    contentDescription = listOfNotNull(
-                                        formatFechaLarga(date, dateLocale),
-                                        "hoy".takeIf { isToday },
-                                        dayState,
-                                    ).joinToString(", ")
-                                },
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterVertically),
-                        ) {
-                            Text(
-                                day.toString(),
-                                style = LocalSageType.current.label.copy(fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium),
-                                color = when {
-                                    isSelected -> scheme.onPrimary
-                                    date > today -> scheme.onSurfaceVariant
-                                    else -> scheme.onSurface
-                                },
-                            )
-                            Row(Modifier.height(6.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                                if (hasIncome) Dot(if (isSelected) scheme.onPrimary else finance.income)
-                                if (hasExpense) Dot(if (isSelected) scheme.onPrimary else finance.expense)
-                            }
-                        }
+                        DayCell(
+                            date = date,
+                            isSelected = date == selected,
+                            isToday = date == today,
+                            isFuture = date > today,
+                            kinds = kindsByDay[date.epochDay()].orEmpty(),
+                            onSelect = { onSelect(date) },
+                            modifier = Modifier.weight(1f),
+                        )
                     }
                 }
             }
+        }
+    }
+}
+
+/** Celda de un día: número y un punto por ingreso y otro por gasto. Anuncia qué tuvo el día. */
+@Composable
+private fun DayCell(
+    date: LocalDate,
+    isSelected: Boolean,
+    isToday: Boolean,
+    isFuture: Boolean,
+    kinds: Set<String>,
+    onSelect: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val finance = LocalFinanceColors.current
+    val scheme = MaterialTheme.colorScheme
+    val dateLocale = LocalDateLocale.current
+    val hasIncome = "INCOME" in kinds
+    val hasExpense = "EXPENSE" in kinds
+    // Los puntos no son la única codificación: la celda anuncia qué tuvo el día.
+    val dayState = when {
+        hasIncome && hasExpense -> "con ingresos y gastos"
+        hasIncome -> "con ingresos"
+        hasExpense -> "con gastos"
+        kinds.isNotEmpty() -> "con movimientos"
+        else -> null
+    }
+    val decoration = when {
+        isSelected -> Modifier.background(scheme.primary)
+        isToday -> Modifier.border(1.dp, scheme.primary, MaterialTheme.shapes.small)
+        else -> Modifier
+    }
+    val textColor = when {
+        isSelected -> scheme.onPrimary
+        isFuture -> scheme.onSurfaceVariant
+        else -> scheme.onSurface
+    }
+    Column(
+        modifier = modifier
+            .height(48.dp)
+            .clip(MaterialTheme.shapes.small)
+            .then(decoration)
+            .selectable(selected = isSelected, role = Role.Button, onClick = onSelect)
+            .semantics(mergeDescendants = true) {
+                contentDescription = listOfNotNull(formatFechaLarga(date, dateLocale), "hoy".takeIf { isToday }, dayState).joinToString(", ")
+            },
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterVertically),
+    ) {
+        Text(
+            date.day.toString(),
+            style = LocalSageType.current.label.copy(fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium),
+            color = textColor,
+        )
+        Row(Modifier.height(6.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+            if (hasIncome) Dot(if (isSelected) scheme.onPrimary else finance.income)
+            if (hasExpense) Dot(if (isSelected) scheme.onPrimary else finance.expense)
         }
     }
 }

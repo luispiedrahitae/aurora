@@ -27,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.input.ImeAction
@@ -84,47 +85,14 @@ fun CategoriesScreen(
     val countFor: (String) -> Int = { k -> parents.count { it.kind == k && it.name !in RESERVED_CATEGORY_NAMES } }
     val nameError = nameError(name, categories.filter { it.kind == kind && it.parentId == null })
 
-    pendingDelete?.let { cat ->
-        ConfirmDialog(
-            title = "¿Eliminar \"${cat.name}\"?",
-            body = "Se elimina la categoría" +
-                (if (cat.parentId == null) " junto con sus subcategorías" else "") +
-                " y todo lo que la use: movimientos, presupuestos, suscripciones, " +
-                "inversiones y planes de cuotas. Esta acción no se puede deshacer.",
-            onConfirm = {
-                vm.delete(cat.id)
-                pendingDelete = null
-            },
-            onDismiss = { pendingDelete = null },
-        )
-    }
-    when (val e = edit) {
-        is CategoryEdit.Rename -> NameDialog(
-            title = "Renombrar categoría",
-            initial = e.category.name,
-            confirmLabel = "Guardar",
-            siblings = categories.filter { it.kind == e.category.kind && it.parentId == e.category.parentId && it.id != e.category.id },
-            onConfirm = {
-                vm.rename(e.category, it)
-                edit = null
-            },
-            onDismiss = { edit = null },
-        )
-
-        is CategoryEdit.AddSub -> NameDialog(
-            title = "Nueva subcategoría en ${e.parent.name}",
-            initial = "",
-            confirmLabel = "Añadir",
-            siblings = categories.filter { it.parentId == e.parent.id },
-            onConfirm = {
-                vm.add(it, e.parent.kind, parentId = e.parent.id)
-                edit = null
-            },
-            onDismiss = { edit = null },
-        )
-
-        null -> Unit
-    }
+    CategoryDialogs(
+        categories = categories,
+        pendingDelete = pendingDelete,
+        edit = edit,
+        vm = vm,
+        onDeleteDone = { pendingDelete = null },
+        onEditDone = { edit = null },
+    )
 
     Column(Modifier.fillMaxSize()) {
         SubScreenHeader(title = "Categorías", onBack = onBack)
@@ -326,4 +294,57 @@ private fun NameDialog(
         containerColor = MaterialTheme.colorScheme.surface,
         shape = MaterialTheme.shapes.large,
     )
+}
+
+/** Confirmación de borrado y diálogos de nombre (renombrar, nueva subcategoría). */
+@Composable
+private fun CategoryDialogs(
+    categories: List<Category>,
+    pendingDelete: Category?,
+    edit: CategoryEdit?,
+    vm: CategoriesViewModel,
+    onDeleteDone: () -> Unit,
+    onEditDone: () -> Unit,
+) {
+    pendingDelete?.let { cat ->
+        ConfirmDialog(
+            title = "¿Eliminar \"${cat.name}\"?",
+            body = "Se elimina la categoría" +
+                (if (cat.parentId == null) " junto con sus subcategorías" else "") +
+                " y todo lo que la use: movimientos, presupuestos, suscripciones, " +
+                "inversiones y planes de cuotas. Esta acción no se puede deshacer.",
+            onConfirm = {
+                vm.delete(cat.id)
+                onDeleteDone()
+            },
+            onDismiss = { onDeleteDone() },
+        )
+    }
+    when (val e = edit) {
+        is CategoryEdit.Rename -> NameDialog(
+            title = "Renombrar categoría",
+            initial = e.category.name,
+            confirmLabel = "Guardar",
+            siblings = categories.filter { it.kind == e.category.kind && it.parentId == e.category.parentId && it.id != e.category.id },
+            onConfirm = {
+                vm.rename(e.category, it)
+                onEditDone()
+            },
+            onDismiss = { onEditDone() },
+        )
+
+        is CategoryEdit.AddSub -> NameDialog(
+            title = "Nueva subcategoría en ${e.parent.name}",
+            initial = "",
+            confirmLabel = "Añadir",
+            siblings = categories.filter { it.parentId == e.parent.id },
+            onConfirm = {
+                vm.add(it, e.parent.kind, parentId = e.parent.id)
+                onEditDone()
+            },
+            onDismiss = { onEditDone() },
+        )
+
+        null -> Unit
+    }
 }

@@ -441,20 +441,7 @@ private fun FundActionSheet(
             if (action == FundAction.Close) {
                 Text("Pon 0 si ya retiraste todo.", style = LocalSageType.current.caption, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            AmountRow("Aportado", totals.contributedMinor, currencyCode)
-            AmountRow("Retirado", totals.withdrawnMinor, currencyCode)
-            if (action == FundAction.Close) {
-                val withdrawn = totals.withdrawnMinor + amountMinor
-                val yieldMinor = InvestmentsViewModel.yieldMinor(withdrawn, totals.contributedMinor)
-                AmountRow(
-                    "Rendimiento",
-                    yieldMinor,
-                    currencyCode,
-                    signed = true,
-                    colorOverride = if (yieldMinor >= 0) finance.income else finance.expense,
-                    pct = if (totals.contributedMinor != 0L) yieldMinor * 100.0 / totals.contributedMinor else null,
-                )
-            }
+            FundTotalsRows(totals, amountMinor, currencyCode, showYield = action == FundAction.Close)
             SageButton(
                 confirmLabel,
                 onClick = { onConfirm(investment.id, action, amountMinor, sourceAccount?.id ?: investment.accountId) },
@@ -626,6 +613,25 @@ internal fun CardAction(label: String, trailing: Painter? = null, onClick: () ->
         if (trailing != null) {
             Icon(trailing, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer, modifier = Modifier.padding(start = 4.dp).size(16.dp))
         }
+    }
+}
+
+/** Aportado y retirado del fondo y, al cerrar, el rendimiento que quedaría con el retiro final. */
+@Composable
+private fun FundTotalsRows(totals: InvestmentsViewModel.FundTotals, finalWithdrawalMinor: Long, currency: String, showYield: Boolean) {
+    val finance = LocalFinanceColors.current
+    AmountRow("Aportado", totals.contributedMinor, currency)
+    AmountRow("Retirado", totals.withdrawnMinor, currency)
+    if (showYield) {
+        val yieldMinor = InvestmentsViewModel.yieldMinor(totals.withdrawnMinor + finalWithdrawalMinor, totals.contributedMinor)
+        AmountRow(
+            "Rendimiento",
+            yieldMinor,
+            currency,
+            signed = true,
+            colorOverride = if (yieldMinor >= 0) finance.income else finance.expense,
+            pct = if (totals.contributedMinor != 0L) yieldMinor * 100.0 / totals.contributedMinor else null,
+        )
     }
 }
 
