@@ -78,8 +78,10 @@ Dirección de dependencias: `ui → viewmodel → data → domain`. Reglas duras
   no cadenas. La conversión a texto ocurre solo en el borde con la base de datos.
 - Prohibido `!!`. Se usa `?: return`, `requireNotNull` con mensaje o un tipo no nulo.
 - Las funciones públicas de `domain/` y `data/` declaran su tipo de retorno.
-- Los warnings del compilador son errores (`allWarningsAsErrors`); se activa al cerrar la Fase 3,
-  cuando desaparezcan los usos de APIs de Material obsoletas.
+- Los warnings del compilador son errores (`allWarningsAsErrors`, activo en `shared/build.gradle.kts`
+  desde el cierre de la Fase 3).
+- UI: tamaños de letra, colores, radios y espacios salen de los tokens (`LocalSageType`,
+  `MaterialTheme.colorScheme`, `LocalFinanceColors`, `SageRadius`, `LocalSpacing`); ver `DESIGN.md`.
 
 ## 5. Errores, estado y datos
 
