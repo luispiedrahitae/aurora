@@ -15,6 +15,7 @@ import com.finanzen.db.Category
 import com.finanzen.db.Subscription
 import com.finanzen.db.TransactionRow
 import com.finanzen.domain.RecurrenceSchedule
+import com.finanzen.domain.SpendingAnalytics
 import com.finanzen.domain.daysInMonth
 import com.finanzen.ui.format.PeriodMode
 import com.finanzen.ui.format.formatDiaMes
@@ -331,10 +332,7 @@ class DashboardViewModel(
 
         /** Gasto proyectado a fin de mes: regla de tres sobre los días transcurridos. Solo aplica
          * al mes en curso (null para meses pasados o futuros — allí no hay nada que proyectar). */
-        internal fun projectMonthEndExpense(expenseSoFarMinor: Long, today: LocalDate, month: LocalDate): Long? {
-            if (today.year != month.year || today.month != month.month) return null
-            return expenseSoFarMinor * daysInMonth(month) / today.day
-        }
+        internal fun projectMonthEndExpense(expenseSoFarMinor: Long, today: LocalDate, month: LocalDate): Long? = SpendingAnalytics.projectMonthEnd(expenseSoFarMinor, today, month)
 
         /** Fusiona las categorías mayores con la porción sintética "Otros" (ver `CategoryDonutChart`),
          * reordenando el conjunto final por pct descendente — "Otros" es la suma de todo lo que no

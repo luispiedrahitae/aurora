@@ -33,6 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.unit.dp
+import com.finanzen.domain.SpendingAnalytics
 import com.finanzen.domain.daysInMonth
 import com.finanzen.ui.components.AddFab
 import com.finanzen.ui.components.BentoTileSize
@@ -232,8 +233,9 @@ private fun BudgetSummary(budgeted: List<BudgetRow>, currency: String, month: Lo
     val spent = budgeted.sumOf { it.spentMinor }
     val limit = budgeted.sumOf { it.limitMinor }
     val left = limit - spent
-    val isCurrentMonth = month.year == today.year && month.month == today.month
-    val daysLeft = if (isCurrentMonth) month.daysInMonth() - today.day + 1 else null
+    // Cupo diario: lo que queda repartido entre los días que faltan (solo en el mes en curso).
+    val allowance = SpendingAnalytics.dailyAllowance(limit, spent, today, month)
+    val daysLeft = month.daysInMonth() - today.day + 1
     val fmt = LocalMoneyFormat.current
     FinanceCard(Modifier.fillMaxWidth(), size = BentoTileSize.Hero) {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -256,14 +258,14 @@ private fun BudgetSummary(budgeted: List<BudgetRow>, currency: String, month: Lo
                         colorOverride = if (left < 0) LocalFinanceColors.current.expense else null,
                     )
                 }
-                if (daysLeft != null && left > 0) {
+                if (allowance != null) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
                             if (daysLeft == 1) "Hoy, último día" else "Por día, $daysLeft días",
                             style = LocalSageType.current.caption,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                        MoneyText(left / daysLeft, currency, style = LocalSageType.current.amountMd)
+                        MoneyText(allowance, currency, style = LocalSageType.current.amountMd)
                     }
                 }
             }
