@@ -613,7 +613,7 @@ class DashboardViewModelTest {
 
         // 100 por día transcurrido -> proyección = 100 por día del mes completo.
         val projected = DashboardViewModel.projectMonthEndExpense(
-            expenseSoFarMinor = today.dayOfMonth * 100L,
+            expenseSoFarMinor = today.day * 100L,
             today = today,
             month = firstOfMonth,
         )

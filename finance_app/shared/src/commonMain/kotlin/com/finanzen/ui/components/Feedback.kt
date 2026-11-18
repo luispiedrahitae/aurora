@@ -21,6 +21,7 @@ import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
@@ -69,7 +70,7 @@ fun InfoTooltip(text: String, contentDescription: String = "Más información", 
     val state = rememberTooltipState(isPersistent = false)
     val scope = rememberCoroutineScope()
     TooltipBox(
-        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
         tooltip = { PlainTooltip { Text(text) } },
         state = state,
         modifier = modifier,

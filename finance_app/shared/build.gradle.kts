@@ -13,6 +13,8 @@ kotlin {
     compilerOptions {
         // Las clases expect/actual siguen en Beta; el proyecto las usa a propósito (platform/).
         freeCompilerArgs.add("-Xexpect-actual-classes")
+        // Un aviso del compilador (API obsoleta, variable sin uso…) rompe el build: ver docs/STANDARDS.md.
+        allWarningsAsErrors.set(true)
     }
 
     androidTarget()
