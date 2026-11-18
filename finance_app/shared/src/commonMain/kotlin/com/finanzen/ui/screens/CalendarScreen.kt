@@ -13,11 +13,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,23 +32,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.finanzen.db.Category
 import com.finanzen.db.TransactionRow
 import com.finanzen.domain.daysInMonth
+import com.finanzen.ui.components.AvatarTone
 import com.finanzen.ui.components.CategoryAvatar
 import com.finanzen.ui.components.EmptyState
 import com.finanzen.ui.components.FinanceCard
+import com.finanzen.ui.components.GroupCard
 import com.finanzen.ui.components.KindAvatar
+import com.finanzen.ui.components.ListRow
 import com.finanzen.ui.components.MoneyText
-import com.finanzen.ui.components.MonthSelector
+import com.finanzen.ui.components.RowDivider
+import com.finanzen.ui.components.ScreenList
 import com.finanzen.ui.components.SubScreenHeader
+import com.finanzen.ui.components.TitledSection
 import com.finanzen.ui.components.kindLabel
 import com.finanzen.ui.components.signedAmountAndColor
 import com.finanzen.ui.format.formatFechaLarga
@@ -57,6 +62,7 @@ import com.finanzen.ui.icons.LucideIcons
 import com.finanzen.ui.theme.LocalDateLocale
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
+import com.finanzen.ui.theme.LocalSageType
 import com.finanzen.viewmodel.TransactionsViewModel
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
@@ -67,7 +73,7 @@ import kotlinx.datetime.todayIn
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.time.Clock
 
-private val WEEKDAYS = listOf("L", "M", "X", "J", "V", "S", "D")
+private val WEEKDAYS = listOf("Lu", "Ma", "Mi", "Ju", "Vi", "Sá", "Do")
 
 private fun LocalDate.epochDay(): Long = toEpochDays()
 
@@ -112,33 +118,42 @@ fun CalendarScreen(
     }
     val selectedRows = byDay[selected.epochDay()].orEmpty()
 
+    // Qué tipos de movimiento tuvo cada día: un punto salvia (ingreso) y/o uno terracota (gasto).
+    val kindsByDay = remember(rows) { rows.groupBy { it.date }.mapValues { (_, list) -> list.map { it.kind }.toSet() } }
+
     Column(Modifier.fillMaxSize()) {
         SubScreenHeader(title = "Calendario", onBack = onBack)
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
+        ScreenList {
             item {
-                MonthSelector(
-                    label = formatMesAnio(month, dateLocale),
-                    onPrev = { goToMonth(month.plus(DatePeriod(months = -1))) },
-                    onNext = { goToMonth(month.plus(DatePeriod(months = 1))) },
-                    onLabelClick = { goToMonth(LocalDate(today.year, today.month, 1)) },
-                )
-            }
-
-            item {
-                // Padding horizontal reducido: deja cada celda en ~45dp de ancho en un teléfono de 360dp.
-                FinanceCard(modifier = Modifier.fillMaxWidth(), contentPadding = PaddingValues(horizontal = 8.dp, vertical = 16.dp)) {
+                FinanceCard(Modifier.fillMaxWidth(), contentPadding = PaddingValues(horizontal = 8.dp, vertical = 12.dp)) {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = { goToMonth(month.plus(DatePeriod(months = -1))) }) {
+                                Icon(LucideIcons.ChevronLeft, contentDescription = "Mes anterior")
+                            }
+                            Text(
+                                formatMesAnio(month, dateLocale),
+                                style = LocalSageType.current.titleSection,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(MaterialTheme.shapes.small)
+                                    .clickable(onClickLabel = "Volver al mes actual", role = Role.Button) {
+                                        goToMonth(LocalDate(today.year, today.month, 1))
+                                    }
+                                    .semantics { heading() },
+                            )
+                            IconButton(onClick = { goToMonth(month.plus(DatePeriod(months = 1))) }) {
+                                Icon(LucideIcons.ChevronRight, contentDescription = "Mes siguiente")
+                            }
+                        }
                         Row(Modifier.fillMaxWidth()) {
                             WEEKDAYS.forEach { d ->
                                 Text(
-                                    d,
-                                    modifier = Modifier.weight(1f),
+                                    d.uppercase(),
+                                    modifier = Modifier.weight(1f).clearAndSetSemantics { },
                                     textAlign = TextAlign.Center,
-                                    style = MaterialTheme.typography.labelMedium,
+                                    style = LocalSageType.current.overline,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 )
                             }
@@ -147,136 +162,47 @@ fun CalendarScreen(
                             month = month,
                             today = today,
                             selected = selected,
-                            netByDay = netByDay,
+                            kindsByDay = kindsByDay,
                             onSelect = { selectedDay = it.toEpochDays() },
                         )
+                        HorizontalDivider(Modifier.padding(top = 8.dp, start = 8.dp, end = 8.dp), color = MaterialTheme.colorScheme.outlineVariant)
+                        Row(
+                            Modifier.padding(start = 8.dp, top = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            LegendDot(LocalFinanceColors.current.income, "Ingreso")
+                            LegendDot(LocalFinanceColors.current.expense, "Gasto")
+                        }
                     }
                 }
             }
 
-            // Qué día se está viendo y su neto: sin esto la lista de abajo no decía a qué fecha pertenecía.
             item {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        formatFechaLarga(selected, dateLocale),
-                        modifier = Modifier.weight(1f).semantics { heading() },
-                        style = MaterialTheme.typography.titleMedium,
-                    )
+                TitledSection(formatFechaLarga(selected, dateLocale).replaceFirstChar { it.uppercase() }) {
                     netByDay[selected.epochDay()]?.let { net ->
-                        MoneyText(net, currency = selectedRows.firstOrNull()?.currency ?: "", signed = true)
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Neto del día", style = LocalSageType.current.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            MoneyText(net, currency = selectedRows.firstOrNull()?.currency ?: "", style = LocalSageType.current.amountSm, signed = true)
+                        }
                     }
-                }
-            }
-
-            if (selectedRows.isEmpty()) {
-                item {
-                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    if (selectedRows.isEmpty()) {
                         EmptyState(
                             icon = LucideIcons.Receipt,
                             title = "Sin movimientos este día",
                             subtitle = "Toca otro día del calendario o registra uno con el botón + de Movimientos.",
-                            modifier = Modifier.padding(32.dp),
                         )
-                    }
-                }
-            } else {
-                items(selectedRows, key = { it.id }) { row ->
-                    val subcategory = categoriesById[row.categoryId]
-                    DayTxRow(
-                        row,
-                        category = subcategory,
-                        parentCategory = subcategory?.parentId?.let { categoriesById[it] },
-                        onClick = { onEdit(row.id) },
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun MonthGrid(
-    month: LocalDate,
-    today: LocalDate,
-    selected: LocalDate,
-    netByDay: Map<Long, Long>,
-    onSelect: (LocalDate) -> Unit,
-) {
-    val finance = LocalFinanceColors.current
-    val dateLocale = LocalDateLocale.current
-    val leadingBlanks = month.dayOfWeek.isoDayNumber - 1 // lunes = 0
-    val total = daysInMonth(month)
-    // Lista de celdas: nulls iniciales para alinear el primer día a su columna.
-    val cells: List<Int?> = List(leadingBlanks) { null } + (1..total).toList()
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        cells.chunked(7).forEach { week ->
-            Row(Modifier.fillMaxWidth()) {
-                // Rellena la última semana para que las celdas conserven el ancho.
-                val padded = week + List(7 - week.size) { null }
-                padded.forEach { day ->
-                    if (day == null) {
-                        Box(modifier = Modifier.weight(1f).height(48.dp))
                     } else {
-                        val date = LocalDate(month.year, month.month, day)
-                        val isSelected = date == selected
-                        val isToday = date == today
-                        val net = netByDay[date.epochDay()]
-                        // El punto de color no puede ser la única codificación: la celda anuncia el
-                        // estado del día (sin movimientos / neto positivo / negativo / en cero).
-                        val dayState = when {
-                            net == null -> "sin movimientos"
-                            net > 0L -> "neto positivo"
-                            net < 0L -> "neto negativo"
-                            else -> "neto en cero"
-                        }
-                        Box(
-                            // El área táctil es la celda completa (~45×48dp); el círculo de 40dp queda
-                            // como tratamiento visual de selección/hoy.
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(48.dp)
-                                .selectable(selected = isSelected, role = Role.Button) { onSelect(date) }
-                                .semantics(mergeDescendants = true) {
-                                    contentDescription = listOfNotNull(
-                                        formatFechaLarga(date, dateLocale),
-                                        "hoy".takeIf { isToday },
-                                        dayState,
-                                    ).joinToString(", ")
-                                },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center,
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .then(
-                                        if (isSelected) {
-                                            Modifier.background(MaterialTheme.colorScheme.primaryContainer)
-                                        } else if (isToday) {
-                                            Modifier.border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
-                                        } else {
-                                            Modifier
-                                        },
-                                    ),
-                            ) {
-                                Text(
-                                    day.toString(),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = if (isSelected) {
-                                        MaterialTheme.colorScheme.onPrimaryContainer
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurface
-                                    },
+                        GroupCard {
+                            selectedRows.forEachIndexed { index, row ->
+                                if (index > 0) RowDivider()
+                                val subcategory = categoriesById[row.categoryId]
+                                DayTxRow(
+                                    row,
+                                    category = subcategory,
+                                    parentCategory = subcategory?.parentId?.let { categoriesById[it] },
+                                    onClick = { onEdit(row.id) },
                                 )
-                                val dotColor = when {
-                                    net == null -> Color.Transparent
-                                    net > 0 -> finance.income
-                                    net < 0 -> finance.expense
-                                    else -> finance.neutral
-                                }
-                                Box(modifier = Modifier.size(5.dp).clip(CircleShape).background(dotColor))
                             }
                         }
                     }
@@ -287,63 +213,127 @@ private fun MonthGrid(
 }
 
 @Composable
+private fun LegendDot(color: Color, label: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Box(Modifier.size(10.dp).clip(CircleShape).background(color))
+        Text(label, style = LocalSageType.current.caption, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun MonthGrid(
+    month: LocalDate,
+    today: LocalDate,
+    selected: LocalDate,
+    kindsByDay: Map<Long, Set<String>>,
+    onSelect: (LocalDate) -> Unit,
+) {
+    val finance = LocalFinanceColors.current
+    val scheme = MaterialTheme.colorScheme
+    val dateLocale = LocalDateLocale.current
+    val leadingBlanks = month.dayOfWeek.isoDayNumber - 1 // lunes = 0
+    val total = daysInMonth(month)
+    // Lista de celdas: nulls iniciales para alinear el primer día a su columna.
+    val cells: List<Int?> = List(leadingBlanks) { null } + (1..total).toList()
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        cells.chunked(DAYS_PER_WEEK).forEach { week ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                // Rellena la última semana para que las celdas conserven el ancho.
+                val padded = week + List(DAYS_PER_WEEK - week.size) { null }
+                padded.forEach { day ->
+                    if (day == null) {
+                        Box(Modifier.weight(1f).height(48.dp))
+                    } else {
+                        val date = LocalDate(month.year, month.month, day)
+                        val isSelected = date == selected
+                        val isToday = date == today
+                        val kinds = kindsByDay[date.epochDay()].orEmpty()
+                        val hasIncome = "INCOME" in kinds
+                        val hasExpense = "EXPENSE" in kinds
+                        // Los puntos no son la única codificación: la celda anuncia qué tuvo el día.
+                        val dayState = when {
+                            hasIncome && hasExpense -> "con ingresos y gastos"
+                            hasIncome -> "con ingresos"
+                            hasExpense -> "con gastos"
+                            kinds.isNotEmpty() -> "con movimientos"
+                            else -> null
+                        }
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp)
+                                .clip(MaterialTheme.shapes.small)
+                                .then(
+                                    when {
+                                        isSelected -> Modifier.background(scheme.primary)
+                                        isToday -> Modifier.border(1.dp, scheme.primary, MaterialTheme.shapes.small)
+                                        else -> Modifier
+                                    },
+                                )
+                                .selectable(selected = isSelected, role = Role.Button) { onSelect(date) }
+                                .semantics(mergeDescendants = true) {
+                                    contentDescription = listOfNotNull(
+                                        formatFechaLarga(date, dateLocale),
+                                        "hoy".takeIf { isToday },
+                                        dayState,
+                                    ).joinToString(", ")
+                                },
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterVertically),
+                        ) {
+                            Text(
+                                day.toString(),
+                                style = LocalSageType.current.label.copy(fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium),
+                                color = when {
+                                    isSelected -> scheme.onPrimary
+                                    date > today -> scheme.onSurfaceVariant
+                                    else -> scheme.onSurface
+                                },
+                            )
+                            Row(Modifier.height(6.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                                if (hasIncome) Dot(if (isSelected) scheme.onPrimary else finance.income)
+                                if (hasExpense) Dot(if (isSelected) scheme.onPrimary else finance.expense)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun Dot(color: Color) {
+    Box(Modifier.size(6.dp).clip(CircleShape).background(color))
+}
+
+private const val DAYS_PER_WEEK = 7
+
+@Composable
 private fun DayTxRow(row: TransactionRow, category: Category?, parentCategory: Category?, onClick: () -> Unit) {
     val finance = LocalFinanceColors.current
     val fmt = LocalMoneyFormat.current
     val isTransfer = row.kind == "TRANSFER"
     val (signedAmount, amountColor) = signedAmountAndColor(row.kind, row.amountMinor, finance)
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.medium)
-            .clickable(onClickLabel = "Editar", role = Role.Button, onClick = onClick)
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        if (category != null) {
-            CategoryAvatar(name = category.name, size = 40.dp)
-        } else {
-            KindAvatar(kind = row.kind)
-        }
-        Column(Modifier.weight(1f)) {
-            // Título = subcategoría (lo que el usuario eligió), como en Movimientos; nunca "(sin nota)".
-            Text(
-                if (isTransfer) "Transferencia" else category?.name ?: row.note.ifBlank { kindLabel(row.kind) },
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                parentCategory?.name ?: kindLabel(row.kind),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-            )
-        }
-        if (isTransfer) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Icon(
-                    LucideIcons.ArrowLeftRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(16.dp),
-                )
-                Text(
-                    fmt.format(row.amountMinor, row.currency),
-                    fontWeight = FontWeight.SemiBold,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        } else {
-            Text(
-                fmt.format(signedAmount, row.currency, signed = true),
-                fontWeight = FontWeight.SemiBold,
-                style = MaterialTheme.typography.bodyLarge,
-                color = amountColor,
-            )
-        }
+    val tone = when (row.kind) {
+        "INCOME" -> AvatarTone.Income
+        "EXPENSE" -> AvatarTone.Expense
+        else -> AvatarTone.Accent
     }
+    ListRow(
+        // Título = subcategoría (lo que el usuario eligió), como en Movimientos; nunca "(sin nota)".
+        title = if (isTransfer) "Transferencia" else category?.name ?: row.note.ifBlank { kindLabel(row.kind) },
+        subtitle = parentCategory?.name ?: kindLabel(row.kind),
+        leading = {
+            if (category != null) CategoryAvatar(name = category.name, tone = tone) else KindAvatar(kind = row.kind)
+        },
+        onClick = onClick,
+        trailing = {
+            if (isTransfer) {
+                Text(fmt.format(row.amountMinor, row.currency), style = LocalSageType.current.amountMd, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                Text(fmt.format(signedAmount, row.currency, signed = true), style = LocalSageType.current.amountMd, color = amountColor)
+            }
+        },
+    )
 }
