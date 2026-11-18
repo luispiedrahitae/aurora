@@ -7,8 +7,12 @@ Rama de trabajo: `redesign` · Respaldo intocable: `backup/pre-redesign` (2da1f2
 
 **Fase 3 — implementada (2026-11-17).** Todas las pantallas usan el design system Sage;
 `checkQuality` y `:androidApp:assembleDebug` en verde con `allWarningsAsErrors`. Pendiente: revisión
-visual en dispositivo por el usuario. **Siguiente: ⛔ Checkpoint 3** — presentar el modelo de datos y
-las fórmulas de las simulaciones (Fase 4) antes de implementarlas.
+visual en dispositivo por el usuario.
+
+**⛔ Checkpoint 3 — presentado el 2026-11-17, esperando aprobación.** Modelo de datos y fórmulas de
+las simulaciones (fondos y gastos diarios) entregados en el chat, con 4 decisiones abiertas:
+guardar simulaciones (tabla nueva + primera migración), cómo cargar datos de ejemplo, cobro de la
+comisión de administración y definición de "semana". No se implementa nada hasta la aprobación.
 
 - Design system: https://claude.ai/artifact/QdRX1cFzN6aWpb9gnEXy5s
 - Pantallas: https://claude.ai/artifact/D5SE4kr7NDM584HCZmj2th
@@ -22,7 +26,7 @@ las fórmulas de las simulaciones (Fase 4) antes de implementarlas.
 | ⛔ Checkpoint 1 | ✅ Aprobado (2026-11-16) | Decisiones en la tabla de abajo |
 | 2 — Estándares | ✅ Hecha (2026-11-16) | Ver "Fase 2 paso a paso" |
 | 3 — Design system (Claude Design) | ✅ Hecha (2026-11-17) | ⛔ Checkpoint 2: ✅ aprobado. Falta revisión en dispositivo |
-| 4 — Simulaciones | ⏳ Pendiente | ⛔ Checkpoint 3 (modelo + fórmulas) antes de implementar |
+| 4 — Simulaciones | ⏳ Pendiente | ⛔ Checkpoint 3 presentado (2026-11-17), esperando aprobación |
 | 5 — Verificación y entrega | ⏳ Pendiente | |
 
 ## Fase 2 paso a paso
