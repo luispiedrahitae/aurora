@@ -1,17 +1,19 @@
 package com.finanzen.ui.screens
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -19,7 +21,6 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedIconButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -33,28 +34,34 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.finanzen.data.RESERVED_CATEGORY_NAMES
+import com.finanzen.db.Subscription
+import com.finanzen.db.TransactionRow
 import com.finanzen.domain.InstallmentMath
 import com.finanzen.ui.components.CategoryAvatar
 import com.finanzen.ui.components.ConfirmDialog
 import com.finanzen.ui.components.DateField
 import com.finanzen.ui.components.DiscardChangesDialog
 import com.finanzen.ui.components.FieldError
+import com.finanzen.ui.components.FieldLabel
 import com.finanzen.ui.components.MoneyField
 import com.finanzen.ui.components.PickerField
-import com.finanzen.ui.components.SelectorPill
+import com.finanzen.ui.components.SageButton
+import com.finanzen.ui.components.SageChip
+import com.finanzen.ui.components.SageTextField
+import com.finanzen.ui.components.SegmentedControl
 import com.finanzen.ui.components.SheetHeader
+import com.finanzen.ui.components.SwitchRow
 import com.finanzen.ui.components.accountTypeLabel
+import com.finanzen.ui.components.kindLabel
 import com.finanzen.ui.components.rememberGuardedSheetState
-import com.finanzen.ui.components.sageFieldColors
 import com.finanzen.ui.icons.LucideIcons
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
-import com.finanzen.ui.theme.LocalSpacing
-import com.finanzen.ui.theme.PillShape
-import com.finanzen.ui.theme.displayFontFamily
+import com.finanzen.ui.theme.LocalSageType
 import com.finanzen.viewmodel.InvestmentsViewModel
 import com.finanzen.viewmodel.SubscriptionsViewModel
 import com.finanzen.viewmodel.TransactionsViewModel
@@ -180,15 +187,23 @@ fun TransactionFormScreen(
     val requestDismiss = { if (dirty) confirmDiscard = true else onDismiss() }
     if (confirmDiscard) DiscardChangesDialog(onDiscard = onDismiss, onKeepEditing = { confirmDiscard = false })
     val sheetState = rememberGuardedSheetState(dirty) { confirmDiscard = true }
-    ModalBottomSheet(onDismissRequest = requestDismiss, sheetState = sheetState, dragHandle = null) {
+    ModalBottomSheet(
+        onDismissRequest = requestDismiss,
+        sheetState = sheetState,
+        dragHandle = null,
+        containerColor = MaterialTheme.colorScheme.background,
+        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+    ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(24.dp).verticalScroll(rememberScrollState()),
+            modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             SheetHeader(
                 title = when {
                     editingSubscription != null -> "Editar suscripción"
-                    editingInvestment != null -> "Editar inversión"
+                    editingInvestment != null -> "Editar aporte a fondo"
+                    existing == null && kind == "SUBSCRIPTION" -> "Nueva suscripción"
+                    existing == null && kind == "INVESTMENT" -> "Nuevo aporte a fondo"
                     existing == null -> "Nuevo movimiento"
                     else -> "Editar movimiento"
                 },
@@ -199,87 +214,50 @@ fun TransactionFormScreen(
             // por sus propios campos (más abajo) — no tiene sentido "cambiar el tipo" de algo que ya
             // está fijado por el vínculo.
             if (!isLinkedEdit) {
+                val selectKind: (String) -> Unit = { k ->
+                    kind = k
+                    categoryId = null
+                    subcategoryId = null
+                    showAddSubcategory = false
+                    newSubcategoryName = ""
+                }
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SelectorPill(
-                            text = "Gasto",
-                            selected = kind == "EXPENSE",
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            kind = "EXPENSE"
-                            categoryId = null
-                            subcategoryId = null
-                            showAddSubcategory = false
-                            newSubcategoryName = ""
-                        }
-                        SelectorPill(
-                            text = "Ingreso",
-                            selected = kind == "INCOME",
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            kind = "INCOME"
-                            categoryId = null
-                            subcategoryId = null
-                            showAddSubcategory = false
-                            newSubcategoryName = ""
-                        }
-                        SelectorPill(
-                            text = "Transferencia",
-                            selected = isTransfer,
-                            modifier = Modifier.weight(1f),
-                        ) {
-                            kind = "TRANSFER"
-                            categoryId = null
-                            subcategoryId = null
-                            showAddSubcategory = false
-                            newSubcategoryName = ""
-                        }
-                    }
-                    // Suscripción/Inversión solo al crear: editar un movimiento existente sin vínculo
-                    // sigue editando solo el TransactionRow.
+                    SegmentedControl(
+                        options = listOf("EXPENSE", "INCOME", "TRANSFER"),
+                        // Suscripción e Inversión no son pestañas: con una de ellas elegida no se marca ninguna.
+                        selected = kind,
+                        onSelect = selectKind,
+                        label = { kindLabel(it) },
+                    )
+                    // Suscripción/Inversión solo al crear: editar un movimiento sin vínculo edita solo esa fila.
                     if (existing == null) {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            SelectorPill(
-                                text = "Suscripción",
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("También:", style = LocalSageType.current.caption, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            SageChip(
+                                "Suscripción",
+                                onClick = { selectKind(if (kind == "SUBSCRIPTION") "EXPENSE" else "SUBSCRIPTION") },
                                 selected = kind == "SUBSCRIPTION",
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                kind = "SUBSCRIPTION"
-                                categoryId = null
-                                subcategoryId = null
-                                showAddSubcategory = false
-                                newSubcategoryName = ""
-                            }
-                            SelectorPill(
-                                text = "Inversión",
+                                icon = LucideIcons.Repeat,
+                            )
+                            SageChip(
+                                "Aporte a fondo",
+                                onClick = { selectKind(if (kind == "INVESTMENT") "EXPENSE" else "INVESTMENT") },
                                 selected = kind == "INVESTMENT",
-                                modifier = Modifier.weight(1f),
-                            ) {
-                                kind = "INVESTMENT"
-                                categoryId = null
-                                subcategoryId = null
-                                showAddSubcategory = false
-                                newSubcategoryName = ""
-                            }
+                                icon = LucideIcons.TrendingUp,
+                            )
                         }
                     }
                 }
             }
 
             if (isRecurringType) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Nombre", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    OutlinedTextField(
-                        value = movementName,
-                        onValueChange = { movementName = it },
-                        singleLine = true,
-                        isError = error == NAME_ERROR,
-                        shape = MaterialTheme.shapes.medium,
-                        colors = sageFieldColors(),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    if (error == NAME_ERROR) FieldError(NAME_ERROR)
-                }
+                SageTextField(
+                    value = movementName,
+                    onValueChange = { movementName = it },
+                    label = if (effectiveKind == "SUBSCRIPTION") "Nombre de la suscripción" else "Nombre del fondo",
+                    placeholder = if (effectiveKind == "SUBSCRIPTION") "Ej.: Netflix" else "Ej.: Fondo de emergencia",
+                    error = NAME_ERROR.takeIf { error == NAME_ERROR },
+                )
             }
 
             MoneyField(
@@ -357,11 +335,12 @@ fun TransactionFormScreen(
                             OutlinedIconButton(
                                 onClick = { showAddSubcategory = true },
                                 enabled = selectedCategory != null,
-                                shape = MaterialTheme.shapes.medium,
+                                shape = MaterialTheme.shapes.small,
                                 colors = IconButtonDefaults.outlinedIconButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                                 ),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                                 modifier = Modifier.size(56.dp),
                             ) {
                                 Icon(LucideIcons.Plus, contentDescription = "Nueva subcategoría")
@@ -372,29 +351,27 @@ fun TransactionFormScreen(
                     // el "+" se reemplaza por un campo "Nombre" + botón "Añadir" dentro del formulario.
                     if (showAddSubcategory) {
                         Row(
-                            verticalAlignment = Alignment.CenterVertically,
+                            verticalAlignment = Alignment.Bottom,
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            OutlinedTextField(
+                            SageTextField(
                                 value = newSubcategoryName,
                                 onValueChange = { newSubcategoryName = it },
-                                placeholder = { Text("Nombre") },
-                                singleLine = true,
-                                isError = subcategoryNameTaken,
-                                shape = MaterialTheme.shapes.medium,
-                                colors = sageFieldColors(),
+                                label = "Nueva subcategoría",
+                                placeholder = "Nombre",
                                 modifier = Modifier.weight(1f),
                             )
-                            Button(
+                            SageButton(
+                                "Añadir",
                                 onClick = {
-                                    val catId = selectedCategory?.id ?: return@Button
-                                    subcategoryId = vm.addSubcategory(newSubcategoryName, kind, catId)
-                                    showAddSubcategory = false
-                                    newSubcategoryName = ""
+                                    selectedCategory?.id?.let { catId ->
+                                        subcategoryId = vm.addSubcategory(newSubcategoryName, kind, catId)
+                                        showAddSubcategory = false
+                                        newSubcategoryName = ""
+                                    }
                                 },
                                 enabled = selectedCategory != null && newSubcategoryName.isNotBlank() && !subcategoryNameTaken,
-                                shape = PillShape,
-                            ) { Text("Añadir") }
+                            )
                         }
                         if (subcategoryNameTaken) FieldError("Ya existe una subcategoría con ese nombre")
                     }
@@ -421,7 +398,7 @@ fun TransactionFormScreen(
                         "Se registrará la cuota 1 (${LocalMoneyFormat.current.format(monthly, selectedAccount.currency)}) " +
                             "este mes. Las próximas ${installments - 1} cuotas se agregan automáticamente cada mes " +
                             "hasta completar el plan, con el interés de tu tarjeta.",
-                        style = MaterialTheme.typography.bodySmall,
+                        style = LocalSageType.current.caption,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -431,11 +408,7 @@ fun TransactionFormScreen(
             // lo sigue gestionando solo el catch-up existente.
             if (!isLinkedEdit) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        "Fecha",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    FieldLabel("Fecha")
                     DateField(
                         epochDay = dateEpochDay,
                         onEpochDayChange = { dateEpochDay = it },
@@ -446,19 +419,22 @@ fun TransactionFormScreen(
             }
 
             if (effectiveKind == "INVESTMENT") {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("¿Periódica?", style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
-                    SelectorPill(text = "Sí", selected = periodic, onClick = { periodic = true })
-                    SelectorPill(text = "No", selected = !periodic, onClick = { periodic = false })
-                }
+                SwitchRow(
+                    title = "Aporte periódico",
+                    subtitle = "Sage registra el aporte solo cada vez que toque.",
+                    checked = periodic,
+                    onCheckedChange = { periodic = it },
+                )
             }
             if (effectiveKind == "SUBSCRIPTION" || (effectiveKind == "INVESTMENT" && periodic)) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Recurrencia", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SelectorPill(text = "Día del mes", selected = recurMonthly, modifier = Modifier.weight(1f), onClick = { recurMonthly = true })
-                        SelectorPill(text = "Cada X días", selected = !recurMonthly, modifier = Modifier.weight(1f), onClick = { recurMonthly = false })
-                    }
+                    FieldLabel("Se repite")
+                    SegmentedControl(
+                        options = listOf(true, false),
+                        selected = recurMonthly,
+                        onSelect = { recurMonthly = it },
+                        label = { if (it) "Un día del mes" else "Cada X días" },
+                    )
                     if (recurMonthly) {
                         LabeledNumberField(
                             label = "Día del mes (1–31)",
@@ -484,7 +460,16 @@ fun TransactionFormScreen(
             // Los errores de un campo concreto ya se muestran bajo ese campo; aquí quedan los generales.
             error?.takeIf { it !in FIELD_ERRORS }?.let { FieldError(it) }
 
-            Button(
+            SageButton(
+                text = when {
+                    editingSubscription != null -> "Guardar suscripción"
+                    editingInvestment != null -> "Guardar aporte"
+                    effectiveKind == "SUBSCRIPTION" -> "Guardar suscripción"
+                    effectiveKind == "INVESTMENT" -> "Guardar aporte"
+                    effectiveKind == "INCOME" -> "Guardar ingreso"
+                    effectiveKind == "TRANSFER" -> "Guardar transferencia"
+                    else -> "Guardar gasto"
+                },
                 onClick = {
                     val account = selectedAccount
                     val minor = amountMinor
@@ -631,16 +616,7 @@ fun TransactionFormScreen(
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    when {
-                        editingSubscription != null -> "Guardar suscripción"
-                        editingInvestment != null -> "Guardar inversión"
-                        else -> "Guardar movimiento"
-                    },
-                    fontFamily = displayFontFamily(),
-                )
-            }
+            )
 
             if (editingSubscription != null) {
                 TextButton(
@@ -650,9 +626,9 @@ fun TransactionFormScreen(
                             onDismiss()
                         }
                     },
-                    colors = ButtonDefaults.textButtonColors(contentColor = finance.expense),
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text("Eliminar suscripción") }
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                ) { Text("Eliminar suscripción", style = LocalSageType.current.label) }
             } else if (editingInvestment != null) {
                 TextButton(
                     onClick = {
@@ -661,9 +637,9 @@ fun TransactionFormScreen(
                             onDismiss()
                         }
                     },
-                    colors = ButtonDefaults.textButtonColors(contentColor = finance.expense),
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text("Eliminar inversión") }
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                ) { Text("Eliminar aporte", style = LocalSageType.current.label) }
             } else if (existing != null) {
                 TextButton(
                     onClick = {
@@ -677,9 +653,9 @@ fun TransactionFormScreen(
                             }
                         }
                     },
-                    colors = ButtonDefaults.textButtonColors(contentColor = finance.expense),
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text("Eliminar movimiento") }
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                ) { Text("Eliminar movimiento", style = LocalSageType.current.label) }
             }
         }
     }
@@ -698,21 +674,19 @@ fun TransactionFormScreen(
     }
 
     blockedDelete?.let { block ->
-        AlertDialog(
-            onDismissRequest = { blockedDelete = null },
-            title = { Text("No se puede eliminar") },
-            text = {
-                Text(
-                    when (block) {
-                        is TransactionsViewModel.DeleteBlock.Subscription ->
-                            "\"${block.name}\" es una suscripción periódica. Elimínala desde la pantalla de Suscripciones — una vez eliminada, podrás borrar este movimiento aquí."
+        ConfirmDialog(
+            title = "No se puede eliminar",
+            body = when (block) {
+                is TransactionsViewModel.DeleteBlock.Subscription ->
+                    "\"${block.name}\" es una suscripción periódica. Elimínala desde Suscripciones; después podrás borrar este movimiento aquí."
 
-                        is TransactionsViewModel.DeleteBlock.Investment ->
-                            "\"${block.name}\" es una inversión periódica. Gestiónala desde la pantalla de Inversiones."
-                    },
-                )
+                is TransactionsViewModel.DeleteBlock.Investment ->
+                    "\"${block.name}\" es un aporte periódico a un fondo. Gestiónalo desde Fondos de inversión."
             },
-            confirmButton = { TextButton(onClick = { blockedDelete = null }) { Text("Entendido") } },
+            confirmLabel = "Entendido",
+            onConfirm = { blockedDelete = null },
+            onDismiss = { blockedDelete = null },
+            destructive = false,
         )
     }
 }
@@ -722,21 +696,14 @@ private const val MAX_INSTALLMENTS = 360L
 /** Campo numérico con la etiqueta encima y el error debajo, igual que los demás campos de la hoja. */
 @Composable
 private fun LabeledNumberField(label: String, value: String, onValueChange: (String) -> Unit, placeholder: String? = null, error: String? = null) {
-    Column(verticalArrangement = Arrangement.spacedBy(LocalSpacing.current.xs)) {
-        Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        OutlinedTextField(
-            value = value,
-            onValueChange = onValueChange,
-            placeholder = placeholder?.let { { Text(it) } },
-            isError = error != null,
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            shape = MaterialTheme.shapes.medium,
-            colors = sageFieldColors(),
-            modifier = Modifier.fillMaxWidth(),
-        )
-        if (error != null) FieldError(error)
-    }
+    SageTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = label,
+        placeholder = placeholder,
+        error = error,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+    )
 }
 
 private const val AMOUNT_ERROR = "Escribe un monto mayor que 0."

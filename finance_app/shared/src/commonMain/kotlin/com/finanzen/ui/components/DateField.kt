@@ -31,6 +31,7 @@ import com.finanzen.data.CurrencyLocaleInfo
 import com.finanzen.ui.format.formatFechaCorta
 import com.finanzen.ui.icons.LucideIcons
 import com.finanzen.ui.theme.LocalDateLocale
+import com.finanzen.ui.theme.LocalSageType
 
 private const val MILLIS_PER_DAY = 86_400_000L
 private val REASONABLE_YEAR_RANGE = 1990..2100
@@ -50,7 +51,7 @@ fun DateField(
     // MoneyField.kt) con el ícono de calendario al final, en vez de un OutlinedButton con ícono
     // líder. Por ahora solo lo usa TransactionFormScreen; Suscripciones/Inversiones siguen con el
     // botón de siempre.
-    plain: Boolean = false,
+    plain: Boolean = true,
 ) {
     var showPicker by remember { mutableStateOf(false) }
 
@@ -87,7 +88,8 @@ fun DateField(
             onValueChange = {},
             readOnly = true,
             trailingIcon = { Icon(LucideIcons.Calendar, contentDescription = null) },
-            shape = MaterialTheme.shapes.medium,
+            shape = MaterialTheme.shapes.small,
+            textStyle = LocalSageType.current.body,
             colors = sageFieldColors(),
             modifier = Modifier.fillMaxWidth(),
         )
@@ -96,7 +98,7 @@ fun DateField(
         Box(
             Modifier
                 .matchParentSize()
-                .clip(MaterialTheme.shapes.medium)
+                .clip(MaterialTheme.shapes.small)
                 .clickable(onClickLabel = "Abrir calendario") { showPicker = true }
                 .clearAndSetSemantics {
                     role = Role.Button
