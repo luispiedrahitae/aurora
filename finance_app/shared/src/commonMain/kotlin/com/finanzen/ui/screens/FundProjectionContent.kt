@@ -45,6 +45,8 @@ import com.finanzen.ui.components.SageButtonKind
 import com.finanzen.ui.components.ScreenList
 import com.finanzen.ui.components.SectionHeader
 import com.finanzen.ui.components.StackedBar
+import com.finanzen.ui.components.axisScale
+import com.finanzen.ui.components.currencyDecimals
 import com.finanzen.ui.components.niceTicks
 import com.finanzen.ui.format.formatDecimal
 import com.finanzen.ui.format.formatPercent
@@ -57,9 +59,6 @@ import kotlin.math.pow
 
 /** Un escenario proyectado: cuál es, con qué entradas y su serie. */
 private data class ScenarioResult(val scenario: Scenario, val input: ProjectionInput, val projection: FundProjection)
-
-/** Escala de los ejes en unidades enteras de la moneda: millones, miles o unidades. */
-private data class AxisScale(val divisor: Double, val unit: String)
 
 @Composable
 internal fun FundProjectionContent(plan: FundPlan, isSaved: Boolean, onCompare: () -> Unit, onSave: () -> Unit) {
@@ -375,21 +374,12 @@ private fun Caption(text: String, color: Color = MaterialTheme.colorScheme.onSur
     Text(text, style = LocalSageType.current.caption, color = color)
 }
 
-@Composable
-private fun currencyDecimals(currency: String): Int = LocalMoneyFormat.current.currencies[currency]?.decimals?.toInt() ?: 2
-
 private val Scenario.shortLabel: String get() = if (this == Scenario.CONSERVATIVE) "Conserv." else label
 
 private fun scenarioColor(scenario: Scenario, chart: List<Color>): Color = when (scenario) {
     Scenario.CONSERVATIVE -> chart[0]
     Scenario.AGGRESSIVE -> chart[1]
     Scenario.MODERATE, Scenario.FIXED -> chart[2]
-}
-
-private fun axisScale(maxMajor: Double): AxisScale = when {
-    maxMajor >= MILLION -> AxisScale(MILLION, "Millones de")
-    maxMajor >= THOUSAND -> AxisScale(THOUSAND, "Miles de")
-    else -> AxisScale(1.0, "")
 }
 
 private fun formatTick(value: Double): String = if (value % 1.0 == 0.0) value.toLong().toString() else formatDecimal(value)
@@ -412,8 +402,6 @@ private fun termLabel(months: Int): String = when {
 
 private fun yearLabel(month: Int): String = if (month % MONTHS_IN_YEAR == 0) (month / MONTHS_IN_YEAR).toString() else "${month / MONTHS_IN_YEAR} a ${month % MONTHS_IN_YEAR} m"
 
-private const val MILLION = 1_000_000.0
-private const val THOUSAND = 1_000.0
 private const val COLLAPSED_ROWS = 4
 private const val MAX_X_TICKS = 6
 private const val QUARTER = 3

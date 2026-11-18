@@ -72,6 +72,7 @@ import com.finanzen.ui.screens.SubscriptionsScreen
 import com.finanzen.ui.screens.SuggestionsScreen
 import com.finanzen.ui.screens.TransactionFormScreen
 import com.finanzen.ui.screens.TransactionsScreen
+import com.finanzen.ui.screens.TrendsScreen
 import com.finanzen.ui.theme.LocalReduceMotion
 import com.finanzen.ui.theme.LocalSageType
 import com.finanzen.ui.theme.SageMotion
@@ -275,6 +276,7 @@ private fun AppNavHost(
             FundSimulationScreen(simulationId = entry.toRoute<FundSimulationRoute>().id.takeIf { it > 0 }, onBack = back)
         }
         composable(Routes.REPORTS) { ReportsScreen(onBack = back) }
+        composable(Routes.TRENDS) { TrendsScreen(onBack = back) }
         composable(Routes.SECURITY) { SecuritySettingsScreen(onBack = back) }
         composable(Routes.BACKUP) { BackupScreen(onBack = back) }
         composable(Routes.APPEARANCE) { SettingsScreen(onBack = back) }

@@ -21,6 +21,7 @@ import com.finanzen.viewmodel.BackupViewModel
 import com.finanzen.viewmodel.BudgetsViewModel
 import com.finanzen.viewmodel.CategoriesViewModel
 import com.finanzen.viewmodel.DashboardViewModel
+import com.finanzen.viewmodel.DemoDataViewModel
 import com.finanzen.viewmodel.FundSimulationsViewModel
 import com.finanzen.viewmodel.InvestmentsViewModel
 import com.finanzen.viewmodel.ReportsViewModel
@@ -29,6 +30,7 @@ import com.finanzen.viewmodel.SettingsViewModel
 import com.finanzen.viewmodel.SubscriptionCatchUp
 import com.finanzen.viewmodel.SubscriptionsViewModel
 import com.finanzen.viewmodel.TransactionsViewModel
+import com.finanzen.viewmodel.TrendsViewModel
 import org.koin.core.context.startKoin
 import org.koin.core.module.Module
 import org.koin.core.module.dsl.viewModel
@@ -73,6 +75,8 @@ val sharedModule: Module = module {
     viewModel { ReportsViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { BackupViewModel(get(), get(), get()) }
     viewModel { FundSimulationsViewModel(get(), get()) }
+    viewModel { TrendsViewModel(get(), get(), get()) }
+    viewModel { DemoDataViewModel(get(), get()) }
     single { SecurityViewModel(get()) }
     single { SettingsViewModel(get(), get()) }
 }

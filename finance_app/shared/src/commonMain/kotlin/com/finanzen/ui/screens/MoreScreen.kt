@@ -30,6 +30,7 @@ fun MoreScreen(onNavigate: (route: String) -> Unit, settingsVm: SettingsViewMode
             MoreItem("Suscripciones", LucideIcons.Repeat, Routes.SUBSCRIPTIONS),
             MoreItem("Fondos de inversión", LucideIcons.TrendingUp, Routes.INVESTMENTS),
             MoreItem("Calendario", LucideIcons.Calendar, Routes.CALENDAR),
+            MoreItem("Tendencias de gasto", LucideIcons.PieChart, Routes.TRENDS),
             MoreItem("Reportes", LucideIcons.FileText, Routes.REPORTS),
         ),
         "Ajustes" to listOf(

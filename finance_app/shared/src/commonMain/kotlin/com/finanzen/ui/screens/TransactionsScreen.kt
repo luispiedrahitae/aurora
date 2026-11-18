@@ -73,6 +73,7 @@ import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.ui.theme.LocalSageType
 import com.finanzen.ui.theme.LocalSpacing
+import com.finanzen.viewmodel.DemoDataViewModel
 import com.finanzen.viewmodel.TransactionsViewModel
 import kotlinx.coroutines.launch
 import kotlinx.datetime.DatePeriod
@@ -251,7 +252,16 @@ internal fun BlockedDeleteDialog(block: TransactionsViewModel.DeleteBlock, onDis
 
 /** Estado vacío: distingue "no hay nada" de "nada coincide con la búsqueda o el filtro". */
 @Composable
-private fun TransactionsEmpty(filtered: Boolean) {
+private fun TransactionsEmpty(filtered: Boolean, demoVm: DemoDataViewModel = koinViewModel()) {
+    val noMovements by demoVm.canLoad.collectAsState()
+    if (!filtered && noMovements == true) {
+        DemoDataEmptyState(
+            onLoad = demoVm::load,
+            icon = LucideIcons.Receipt,
+            subtitle = "Usa el botón + para registrar tu primer movimiento, o carga datos de ejemplo para explorar la app.",
+        )
+        return
+    }
     EmptyState(
         icon = LucideIcons.Receipt,
         title = if (filtered) "Sin resultados" else "Sin movimientos",

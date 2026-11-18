@@ -18,6 +18,7 @@ object Routes {
     const val SUBSCRIPTIONS = "subscriptions"
     const val INVESTMENTS = "investments"
     const val CALENDAR = "calendar"
+    const val TRENDS = "trends"
     const val REPORTS = "reports"
     const val CATEGORIES = "categories"
     const val APPEARANCE = "settings"

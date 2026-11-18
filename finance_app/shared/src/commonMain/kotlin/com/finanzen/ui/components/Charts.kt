@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.ui.theme.LocalSageType
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -40,6 +41,20 @@ import kotlin.math.pow
 
 /** Una serie de [LineChart]: valores en orden de x (índice), su color y si es línea de referencia punteada. */
 data class ChartSeries(val label: String, val values: List<Double>, val color: Color, val dashed: Boolean = false)
+
+/** Escala de un eje en unidades enteras de la moneda: [unit] es "Millones de", "Miles de" o vacío. */
+data class AxisScale(val divisor: Double, val unit: String)
+
+/** Escala legible para un máximo en unidades enteras de la moneda (millones, miles o unidades). */
+fun axisScale(maxMajor: Double): AxisScale = when {
+    maxMajor >= MILLION -> AxisScale(MILLION, "Millones de")
+    maxMajor >= THOUSAND -> AxisScale(THOUSAND, "Miles de")
+    else -> AxisScale(1.0, "")
+}
+
+/** Decimales de [currency] según el catálogo de monedas (2 si no se conoce). */
+@Composable
+fun currencyDecimals(currency: String): Int = LocalMoneyFormat.current.currencies[currency]?.decimals?.toInt() ?: 2
 
 /** Marca del eje: posición (valor en x o en y) y su texto. */
 data class AxisTick(val value: Double, val label: String)
@@ -257,6 +272,8 @@ private fun DrawScope.drawEndLabels(ends: List<Pair<ChartSeries, Float>>, x: Flo
 private val NICE_STEPS = listOf(1.0, 2.0, 2.5, 5.0, 10.0)
 private const val HALF = 0.5f
 private const val DEFAULT_TICKS = 4
+private const val MILLION = 1_000_000.0
+private const val THOUSAND = 1_000.0
 private const val GUTTER_GAP = 6
 private const val LABEL_GAP = 6
 private const val LINE_STROKE = 2.5f

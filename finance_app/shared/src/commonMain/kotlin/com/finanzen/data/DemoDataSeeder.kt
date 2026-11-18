@@ -126,6 +126,21 @@ fun seedDemoTransactions(db: FinanzenDb, today: LocalDate) {
 }
 
 /**
+ * "Cargar datos de ejemplo", a pedido del usuario y solo con la BD sin movimientos. Marca la
+ * limpieza de [cleanupLeakedDemoData] como hecha (si no, al siguiente arranque borraría la
+ * suscripción, el fondo y el plan de cuotas que el usuario pidió) y quita la bandera de sembrado
+ * para poder volver a cargarlos si antes los borró todos.
+ */
+fun loadDemoData(db: FinanzenDb, today: LocalDate) {
+    if (db.transactionQueries.selectAll().executeAsList().isNotEmpty()) return
+    db.transaction {
+        db.settingQueries.put(KEY_DEMO_DATA_CLEANED, "true")
+        db.settingQueries.delete(KEY_DEMO_SEEDED)
+    }
+    seedDemoTransactions(db, today)
+}
+
+/**
  * Limpieza única de las entidades del sembrado de demo que se filtraron a producción antes de que
  * [seedDemoTransactions] dejara de invocarse automáticamente (ver AppModule.kt): identifica por
  * nombre + parámetros exactos del seed (poco probable que un usuario real los replique por
