@@ -9,7 +9,7 @@ Rama de trabajo: `redesign` · Respaldo intocable: `backup/pre-redesign` (2da1f2
 `checkQuality` y `:androidApp:assembleDebug` en verde con `allWarningsAsErrors`. Pendiente: revisión
 visual en dispositivo por el usuario.
 
-**Fase 4 — en curso.** Checkpoint 3 aprobado el 2026-11-17: guardar simulaciones (sí), botón
+**Fase 4 — hecha (2026-11-18).** Checkpoint 3 aprobado el 2026-11-17: guardar simulaciones (sí), botón
 "Cargar datos de ejemplo" (sí), comisión de administración mensual sobre el saldo (sí, el usuario
 la revisará), Tendencias por semanas de lunes a domingo (interpretado de "hazlo por semanas";
 fácil de cambiar a bloques de 7 días).
@@ -34,8 +34,15 @@ cuotas), como dice el diseño; el reparto recurrente/puntual y las categorías c
 moneda base. Al cargar datos de ejemplo se marca la limpieza de arranque como hecha para que no
 borre la suscripción, el fondo y el plan de cuotas de ejemplo.
 
-Falta: mover `fundTotals`/`yieldMinor`/presupuestos/agregación del Resumen a `domain/`, test de la
-migración de escritorio (`openDesktopDatabase`). Luego Fase 5.
+Cierre (2026-11-18): las cuentas de fondos reales pasan a `domain/FundLedger.kt`; Presupuesto usa
+`SpendingAnalytics.dailyAllowance` y el Resumen `projectMonthEnd` (antes duplicados); prueba de
+migración de escritorio (BD v1 con `user_version` 0 → versión actual sin perder datos). El resto
+de la agregación del Resumen se queda en `DashboardViewModel`: ya son funciones puras y probadas,
+pero dependen de filas de BD y etiquetas de UI; moverlas es un refactor grande sin cambio visible
+y queda en pendientes. `checkQuality` y `:androidApp:assembleDebug` en verde (232 pruebas en
+escritorio, 117 en Android).
+
+**Fase 5 — siguiente.**
 
 - Design system: https://claude.ai/artifact/QdRX1cFzN6aWpb9gnEXy5s
 - Pantallas: https://claude.ai/artifact/D5SE4kr7NDM584HCZmj2th
@@ -49,7 +56,7 @@ migración de escritorio (`openDesktopDatabase`). Luego Fase 5.
 | ⛔ Checkpoint 1 | ✅ Aprobado (2026-11-16) | Decisiones en la tabla de abajo |
 | 2 — Estándares | ✅ Hecha (2026-11-16) | Ver "Fase 2 paso a paso" |
 | 3 — Design system (Claude Design) | ✅ Hecha (2026-11-17) | ⛔ Checkpoint 2: ✅ aprobado. Falta revisión en dispositivo |
-| 4 — Simulaciones | 🔄 En curso | ⛔ Checkpoint 3: ✅ aprobado (2026-11-17). Pantallas hechas; falta mover cálculos a `domain/` |
+| 4 — Simulaciones | ✅ Hecha (2026-11-18) | ⛔ Checkpoint 3: ✅ aprobado (2026-11-17). Falta revisión en dispositivo |
 | 5 — Verificación y entrega | ⏳ Pendiente | |
 
 ## Fase 2 paso a paso
@@ -175,6 +182,7 @@ numerales tabulares; una cifra principal por pantalla.
 - `AndroidAesGcm.kt` y `JvmAesGcm.kt` duplicados (requiere un source set JVM compartido).
 - Repositorios bloqueantes llamados en el hilo principal.
 - Sin migraciones de BD: cada cambio de esquema obliga a reinstalar mientras sea pre-release.
+- Llevar a `domain/` el resto de la agregación del Resumen (`DashboardViewModel.computeDashboard` y compañía).
 - iOS: sin proyecto Xcode; cripto, respaldo, notificaciones y biometría son stubs.
 
 ## Cómo verificar
