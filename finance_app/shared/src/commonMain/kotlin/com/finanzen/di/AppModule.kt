@@ -5,6 +5,7 @@ import com.finanzen.data.BudgetRepository
 import com.finanzen.data.CardRepository
 import com.finanzen.data.CategoryRepository
 import com.finanzen.data.CurrencyRepository
+import com.finanzen.data.FundSimulationRepository
 import com.finanzen.data.InstallmentPlanRepository
 import com.finanzen.data.InvestmentRepository
 import com.finanzen.data.SecurityRepository
@@ -20,6 +21,7 @@ import com.finanzen.viewmodel.BackupViewModel
 import com.finanzen.viewmodel.BudgetsViewModel
 import com.finanzen.viewmodel.CategoriesViewModel
 import com.finanzen.viewmodel.DashboardViewModel
+import com.finanzen.viewmodel.FundSimulationsViewModel
 import com.finanzen.viewmodel.InvestmentsViewModel
 import com.finanzen.viewmodel.ReportsViewModel
 import com.finanzen.viewmodel.SecurityViewModel
@@ -59,6 +61,7 @@ val sharedModule: Module = module {
     single { SecurityRepository(get()) }
     single { SettingsRepository(get()) }
     single { BudgetRepository(get()) }
+    single { FundSimulationRepository(get()) }
 
     viewModel { DashboardViewModel(get(), get(), get(), get(), get()) }
     viewModel { TransactionsViewModel(get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
@@ -69,6 +72,7 @@ val sharedModule: Module = module {
     viewModel { InvestmentsViewModel(get(), get(), get(), get(), get()) }
     viewModel { ReportsViewModel(get(), get(), get(), get(), get(), get()) }
     viewModel { BackupViewModel(get(), get(), get()) }
+    viewModel { FundSimulationsViewModel(get(), get()) }
     single { SecurityViewModel(get()) }
     single { SettingsViewModel(get(), get()) }
 }
