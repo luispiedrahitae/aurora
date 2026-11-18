@@ -1,5 +1,7 @@
 package com.finanzen.ui.navigation
 
+import kotlinx.serialization.Serializable
+
 /** Los íconos viven fuera del enum: `LucideIcons` expone `Painter` vía `@Composable get()`
  *  (llama a `painterResource`), y los valores de constructor de un enum se evalúan fuera de
  *  composición. Ver [topDestinationIcon]. */
@@ -26,3 +28,7 @@ object Routes {
     const val ABOUT = "about"
     const val SUGGESTIONS = "suggestions"
 }
+
+/** Simulación de un fondo (ruta tipada): [id] 0 = simulación nueva. */
+@Serializable
+data class FundSimulationRoute(val id: Long = 0)

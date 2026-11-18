@@ -50,6 +50,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import com.finanzen.ui.components.AddFab
 import com.finanzen.ui.icons.LucideIcons
 import com.finanzen.ui.screens.AboutScreen
@@ -60,6 +61,7 @@ import com.finanzen.ui.screens.CalendarScreen
 import com.finanzen.ui.screens.CategoriesScreen
 import com.finanzen.ui.screens.CurrencyScreen
 import com.finanzen.ui.screens.DashboardScreen
+import com.finanzen.ui.screens.FundSimulationScreen
 import com.finanzen.ui.screens.InvestmentsScreen
 import com.finanzen.ui.screens.MoreScreen
 import com.finanzen.ui.screens.NotificationsScreen
@@ -266,7 +268,12 @@ private fun AppNavHost(
             MoreScreen(onNavigate = { route -> navController.navigate(route) })
         }
         composable(Routes.SUBSCRIPTIONS) { SubscriptionsScreen(onBack = back) }
-        composable(Routes.INVESTMENTS) { InvestmentsScreen(onBack = back) }
+        composable(Routes.INVESTMENTS) {
+            InvestmentsScreen(onBack = back, onOpenSimulation = { id -> navController.navigate(FundSimulationRoute(id ?: 0)) })
+        }
+        composable<FundSimulationRoute> { entry ->
+            FundSimulationScreen(simulationId = entry.toRoute<FundSimulationRoute>().id.takeIf { it > 0 }, onBack = back)
+        }
         composable(Routes.REPORTS) { ReportsScreen(onBack = back) }
         composable(Routes.SECURITY) { SecuritySettingsScreen(onBack = back) }
         composable(Routes.BACKUP) { BackupScreen(onBack = back) }

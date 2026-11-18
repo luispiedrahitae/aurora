@@ -83,6 +83,7 @@ import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.ui.theme.LocalSageType
 import com.finanzen.ui.theme.LocalSpacing
+import com.finanzen.viewmodel.FundSimulationsViewModel
 import com.finanzen.viewmodel.InvestmentsViewModel
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
@@ -91,8 +92,11 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable
 fun InvestmentsScreen(
     onBack: () -> Unit,
+    onOpenSimulation: (Long?) -> Unit = {},
     vm: InvestmentsViewModel = koinViewModel(),
+    simulationsVm: FundSimulationsViewModel = koinViewModel(),
 ) {
+    val simulations by simulationsVm.simulations.collectAsState()
     val open by vm.openInvestments.collectAsState()
     val closed by vm.closedInvestments.collectAsState()
     val archived by vm.archivedInvestments.collectAsState()
@@ -264,6 +268,10 @@ fun InvestmentsScreen(
                             )
                         }
                     }
+                }
+                item(key = "simulate") { SimulateFundCard(onClick = { onOpenSimulation(null) }) }
+                if (simulations.isNotEmpty()) {
+                    item(key = "simulations") { SavedSimulations(simulations, onOpen = { onOpenSimulation(it) }) }
                 }
                 if (closed.isNotEmpty()) {
                     item(key = "closed_header") { SectionHeader("Cerrados") }
