@@ -1,5 +1,6 @@
 package com.finanzen.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -23,8 +24,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.finanzen.ui.format.PeriodMode
 import com.finanzen.ui.icons.LucideIcons
+import com.finanzen.ui.theme.LocalSageType
 import com.finanzen.ui.theme.LocalSpacing
-import com.finanzen.ui.theme.PillShape
 
 /** Selector de mes con flechas prev/next, reutilizado por las pantallas que filtran por periodo.
  * Con [onLabelClick], la etiqueta central es tocable y vuelve al periodo actual ("hoy"). */
@@ -42,11 +43,11 @@ fun MonthSelector(
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         IconButton(onClick = onPrev) {
-            Icon(LucideIcons.ChevronLeft, contentDescription = "Mes anterior", tint = MaterialTheme.colorScheme.primary)
+            Icon(LucideIcons.ChevronLeft, contentDescription = "Mes anterior", tint = MaterialTheme.colorScheme.onSurface)
         }
         SelectorLabel(label, onLabelClick, onClickLabel = "Volver al mes actual")
         IconButton(onClick = onNext) {
-            Icon(LucideIcons.ChevronRight, contentDescription = "Mes siguiente", tint = MaterialTheme.colorScheme.primary)
+            Icon(LucideIcons.ChevronRight, contentDescription = "Mes siguiente", tint = MaterialTheme.colorScheme.onSurface)
         }
     }
 }
@@ -67,11 +68,11 @@ fun YearSelector(
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         IconButton(onClick = onPrev) {
-            Icon(LucideIcons.ChevronLeft, contentDescription = "Año anterior", tint = MaterialTheme.colorScheme.primary)
+            Icon(LucideIcons.ChevronLeft, contentDescription = "Año anterior", tint = MaterialTheme.colorScheme.onSurface)
         }
         SelectorLabel(label, onLabelClick, onClickLabel = "Volver al año actual")
         IconButton(onClick = onNext) {
-            Icon(LucideIcons.ChevronRight, contentDescription = "Año siguiente", tint = MaterialTheme.colorScheme.primary)
+            Icon(LucideIcons.ChevronRight, contentDescription = "Año siguiente", tint = MaterialTheme.colorScheme.onSurface)
         }
     }
 }
@@ -97,15 +98,16 @@ fun PeriodModeChip(mode: PeriodMode, onToggle: () -> Unit, modifier: Modifier = 
             role = Role.Switch
             contentDescription = "Vista: $label. Cambiar a vista de $nextLabel"
         },
-        shape = PillShape,
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shape = MaterialTheme.shapes.small,
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
     ) {
         Row(
             modifier = Modifier.padding(horizontal = LocalSpacing.current.md, vertical = LocalSpacing.current.xs),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(LocalSpacing.current.xs),
         ) {
-            Text(label, style = MaterialTheme.typography.labelLarge)
+            Text(label, style = LocalSageType.current.label)
             Icon(
                 LucideIcons.ChevronsUpDown,
                 contentDescription = null,
@@ -121,11 +123,11 @@ fun PeriodModeChip(mode: PeriodMode, onToggle: () -> Unit, modifier: Modifier = 
 private fun SelectorLabel(label: String, onClick: (() -> Unit)?, onClickLabel: String) {
     val clickable = if (onClick != null) {
         Modifier
-            .clip(PillShape)
+            .clip(MaterialTheme.shapes.small)
             .clickable(onClickLabel = onClickLabel, role = Role.Button, onClick = onClick)
             .padding(horizontal = LocalSpacing.current.md, vertical = LocalSpacing.current.xs)
     } else {
         Modifier
     }
-    Text(label, modifier = clickable, style = MaterialTheme.typography.titleMedium)
+    Text(label, modifier = clickable, style = LocalSageType.current.titleCard)
 }

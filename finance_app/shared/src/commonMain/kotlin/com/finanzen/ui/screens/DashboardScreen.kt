@@ -1,18 +1,18 @@
 package com.finanzen.ui.screens
 
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -20,41 +20,44 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.finanzen.ui.components.AccountBalanceBars
 import com.finanzen.ui.components.AutoSizeText
+import com.finanzen.ui.components.BadgeTone
 import com.finanzen.ui.components.BentoTileSize
 import com.finanzen.ui.components.CategoryBreakdownSection
 import com.finanzen.ui.components.FinanceCard
+import com.finanzen.ui.components.IconAvatar
 import com.finanzen.ui.components.IncomeExpenseBarChart
 import com.finanzen.ui.components.KpiDelta
+import com.finanzen.ui.components.ListRow
 import com.finanzen.ui.components.MainTabHeader
 import com.finanzen.ui.components.MonthSelector
+import com.finanzen.ui.components.Overline
 import com.finanzen.ui.components.PeriodModeChip
+import com.finanzen.ui.components.SageBadge
 import com.finanzen.ui.components.SavingsRateGauge
 import com.finanzen.ui.components.SectionHeader
 import com.finanzen.ui.components.TopFrequentExpensesList
 import com.finanzen.ui.components.YearSelector
-import com.finanzen.ui.components.balanceColor
 import com.finanzen.ui.components.kpiDelta
 import com.finanzen.ui.format.PeriodMode
 import com.finanzen.ui.format.formatMesAnio
 import com.finanzen.ui.format.mesLargo
 import com.finanzen.ui.icons.LucideIcons
-import com.finanzen.ui.theme.LocalAccentColor
 import com.finanzen.ui.theme.LocalDateLocale
 import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
+import com.finanzen.ui.theme.LocalSageType
 import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.ui.theme.motionTween
 import com.finanzen.viewmodel.DashboardViewModel
@@ -124,8 +127,8 @@ fun DashboardScreen(
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             // bottom extra para que el FAB central no tape la última tarjeta.
-            contentPadding = PaddingValues(start = spacing.lg, end = spacing.lg, top = spacing.sm, bottom = 96.dp),
-            verticalArrangement = Arrangement.spacedBy(spacing.lg),
+            contentPadding = PaddingValues(start = spacing.lg, end = spacing.lg, top = spacing.sm, bottom = spacing.xl),
+            verticalArrangement = Arrangement.spacedBy(spacing.xl),
         ) {
             item {
                 BalanceHeroCard(
@@ -142,23 +145,23 @@ fun DashboardScreen(
             }
             item {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(spacing.sm),
+                    modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                    horizontalArrangement = Arrangement.spacedBy(spacing.md),
                 ) {
                     KpiTile(
                         "Ingresos",
-                        if (hideAmounts) MASK else fmt.format(data.periodIncomeMinor, data.currency),
+                        if (hideAmounts) MASK else fmt.format(data.periodIncomeMinor, data.currency, signed = true),
                         finance.income,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
                         masked = hideAmounts,
                         delta = kpiDelta(data.periodIncomeMinor, data.prevPeriodIncomeMinor, prevLabel, upIsGood = true),
                     )
                     KpiTile(
                         "Gastos",
-                        if (hideAmounts) MASK else fmt.format(data.periodExpenseMinor, data.currency),
+                        if (hideAmounts) MASK else fmt.format(-data.periodExpenseMinor, data.currency, signed = true),
                         finance.expense,
                         flipTrendIcon = true,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
                         masked = hideAmounts,
                         delta = kpiDelta(data.periodExpenseMinor, data.prevPeriodExpenseMinor, prevLabel, upIsGood = false),
                     )
@@ -166,7 +169,7 @@ fun DashboardScreen(
             }
             item {
                 SubscriptionsSummaryRow(
-                    valueText = if (hideAmounts) MASK else fmt.format(data.subscriptionCostMinor, data.currency),
+                    valueText = if (hideAmounts) MASK else fmt.format(-data.subscriptionCostMinor, data.currency, signed = true),
                     masked = hideAmounts,
                     onClick = onOpenSubscriptions,
                     modifier = Modifier.fillMaxWidth(),
@@ -248,8 +251,8 @@ private fun BalanceHeroCard(
     // grande siempre quepa en una línea.
     val fmt = LocalMoneyFormat.current
     val haptic = LocalHapticFeedback.current
-    // Tarjeta neutra (no primaryContainer): verde/rojo semánticos contrastan en cualquier acento.
-    val heroColor = balanceColor(totalBalance)
+    // La cifra va en tinta; solo un saldo negativo toma el color de gasto (con su signo).
+    val heroColor = if (totalBalance < 0) LocalFinanceColors.current.expense else MaterialTheme.colorScheme.onSurface
     val animatedBalance by animateFloatAsState(targetValue = totalBalance.toFloat(), animationSpec = motionTween(400))
     val balanceText = if (hidden) MASK else fmt.format(animatedBalance.toLong(), currency)
 
@@ -260,12 +263,7 @@ private fun BalanceHeroCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    "BALANCE GENERAL",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = onSurfaceVar,
-                    fontWeight = FontWeight.SemiBold,
-                )
+                Overline("Saldo total")
                 IconButton(onClick = {
                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     onToggleHidden()
@@ -273,7 +271,7 @@ private fun BalanceHeroCard(
                     Icon(
                         if (hidden) LucideIcons.EyeOff else LucideIcons.Eye,
                         contentDescription = if (hidden) "Mostrar montos" else "Ocultar montos",
-                        tint = MaterialTheme.colorScheme.primary,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
@@ -281,12 +279,9 @@ private fun BalanceHeroCard(
                 text = balanceText,
                 modifier = Modifier.fillMaxWidth()
                     .then(if (hidden) Modifier.semantics { contentDescription = "Monto oculto" } else Modifier),
-                // Sage.dc.html: el balance del hero es 36px/700, no el display de 52sp reservado
-                // para "un número por pantalla" — aquí ya conviven balance + KPIs + suscripciones.
-                maxFontSize = MaterialTheme.typography.displaySmall.fontSize,
+                maxFontSize = LocalSageType.current.amountHero.fontSize,
                 color = heroColor,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.displaySmall,
+                style = LocalSageType.current.amountHero,
             )
         }
     }
@@ -310,61 +305,33 @@ private fun KpiTile(
     delta: KpiDelta? = null,
     caption: String? = null,
 ) {
-    val spacing = LocalSpacing.current
     val finance = LocalFinanceColors.current
-    FinanceCard(modifier = modifier, contentPadding = PaddingValues(spacing.md)) {
-        Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
-                Text(
-                    label,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Icon(
-                    LucideIcons.TrendingUp,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(14.dp).rotate(if (flipTrendIcon) 180f else 0f),
-                )
-            }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
-                Text(
-                    valueText,
-                    // Número secundario de pantalla (KPI), no la cifra hero — Title (20sp) en vez de
-                    // Headline (24sp) para que quepa cómodo en la mitad del ancho, con Bold explícito
-                    // (Title por defecto es SemiBold) para que siga leyéndose como un dato destacado.
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = accent,
-                    maxLines = 1,
-                    modifier = if (masked) Modifier.semantics { contentDescription = "Monto oculto" } else Modifier,
-                )
-                delta?.let {
-                    Icon(
-                        // Sin glifo de flecha arriba/abajo en el set Lucide (39 iconos) — se reusa
-                        // chevron up/down, ya en el set, en vez de agregar un drawable nuevo.
-                        if (it.pct >= 0) LucideIcons.ChevronUp else LucideIcons.ChevronDown,
-                        contentDescription = null,
-                        tint = if (it.isGood) finance.income else finance.expense,
-                        modifier = Modifier.size(12.dp),
-                    )
-                }
-            }
+    FinanceCard(modifier = modifier) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(label, style = LocalSageType.current.caption, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                valueText,
+                style = LocalSageType.current.amountLg.copy(fontSize = KPI_FONT_SIZE),
+                color = accent,
+                maxLines = 1,
+                modifier = if (masked) Modifier.semantics { contentDescription = "Monto oculto" } else Modifier,
+            )
             delta?.let {
-                Text(
-                    "${if (it.pct >= 0) "+" else ""}${it.pct}% vs ${it.vsLabel}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (it.isGood) finance.income else finance.expense,
-                    maxLines = 1,
+                SageBadge(
+                    "${if (it.pct >= 0) "+" else ""}${it.pct} % vs ${it.vsLabel}",
+                    tone = if (it.isGood) BadgeTone.Income else BadgeTone.Expense,
+                    icon = if (it.pct >= 0) LucideIcons.ChevronUp else LucideIcons.ChevronDown,
                 )
             }
             caption?.let {
-                Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
+                Text(it, style = LocalSageType.current.caption, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
             }
         }
     }
 }
+
+/** Las cifras de los KPI van a 20 (no 24) para que dos quepan lado a lado en un teléfono. */
+private val KPI_FONT_SIZE = 20.sp
 
 /** Fila resumen de suscripciones: icono + etiqueta + monto mensual + chevron, tocable → abre
  * Suscripciones (mismo patrón de fila-resumen-navegable que Sage.dc.html). Envuelta en
@@ -373,47 +340,23 @@ private fun KpiTile(
  */
 @Composable
 private fun SubscriptionsSummaryRow(valueText: String, masked: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    val spacing = LocalSpacing.current
-    FinanceCard(modifier = modifier, onClick = onClick, contentPadding = PaddingValues(spacing.md)) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(spacing.sm),
-        ) {
-            // Mismas medidas que IconAvatar (40dp, glifo a la mitad), que acá no sirve porque recibe
-            // ImageVector y este icono es un Painter Lucide.
-            Box(
-                modifier = Modifier.size(40.dp).clip(CircleShape).background(LocalAccentColor.current),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    LucideIcons.Repeat,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp),
-                )
-            }
-            Text(
-                "SUSCRIPCIONES",
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.weight(1f),
-            )
-            Text(
-                valueText,
-                // Mismo tamaño/peso que los montos de fila del dashboard (saldo de cuenta, gasto por
-                // categoría, gasto frecuente): bodyLarge+SemiBold, no el titleSmall+Bold de KpiTile.
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.primary,
-                maxLines = 1,
-                modifier = if (masked) Modifier.semantics { contentDescription = "Monto oculto" } else Modifier,
-            )
-            Icon(
-                LucideIcons.ChevronRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+    FinanceCard(modifier = modifier, onClick = onClick, contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)) {
+        ListRow(
+            title = "Suscripciones",
+            subtitle = "Costo de este período",
+            leading = { IconAvatar(LucideIcons.Repeat) },
+            trailing = {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        valueText,
+                        style = LocalSageType.current.amountMd,
+                        color = LocalFinanceColors.current.expense,
+                        maxLines = 1,
+                        modifier = if (masked) Modifier.semantics { contentDescription = "Monto oculto" } else Modifier,
+                    )
+                    Icon(LucideIcons.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            },
+        )
     }
 }

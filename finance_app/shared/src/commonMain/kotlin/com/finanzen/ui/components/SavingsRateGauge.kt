@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.finanzen.ui.icons.LucideIcons
 import com.finanzen.ui.theme.LocalFinanceColors
+import com.finanzen.ui.theme.LocalSageType
 import com.finanzen.ui.theme.LocalSpacing
 import com.finanzen.ui.theme.motionTween
 
@@ -102,9 +103,8 @@ fun SavingsRateGauge(savingsRate: Float, goalPct: Long, onGoalChange: (Long) -> 
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    "$goalPct%",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
+                    "$goalPct %",
+                    style = LocalSageType.current.amountLg,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 // Nombra el número del anillo: sin esto había dos porcentajes y solo uno con etiqueta.
@@ -140,8 +140,8 @@ private fun SavingsGoalDialog(goalPct: Long, onChange: (Long) -> Unit, onDismiss
                     Icon(LucideIcons.Minus, contentDescription = "Reducir meta")
                 }
                 Text(
-                    "$goalPct%",
-                    style = MaterialTheme.typography.headlineSmall,
+                    "$goalPct %",
+                    style = LocalSageType.current.amountLg,
                     modifier = Modifier.padding(horizontal = 24.dp),
                 )
                 IconButton(onClick = { onChange((goalPct + 5).coerceAtMost(100)) }, enabled = goalPct < 100) {
