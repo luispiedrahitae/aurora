@@ -42,7 +42,10 @@ pero dependen de filas de BD y etiquetas de UI; moverlas es un refactor grande s
 y queda en pendientes. `checkQuality` y `:androidApp:assembleDebug` en verde (232 pruebas en
 escritorio, 117 en Android).
 
-**Fase 5 — siguiente.**
+**Fase 5 — verificación hecha (2026-11-21); entrega lista, a la espera del usuario.**
+`checkQuality`, `:androidApp:assembleDebug` y la compilación de escritorio en verde
+(232 pruebas en escritorio y 117 en Android, sin fallos ni warnings). 46 commits sobre `backup/pre-redesign`; `redesign` lista para PR hacia `main`
+(el merge lo decide el usuario). Ver "Entrega" al final.
 
 - Design system: https://claude.ai/artifact/QdRX1cFzN6aWpb9gnEXy5s
 - Pantallas: https://claude.ai/artifact/D5SE4kr7NDM584HCZmj2th
@@ -57,7 +60,7 @@ escritorio, 117 en Android).
 | 2 — Estándares | ✅ Hecha (2026-11-16) | Ver "Fase 2 paso a paso" |
 | 3 — Design system (Claude Design) | ✅ Hecha (2026-11-17) | ⛔ Checkpoint 2: ✅ aprobado. Falta revisión en dispositivo |
 | 4 — Simulaciones | ✅ Hecha (2026-11-18) | ⛔ Checkpoint 3: ✅ aprobado (2026-11-17). Falta revisión en dispositivo |
-| 5 — Verificación y entrega | ⏳ Pendiente | |
+| 5 — Verificación y entrega | 🟡 Verificación hecha (2026-11-21) | Falta: revisión en dispositivo, fórmula de comisión, borrado Figtree/`PlatformColorScheme.kt`, CI de iOS |
 
 ## Fase 2 paso a paso
 
@@ -181,10 +184,33 @@ numerales tabulares; una cifra principal por pantalla.
 - Migrar a AGP 9 (desbloquea Compose 1.12 y navigation 2.10).
 - `AndroidAesGcm.kt` y `JvmAesGcm.kt` duplicados (requiere un source set JVM compartido).
 - Repositorios bloqueantes llamados en el hilo principal.
-- Sin migraciones de BD: cada cambio de esquema obliga a reinstalar mientras sea pre-release.
 - Llevar a `domain/` el resto de la agregación del Resumen (`DashboardViewModel.computeDashboard` y compañía).
 - iOS: sin proyecto Xcode; cripto, respaldo, notificaciones y biometría son stubs.
 
 ## Cómo verificar
 
 Desde `finance_app/`: `./gradlew checkQuality` (2026-11-16: verde, 195 tests, incluye compilación de Android e iOS).
+
+## Entrega (Fase 5)
+
+**Qué cambió**
+
+- Estándares: `docs/STANDARDS.md`, hook de pre-commit, Detekt analizando `shared/` con línea base,
+  `allWarningsAsErrors`, repositorios en un archivo cada uno, tests puros en `commonTest`.
+- Versiones estables (tabla "Versiones"); iOS se compila desde Windows dentro de `checkQuality`.
+- Design system Sage aplicado a todas las pantallas: tokens de color claro/oscuro, Caprasimo +
+  IBM Plex, componentes divididos por tema, preferencia de tema Automático/Claro/Oscuro.
+- Simulaciones: proyección de fondos con escenarios y comisiones (guardar, editar, comparar);
+  Tendencias de gasto por día/semana/mes; "Cargar datos de ejemplo"; cálculos en `domain/` con
+  pruebas; primera migración de BD (`1.sqm`) y prueba de migración de escritorio.
+
+**Qué se eliminó (aprobado):** ~140 logs y capturas, 6 carpetas `.impeccable/`, tooling local viejo,
+4 fuentes Inter, target `iosX64`.
+
+**Pendiente del usuario**
+
+1. Revisión visual en dispositivo de las pantallas de las Fases 3 y 4 (claro y oscuro).
+2. Revisar la fórmula de comisión de administración mensual (`domain/FundProjection.kt`).
+3. Aprobar o no borrar las fuentes Figtree y `PlatformColorScheme.kt` (sin uso).
+4. Confirmar el job `ios` del CI en GitHub Actions.
+5. Decidir el merge de `redesign` a `main`.
