@@ -14,8 +14,11 @@ import com.finanzen.domain.SymbolPosition
 data class MoneyFormat(
     val position: SymbolPosition = SymbolPosition.PREFIX,
     val currencies: Map<String, Currency> = emptyMap(),
+    /** "Ocultar montos" del Resumen: todo monto formateado con esta instancia sale como [MASKED_AMOUNT]. */
+    val masked: Boolean = false,
 ) {
     fun format(amountMinor: Long, currency: String, signed: Boolean = false, decimals: Int? = null): String {
+        if (masked) return MASKED_AMOUNT
         val row = currencies[currency]
         val effectiveDecimals = decimals ?: row?.decimals?.toInt() ?: 2
         val base = Money(amountMinor, currency).format(
@@ -48,6 +51,9 @@ data class MoneyFormat(
 }
 
 val LocalMoneyFormat = staticCompositionLocalOf { MoneyFormat() }
+
+/** Lo que se muestra en lugar de un monto cuando el usuario los oculta. */
+const val MASKED_AMOUNT = "******"
 
 /** Convención de fecha (orden + nombres de mes) de la moneda base actual. Ver [CURRENCY_LOCALE_INFO]. */
 val LocalDateLocale = staticCompositionLocalOf { DEFAULT_LOCALE_INFO }

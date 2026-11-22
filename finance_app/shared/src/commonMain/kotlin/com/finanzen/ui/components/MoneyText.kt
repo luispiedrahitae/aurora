@@ -2,12 +2,16 @@ package com.finanzen.ui.components
 
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -39,8 +43,46 @@ fun MoneyText(
     val color = colorOverride ?: if (signed) balanceColor(amountMinor) else MaterialTheme.colorScheme.onSurface
     // El símbolo y su posición ($ antes/después/ninguno) los aporta el formato global.
     val text = LocalMoneyFormat.current.format(amountMinor, currency, signed)
-    Text(text, modifier = modifier, style = style, fontWeight = fontWeight, color = color, textAlign = textAlign)
+    FitText(text, modifier = modifier, style = style, fontWeight = fontWeight, color = color, textAlign = textAlign)
 }
+
+/**
+ * Una sola línea que se encoge (hasta [minScale] del tamaño de [style]) si no cabe en el ancho
+ * disponible. Para cifras: un monto partido en dos renglones se lee mal y descuadra lo que lo rodea.
+ */
+@Composable
+fun FitText(
+    text: String,
+    modifier: Modifier = Modifier,
+    style: TextStyle = MaterialTheme.typography.bodyLarge,
+    fontWeight: FontWeight? = null,
+    color: Color = Color.Unspecified,
+    textAlign: TextAlign? = null,
+    minScale: Float = FIT_MIN_SCALE,
+) {
+    val merged = style.merge(
+        TextStyle(
+            color = color.takeOrElse { style.color.takeOrElse { LocalContentColor.current } },
+            fontWeight = fontWeight,
+            textAlign = textAlign ?: TextAlign.Unspecified,
+        ),
+    )
+    val max = style.fontSize
+    if (!max.isSp) {
+        BasicText(text, modifier = modifier, style = merged, maxLines = 1, softWrap = false)
+        return
+    }
+    BasicText(
+        text,
+        modifier = modifier,
+        style = merged,
+        maxLines = 1,
+        softWrap = false,
+        autoSize = TextAutoSize.StepBased(minFontSize = (max.value * minScale).sp, maxFontSize = max, stepSize = 1.sp),
+    )
+}
+
+private const val FIT_MIN_SCALE = 0.6f
 
 /** Color de un saldo o monto con signo en toda la app: positivo = ingreso (verde), negativo =
  * gasto (rojo), cero = neutro. */

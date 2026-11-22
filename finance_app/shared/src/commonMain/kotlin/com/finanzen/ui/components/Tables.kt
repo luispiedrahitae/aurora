@@ -59,13 +59,12 @@ private fun TableRow(cells: List<String>, style: TextStyle, background: Color) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         cells.forEachIndexed { i, cell ->
-            Text(
-                cell,
-                modifier = Modifier.weight(if (i == 0) FIRST_COLUMN_WEIGHT else 1f),
-                style = style,
-                color = MaterialTheme.colorScheme.onSurface,
-                textAlign = if (i == 0) TextAlign.Start else TextAlign.End,
-            )
+            if (i == 0) {
+                Text(cell, Modifier.weight(FIRST_COLUMN_WEIGHT), style = style, color = MaterialTheme.colorScheme.onSurface)
+            } else {
+                // Las cifras se encogen antes que partirse en dos renglones.
+                FitText(cell, Modifier.weight(1f), style = style, color = MaterialTheme.colorScheme.onSurface, textAlign = TextAlign.End)
+            }
         }
     }
 }

@@ -16,6 +16,13 @@ class MoneyFormatTest {
     }
 
     @Test
+    fun ocultoTapaCualquierMonto() {
+        val fmt = MoneyFormat(SymbolPosition.PREFIX, mapOf("USD" to usd), masked = true)
+        assertEquals(MASKED_AMOUNT, fmt.format(123456, "USD"))
+        assertEquals(MASKED_AMOUNT, fmt.format(-5, "USD", signed = true))
+    }
+
+    @Test
     fun sufijoConMonedaConocida() {
         val fmt = MoneyFormat(SymbolPosition.SUFFIX, mapOf("EUR" to eur))
         assertEquals("1.234,56 €", fmt.format(123456, "EUR"))

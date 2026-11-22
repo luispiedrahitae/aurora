@@ -18,6 +18,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
@@ -36,6 +37,7 @@ import com.finanzen.ui.components.BadgeTone
 import com.finanzen.ui.components.BentoTileSize
 import com.finanzen.ui.components.CategoryBreakdownSection
 import com.finanzen.ui.components.FinanceCard
+import com.finanzen.ui.components.FitText
 import com.finanzen.ui.components.IconAvatar
 import com.finanzen.ui.components.IncomeExpenseBarChart
 import com.finanzen.ui.components.KpiDelta
@@ -59,6 +61,7 @@ import com.finanzen.ui.theme.LocalFinanceColors
 import com.finanzen.ui.theme.LocalMoneyFormat
 import com.finanzen.ui.theme.LocalSageType
 import com.finanzen.ui.theme.LocalSpacing
+import com.finanzen.ui.theme.MASKED_AMOUNT
 import com.finanzen.ui.theme.motionTween
 import com.finanzen.viewmodel.DashboardViewModel
 import com.finanzen.viewmodel.SettingsViewModel
@@ -124,106 +127,113 @@ fun DashboardScreen(
                 onLabelClick = { vm.setYear(Clock.System.todayIn(TimeZone.currentSystemDefault()).year) },
             )
         }
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            // bottom extra para que el FAB central no tape la última tarjeta.
-            contentPadding = PaddingValues(start = spacing.lg, end = spacing.lg, top = spacing.sm, bottom = spacing.xl),
-            verticalArrangement = Arrangement.spacedBy(spacing.xl),
-        ) {
-            item {
-                BalanceHeroCard(
-                    totalBalance = data.totalBalanceMinor,
-                    currency = data.currency,
-                    hidden = hideAmounts,
-                    onToggleHidden = { settingsVm.setHideAmounts(!hideAmounts) },
-                )
-            }
-
-            val prevLabel = when (mode) {
-                PeriodMode.MONTH -> mesLargo(month.plus(DatePeriod(months = -1)).month.number).replaceFirstChar { it.uppercase() }
-                PeriodMode.YEAR -> "${year - 1}"
-            }
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
-                    horizontalArrangement = Arrangement.spacedBy(spacing.md),
-                ) {
-                    KpiTile(
-                        "Ingresos",
-                        if (hideAmounts) MASK else fmt.format(data.periodIncomeMinor, data.currency, signed = true),
-                        finance.income,
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                        masked = hideAmounts,
-                        delta = kpiDelta(data.periodIncomeMinor, data.prevPeriodIncomeMinor, prevLabel, upIsGood = true),
-                    )
-                    KpiTile(
-                        "Gastos",
-                        if (hideAmounts) MASK else fmt.format(-data.periodExpenseMinor, data.currency, signed = true),
-                        finance.expense,
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                        masked = hideAmounts,
-                        delta = kpiDelta(data.periodExpenseMinor, data.prevPeriodExpenseMinor, prevLabel, upIsGood = false),
+        // "Ocultar montos" tapa todas las cifras del Resumen, no solo el saldo y los totales.
+        CompositionLocalProvider(LocalMoneyFormat provides fmt.copy(masked = hideAmounts)) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                // bottom extra para que el FAB central no tape la última tarjeta.
+                contentPadding = PaddingValues(start = spacing.lg, end = spacing.lg, top = spacing.sm, bottom = spacing.xl),
+                verticalArrangement = Arrangement.spacedBy(spacing.xl),
+            ) {
+                item {
+                    BalanceHeroCard(
+                        totalBalance = data.totalBalanceMinor,
+                        currency = data.currency,
+                        hidden = hideAmounts,
+                        onToggleHidden = { settingsVm.setHideAmounts(!hideAmounts) },
                     )
                 }
-            }
-            item {
-                SubscriptionsSummaryRow(
-                    valueText = if (hideAmounts) MASK else fmt.format(-data.subscriptionCostMinor, data.currency, signed = true),
-                    masked = hideAmounts,
-                    onClick = onOpenSubscriptions,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
 
-            item {
-                SavingsRateGauge(
-                    savingsRate = data.savingsRate,
-                    goalPct = savingsGoalPct,
-                    onGoalChange = settingsVm::setSavingsGoalPct,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-
-            if (data.accounts.isNotEmpty()) {
-                item {
-                    Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
-                        SectionHeader("Saldos por cuenta")
-                        AccountBalanceBars(data.accounts, data.currency, modifier = Modifier.fillMaxWidth())
-                    }
+                val prevLabel = when (mode) {
+                    PeriodMode.MONTH -> mesLargo(month.plus(DatePeriod(months = -1)).month.number).replaceFirstChar { it.uppercase() }
+                    PeriodMode.YEAR -> "${year - 1}"
                 }
-            }
-
-            if (data.incomeExpenseTrend.any { it.incomeMinor > 0 || it.expenseMinor > 0 }) {
                 item {
-                    val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
-                    val todayIndex = when (mode) {
-                        PeriodMode.MONTH -> if (month.year == today.year && month.month.number == today.month.number) today.day - 1 else null
-                        PeriodMode.YEAR -> if (year == today.year) today.month.number - 1 else null
-                    }
-                    Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
-                        SectionHeader("Ingresos vs gastos")
-                        IncomeExpenseBarChart(
-                            data.incomeExpenseTrend,
-                            data.currency,
-                            modifier = Modifier.fillMaxWidth(),
-                            initialSelectedIndex = todayIndex,
+                    Row(
+                        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                        horizontalArrangement = Arrangement.spacedBy(spacing.md),
+                    ) {
+                        KpiTile(
+                            "Ingresos",
+                            if (hideAmounts) MASK else fmt.format(data.periodIncomeMinor, data.currency, signed = true),
+                            finance.income,
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                            masked = hideAmounts,
+                            delta = kpiDelta(data.periodIncomeMinor, data.prevPeriodIncomeMinor, prevLabel, upIsGood = true),
+                        )
+                        KpiTile(
+                            "Gastos",
+                            if (hideAmounts) MASK else fmt.format(-data.periodExpenseMinor, data.currency, signed = true),
+                            finance.expense,
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                            masked = hideAmounts,
+                            delta = kpiDelta(data.periodExpenseMinor, data.prevPeriodExpenseMinor, prevLabel, upIsGood = false),
                         )
                     }
                 }
-            }
-
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
-                    SectionHeader("Gastos por categoría")
-                    CategoryBreakdownSection(data.categoryBreakdown, data.currency, modifier = Modifier.fillMaxWidth())
+                item {
+                    SubscriptionsSummaryRow(
+                        valueText = if (hideAmounts) MASK else fmt.format(-data.subscriptionCostMinor, data.currency, signed = true),
+                        masked = hideAmounts,
+                        onClick = onOpenSubscriptions,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
-            }
 
-            if (data.frequent.isNotEmpty()) {
+                item {
+                    SavingsRateGauge(
+                        savingsRate = data.savingsRate,
+                        goalPct = savingsGoalPct,
+                        onGoalChange = settingsVm::setSavingsGoalPct,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+
+                if (data.accounts.isNotEmpty()) {
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                            SectionHeader("Saldos por cuenta")
+                            AccountBalanceBars(data.accounts, data.currency, modifier = Modifier.fillMaxWidth())
+                        }
+                    }
+                }
+
+                if (data.incomeExpenseTrend.any { it.incomeMinor > 0 || it.expenseMinor > 0 }) {
+                    item {
+                        val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+                        val todayIndex = when (mode) {
+                            PeriodMode.MONTH -> if (month.year == today.year && month.month.number == today.month.number) today.day - 1 else null
+                            PeriodMode.YEAR -> if (year == today.year) today.month.number - 1 else null
+                        }
+                        Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                            SectionHeader("Ingresos vs gastos")
+                            IncomeExpenseBarChart(
+                                data.incomeExpenseTrend,
+                                data.currency,
+                                modifier = Modifier.fillMaxWidth(),
+                                initialSelectedIndex = todayIndex,
+                                totalLabel = when (mode) {
+                                    PeriodMode.MONTH -> "Total de ${mesLargo(month.month.number)}"
+                                    PeriodMode.YEAR -> "Total de $year"
+                                },
+                            )
+                        }
+                    }
+                }
+
                 item {
                     Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
-                        SectionHeader("Gastos más frecuentes")
-                        TopFrequentExpensesList(data.frequent, modifier = Modifier.fillMaxWidth())
+                        SectionHeader("Gastos por categoría")
+                        CategoryBreakdownSection(data.categoryBreakdown, data.currency, modifier = Modifier.fillMaxWidth())
+                    }
+                }
+
+                if (data.frequent.isNotEmpty()) {
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                            SectionHeader("Gastos más frecuentes")
+                            TopFrequentExpensesList(data.frequent, modifier = Modifier.fillMaxWidth())
+                        }
                     }
                 }
             }
@@ -231,7 +241,7 @@ fun DashboardScreen(
     }
 }
 
-private const val MASK = "******"
+private const val MASK = MASKED_AMOUNT
 
 @Composable
 private fun BalanceHeroCard(
@@ -304,11 +314,10 @@ private fun KpiTile(
     FinanceCard(modifier = modifier) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(label, style = LocalSageType.current.caption, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(
+            FitText(
                 valueText,
                 style = LocalSageType.current.amountLg.copy(fontSize = KPI_FONT_SIZE),
                 color = accent,
-                maxLines = 1,
                 modifier = if (masked) Modifier.semantics { contentDescription = "Monto oculto" } else Modifier,
             )
             delta?.let {
